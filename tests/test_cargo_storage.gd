@@ -32,7 +32,7 @@ func run():
   DirAccess.copy_absolute(ProjectSettings.globalize_path("res://tests/fixtures/schema17-"+label+"-store.json"),s.native.root.path_join("store.json"));s.native=Clocked.new(s.path)
   var r=await s.read_active()
   if not need(r,"old17 "+label):return
-  check(r.snapshot.version==18 and r.snapshot.cargo=={"version":0,"state":"off","destination":""},"old17 no cargo retrofit "+label)
+  check(r.snapshot.version==19 and r.snapshot.cargo=={"version":0,"state":"off","destination":""},"old17 no cargo retrofit "+label)
   var raw=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema17-"+label+".json"))
   for key in raw:
    if key!="version":check(JSON.parse_string(JSON.stringify(r.snapshot[key]))==raw[key],"old17 retains "+label+" "+key)

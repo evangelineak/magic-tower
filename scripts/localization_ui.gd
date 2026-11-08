@@ -1,5 +1,20 @@
 extends RefCounted
 const EXACT = {
+"ONE-WAY FERRY ROPE":"单程摆渡绳",
+"Confirm: spend 1 focus and cross once":"确认：消耗 1 专注，摆渡一次",
+"Cancel: stay on this bank":"取消：留在此岸",
+"Inspect the single-use ferry rope / no cost":"查看单次摆渡绳 / 不消耗资源",
+"The rope snaps after crossing. The guardian stays alive. No kill, gold or victory recovery.":"过岸后绳索断裂。守卫仍然活着，不计击杀，不获金币或战胜恢复。",
+"Return requires another route, the bridge, or fighting the guardian. U can undo the complete crossing.":"回程须另找路线、修桥或击败守卫。U 可完整撤销本次摆渡。",
+"Last focus: your armed skill will be cancelled.":"用完最后 1 专注：已备战的技能将取消。",
+"Any currently armed skill stays prepared if focus remains.":"若仍有专注，当前已备战的技能保持不变。",
+"Journey changed. Inspect the rope again before confirming.":"旅程状态已变化，请重新查看绳索再确认。",
+
+"LOCAL VIEW / N UP":"局部位置 / 上北",
+"Coordinates start at 0.":"坐标从 0 开始。",
+"You are outside this inset.":"玩家在小图范围外。",
+"Location only, not a route.":"仅表示位置，不是行走路线。",
+
 "Actual next-battle skill: armed":"实际下场技能：已备战",
 "Actual next-battle skill: off":"实际下场技能：未备战",
 "TACTICAL WHAT-IF / READ ONLY":"战术试算 / 只读",
@@ -492,6 +507,12 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["Takeoff (%d,%d) -> landing (%d,%d) / cost 1 focus","起点 (%d,%d) → 落点 (%d,%d) / 消耗 1 专注"],
+
+["P: YOU (%d,%d)","P 玩家 (%d,%d)"],
+["E: ENEMY (%d,%d)","E 守卫 (%d,%d)"],
+["F: BARRIER (%d,%d)","F 挡板 (%d,%d)"],
+
 ["Full-fight loss %d / LETHAL; no recovery","整场试算损血 %d / 致死，无恢复"],
 ["Loss %d / after battle %d HP","损血 %d / 战后生命 %d"],
 ["Hero strikes %d / retaliations %d","出手 %d 次 / 反击 %d 次"],

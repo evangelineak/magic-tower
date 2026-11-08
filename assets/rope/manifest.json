@@ -1,0 +1,17 @@
+[
+  {
+    "path": "assets/rope/rope_ready.png",
+    "bytes": 26299,
+    "sha256": "4914b0ed427488ef65339c0add9430e0d9771ee14d22cadaca3e89368bfd5732"
+  },
+  {
+    "path": "assets/rope/rope_spent.png",
+    "bytes": 25780,
+    "sha256": "1f982d37a0809660d77789098fb9302f5007d980587b6a5bf48a20aeb586e3a7"
+  },
+  {
+    "path": "assets/rope/rope.blend",
+    "bytes": 103874,
+    "sha256": "7465e2ef087bfdc620320ef60fc6629308e7c159403bb0da594f139c72a9f8b3"
+  }
+]

@@ -3,6 +3,19 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"No single-use ferry rope is known here.":"此处没有已知的单次摆渡绳。",
+"The ferry guardian is gone. Keep your focus; no rope crossing is needed.":"摆渡守卫已被击败，无需荡绳，留住专注即可。",
+"The rope was used and snapped. Return by the bridge or by fighting the guardian.":"摆渡绳已使用并断裂，返回时请走桥，或击败守卫。",
+"The bridges are already open. Keep your focus and use the bridge.":"桥梁已经通行，留住专注，走桥即可。",
+"The landing is not cleared floor. The rope cannot be used.":"落点并非已清理的空地，无法使用摆渡绳。",
+"Stand at the marked entrance-side takeoff point before crossing.":"请先站在入口侧标出的起跳点，再荡绳跨越。",
+"No focus available. The normal battle and bridge routes remain available.":"没有可用专注，仍可选择正常战斗或桥梁路线。",
+"Spend the last focus and cancel the armed skill; cross once without fighting. The rope then snaps.":"消耗最后一点专注并取消技能备战，无战斗跨越一次，随后绳索断裂。",
+"Spend 1 focus to cross once without fighting. The rope then snaps; no kill, gold or victory recovery.":"消耗 1 点专注，无战斗跨越一次，随后绳索断裂；不计击杀，不得金币或胜利恢复。",
+"Rope crossed once and snapped. Guardian, gold and kill count are unchanged; return by bridge or battle.":"已荡绳跨越一次，绳索断裂。守卫、金币和击杀数不变；返回时请走桥或战斗。",
+"Single-use ferry rope":"单次摆渡绳",
+"Rope landing: one-way only. Crossing grants no kill or victory rewards.":"荡绳落点：只能单向跨越，不计击杀，也无胜利奖励。",
+
 "No cleared-floor walking path to this position; forecast only.":"已清理区域内没有通往此处的步行路线；仅供试算。",
 "No focus available; this skill forecast is theoretical.":"没有可用专注；此技能试算仅供理论比较。",
 "This journey is not currently accepting actions.":"本局当前无法执行行动。",
@@ -412,6 +425,7 @@ const EXACT = {
 # Preserve conversion types and argument order. The display adapter matches
 # these full English templates; %s values may themselves have catalog names.
 const TEMPLATES = [
+	["Single-use rope: 1 focus to landing (%d, %d). Inspect with E; crossing never fights.", "单次摆渡绳：消耗 1 点专注到达落点（%d，%d）。按 E 查看，跨越不会触发战斗。"],
 ["Damage required to defeat this enemy: %d HP; current HP: %d. This fight cannot be survived.", "击败此敌需要承受 %d 生命损失；当前生命 %d，无法在这场战斗中存活。"],
 ["%s Sealed freight: the SAME 70 HP supply, not an extra reward. Open the floor 1 door with 1 key now, or ship it free and collect later. %s Shipping removes the empty source lock. Destination is fixed; this supply can only be collected once. Normal Undo remains available.", "%s 封箱货物就是原本的 70 生命补给，并非额外奖励。可以现在花 1 把钥匙开启 1 层房门，或免费发往高层稍后领取。%s 发货会移除空置的源房锁门；目的地固定，这份补给只能领取一次；仍可使用普通撤销。"],
 ["%s Freight contains only the original 70 HP supply; it is not an extra reward. %s Shipping removes the empty source lock. Destination is fixed; this supply can only be collected once. Normal Undo remains available.", "%s 货物只有原本的 70 生命补给，并非额外奖励。%s 发货会移除空置的源房锁门；目的地固定，这份补给只能领取一次；仍可使用普通撤销。"],

@@ -29,7 +29,7 @@ func offer(w,gear:String,id:String):
 	w.gear_offers[gear]=ids
 func _init():
 	var w=World.new(42)
-	check(w.save_data().version==18 and w.attunement_version==1 and w.gear_choices.is_empty(),"new schema starts unselected and original")
+	check(w.save_data().version==19 and w.attunement_version==1 and w.gear_choices.is_empty(),"new schema starts unselected and original")
 	check(w.gear_offers.size()==4 and not w.gear_offers.has("balanced"),"only four nonbaseline gear catalogs")
 	check(w.gear_offers==World.new(42).gear_offers,"catalog is deterministic")
 	for gear in World.ATTUNABLE_GEAR:

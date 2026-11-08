@@ -109,7 +109,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema10-"+branch+".json"))
   check(w.restore(old) and w.layout_revision==1,"old schema10 retains layout1")
   var migrated=state(w); migrated.erase("layout_revision"); migrated.version=10
-  for field in ["attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft","talent_draft","last_kill_kind","legacy_points","legacy_reserves","cargo"]: migrated.erase(field)
+  for field in ["attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft","talent_draft","last_kill_kind","legacy_points","legacy_reserves","cargo","rope"]: migrated.erase(field)
   check(JSON.parse_string(JSON.stringify(migrated))==old,"old map, rewards, resources and coordinates are unchanged")
   var landing=Layout.stair_destination(w.floors,1,0,Vector2i(9,9))
   check(landing.ok and landing.pos==Vector2i(1,1),"old stair corner mapping remains compatible")

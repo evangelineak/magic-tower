@@ -65,7 +65,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema8-"+reward+".json"))
   check(w.restore(old) and w.travel_anchors.is_empty() and not w.audit_read and not w.audit_solved and w.audit_reward=="","old seen floors do not create anchors or audit rewards")
   var upgraded=state(w)
-  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft","talent_draft","last_kill_kind","legacy_points","legacy_reserves","cargo"]: upgraded.erase(field)
+  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft","talent_draft","last_kill_kind","legacy_points","legacy_reserves","cargo","rope"]: upgraded.erase(field)
   upgraded.version=8
   check(JSON.parse_string(JSON.stringify(upgraded))==old,"real old oath/NPC/stock state completely preserved: "+reward)
   reject(w,"fast_travel_3:1:3"); restore_check(w)

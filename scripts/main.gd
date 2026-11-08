@@ -70,6 +70,8 @@ var battle_hero := "warden"
 var battle_skill := false
 var interaction_page := 0
 var interaction := false
+var rope_pending: Dictionary={}
+var rope_inspecting:=false
 var cargo_pending := false
 var cargo_inspecting := false
 var winch_pending := ""
@@ -130,6 +132,8 @@ func _ready():
 	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent","gate_brute","archivist","ferryman","jailer","ilen","mira"]:
 		var path := "res://assets/map_icons/%s.png" % id
 		if ResourceLoader.exists(path): map_art[id]=load(path)
+	for rope_art in ["rope_ready","rope_spent"]:
+		if ResourceLoader.exists("res://assets/rope/%s.png" % rope_art): map_art[rope_art]=load("res://assets/rope/%s.png" % rope_art)
 	for cargo_art in ["cargo","cargo_empty"]:
 		if ResourceLoader.exists("res://assets/cargo/%s.png" % cargo_art): map_art[cargo_art]=load("res://assets/cargo/%s.png" % cargo_art)
 	buttons = [Rect2(768,636,148,40),Rect2(932,636,148,40),Rect2(1096,636,148,40),Rect2(1014,536,230,40),Rect2(768,586,230,40),Rect2(768,536,230,40),Rect2(1014,586,230,40),Rect2(768,686,476,40)]
@@ -193,6 +197,7 @@ func _draw():
 				draw_line(center+Vector2(-toward*12,0),center+Vector2(toward*12,0),TEAL,3)
 				draw_line(center+Vector2(toward*12,0),center+Vector2(toward*5,-7),TEAL,3)
 				draw_line(center+Vector2(toward*12,0),center+Vector2(toward*5,7),TEAL,3)
+	draw_rope_marker()
 	draw_target_marker()
 	var hero := ORIGIN+Vector2(world.pos)*CELL+Vector2(CELL/2,CELL/2)
 	draw_circle(hero,19+sin(tick*3)*1.5,Color(0.4,0.85,0.76,0.15))
@@ -403,7 +408,7 @@ func open_attunement():
 	if attuning: close_attunement(); return
 	if battle_time>0.0: return
 	close_travel(); comparison=false; journal=false; book=false; growth=false; interaction=false
-	winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	attune_gear=world.equipped if world.equipped!="balanced" else "buckler"; attune_pending=""; attuning=true
 func cycle_attunement(delta: int):
 	var ids: Array=["buckler","duelist","repeater","maul"]
@@ -520,6 +525,43 @@ func draw_tactical_branch(branch: Dictionary,p:Vector2):
 	if preview.get("survivable",false) and branch.get("focus_after")!=null:
 		label_at(p+Vector2(0,36),"Focus: spend %d / restore %d / after %d" % [int(branch.focus_cost),int(branch.focus_restored),int(branch.focus_after)],11,TEAL)
 		label_at(p+Vector2(0,52),"Victory: %d gold before debt / +%d HP" % [int(preview.get("gold_after",0)),int(preview.get("heal_after",0))],11,TEAL)
+func tactical_map_data() -> Dictionary:
+	if not comparison: return {}
+	var forecast:=comparison_forecast()
+	var flank:Dictionary=forecast.get("flank",{})
+	if not forecast.get("valid",false) or not flank.get("available",false): return {}
+	var start:Vector2i=compare_pos-Vector2i(2,2)
+	var cells:Array=[]
+	for y in range(5):
+		for x in range(5):
+			var point:=start+Vector2i(x,y)
+			cells.append({"point":point,"token":world.tile(point)})
+	return {"start":start,"cells":cells,"player":world.pos,"enemy":compare_pos,"barrier":flank.position,"player_visible":absi(world.pos.x-compare_pos.x)<=2 and absi(world.pos.y-compare_pos.y)<=2}
+func draw_tactical_map():
+	var data:=tactical_map_data()
+	if data.is_empty(): return
+	panel(Rect2(1095,70,170,335),Color("0c1928"))
+	label_at(Vector2(1105,94),"LOCAL VIEW / N UP",12,GOLD)
+	var origin:=Vector2(1110,110)
+	for cell in data.cells:
+		var offset:Vector2i=cell.point-data.start
+		var rect:=Rect2(origin+Vector2(offset)*28,Vector2(26,26))
+		draw_rect(rect,Color("344657") if cell.token=="#" else Color("142838"))
+		if cell.token not in ["#","."]: draw_circle(rect.get_center(),3,MUTED)
+		var mark:=""
+		var color:=INK
+		if cell.point==data.barrier: mark="F";color=TEAL
+		if cell.point==data.enemy: mark="E";color=RED
+		if cell.point==data.player: mark="P";color=GOLD
+		if mark!="": label_at(rect.position+Vector2(7,19),mark,16,color)
+		if cell.point==data.barrier: draw_rect(rect,TEAL,false,2)
+		if cell.point==(data.barrier if compare_flank else data.player): draw_rect(rect.grow(1),GOLD,false,2)
+	label_at(Vector2(1105,269),"P: YOU (%d,%d)" % [data.player.x,data.player.y],11,GOLD)
+	label_at(Vector2(1105,289),"E: ENEMY (%d,%d)" % [data.enemy.x,data.enemy.y],11,RED)
+	label_at(Vector2(1105,309),"F: BARRIER (%d,%d)" % [data.barrier.x,data.barrier.y],11,TEAL)
+	label_at(Vector2(1105,331),"Coordinates start at 0.",10,MUTED)
+	if not data.player_visible: draw_wrapped(Vector2(1105,350),"You are outside this inset.",150,11,GOLD,2)
+	draw_wrapped(Vector2(1105,385),"Location only, not a route.",150,11,MUTED,2)
 func draw_comparison():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
 	panel(Rect2(195,70,890,670),Color("0c1928"))
@@ -556,6 +598,7 @@ func draw_comparison():
 	panel(Rect2(800,682,110,35),Color("253748")); label_at(Vector2(812,706),"PREV",14)
 	panel(Rect2(920,682,110,35),Color("253748")); label_at(Vector2(932,706),"NEXT",14)
 	label_at(Vector2(225,706),"V / Esc: close. [ / ]: equipment pages. %d / %d" % [compare_page+1,maxi(1,ceili(comparison_rows().size()/3.0))],14,MUTED)
+	draw_tactical_map()
 func chapter_button() -> Rect2:
 	return Rect2(395,465,490,55)
 func draw_victory():
@@ -724,7 +767,12 @@ func cargo_actions() -> Array:
 	for offer in world.cargo_offers():
 		rows.append([offer[0],"Ship the original supply free / delay its 70 HP" if offer[0]=="cargo_ship" else offer[1]])
 	return rows
+func at_rope_anchor() -> bool:
+	var preview:Dictionary=world.rope_preview()
+	return preview.valid and world.pos in [preview.origin,preview.landing]
 func available_actions() -> Array:
+	if not rope_pending.is_empty(): return [["rope_confirm","Confirm: spend 1 focus and cross once"],["rope_cancel","Cancel: stay on this bank"]]
+	if rope_inspecting or at_rope_anchor(): return world.rope_offers()
 	if cargo_pending: return [["cargo_confirm","Confirm shipment to the fixed destination"],["cargo_cancel","Cancel: keep the floor 1 box sealed"]]
 	if cargo_inspecting: return cargo_actions()
 	if winch_pending!="": return [["winch_confirm","Confirm permanent winch choice"],["winch_cancel","Cancel: leave both options undecided"]]
@@ -740,6 +788,7 @@ func available_actions() -> Array:
 	rows.append_array(world.audit_offers())
 	rows.append_array(world.winch_offers())
 	rows.append_array(cargo_actions())
+	if world.rope_context(): rows.append(["rope_inspect","Inspect the single-use ferry rope / no cost"])
 	if world.cargo_context() and nearby("Q"): rows.append(["cargo_inspect","Read the freight label / no resources spent"])
 	if nearby("M"):
 		if (world.seal_clues & 1)==0: rows.append(["seal_contract","Read the old contract: calibration clue / lift power required"])
@@ -797,6 +846,9 @@ func action_label(rect: Rect2, source: String):
 	label_at(rect.position+Vector2(12,15),text.left(cut),14)
 	label_at(rect.position+Vector2(12,31),text.substr(cut).strip_edges(),14)
 func draw_interaction():
+	if rope_inspecting or not rope_pending.is_empty() or (pending_reason=="" and at_rope_anchor()):
+		draw_rope_confirmation()
+		return
 	if cargo_pending or cargo_inspecting or (world.cargo_context() and not nearby("Q") and pending_reason==""):
 		draw_cargo()
 		return
@@ -878,6 +930,39 @@ func draw_key_confirmation():
 	label_at(Vector2(290,580),"U restores the opened door, your keys and your position together.",15,MUTED)
 	label_at(Vector2(290,640),"Nothing is spent until you confirm.",16,TEAL)
 	label_at(Vector2(290,672),"Click a choice / press 1-2. E / Esc cancels.",14,MUTED)
+func draw_rope_marker():
+	var preview:Dictionary=world.rope_preview()
+	if not preview.valid:return
+	var origin:Vector2=ORIGIN+Vector2(preview.origin)*CELL+Vector2(CELL/2,CELL/2)
+	var landing:Vector2=ORIGIN+Vector2(preview.landing)*CELL+Vector2(CELL/2,CELL/2)
+	var art:String="rope_spent" if preview.status=="spent" else "rope_ready"
+	if map_art.has(art):draw_texture_rect(map_art[art],Rect2(origin-Vector2(27,27),Vector2(54,54)),false)
+	else:draw_arc(origin,18,0,TAU,20,GOLD,3)
+	label_at(origin+Vector2(-25,-18),"E",13,GOLD)
+	if preview.status!="ready":return
+	# Offset above the guard so the direction cue never conceals its identity.
+	var from:Vector2=origin+Vector2(0,-25)
+	var to:Vector2=landing+Vector2(0,-25)
+	draw_line(from,to,GOLD,2)
+	var direction:float=signf(to.x-from.x)
+	draw_line(to,to+Vector2(-direction*8,-6),GOLD,2);draw_line(to,to+Vector2(-direction*8,6),GOLD,2)
+	draw_rect(Rect2(landing-Vector2(27,27),Vector2(54,54)),GOLD,false,2)
+func draw_rope_confirmation():
+	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
+	panel(Rect2(260,120,770,570),Color("0c1928"))
+	label_at(Vector2(290,158),"ONE-WAY FERRY ROPE",24,GOLD)
+	var preview:Dictionary=world.rope_preview()
+	if preview.valid:
+		label_at(Vector2(290,205),"Takeoff (%d,%d) -> landing (%d,%d) / cost 1 focus" % [preview.origin.x,preview.origin.y,preview.landing.x,preview.landing.y],18,TEAL)
+		draw_wrapped(Vector2(290,245),"The rope snaps after crossing. The guardian stays alive. No kill, gold or victory recovery.",700,17,INK,3)
+		draw_wrapped(Vector2(290,305),"Return requires another route, the bridge, or fighting the guardian. U can undo the complete crossing.",700,16,INK,3)
+		draw_wrapped(Vector2(290,520),"Last focus: your armed skill will be cancelled." if preview.disarm else "Any currently armed skill stays prepared if focus remains.",700,15,GOLD,2)
+	draw_wrapped(Vector2(290,570),preview.reason,700,15,TEAL,3)
+	action_rows=visible_actions()
+	for i in action_rows.size():
+		var rect:=Rect2(285,375+i*43,720,37)
+		panel(rect,Color("253748"));action_label(rect,"%d  %s" % [i+1,action_rows[i][1]])
+	label_at(Vector2(290,672),"Click a choice or press its number. E / Esc closes without choosing.",14,MUTED)
 func draw_cargo():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
 	panel(Rect2(260,120,770,570),Color("0c1928"))
@@ -909,6 +994,21 @@ func draw_winch_confirmation():
 func perform_action(id: String, confirmed:=false):
 	if not can_mutate(): return
 	cancel_walk()
+	if id=="rope_inspect":rope_inspecting=true;interaction=true;interaction_page=0;return
+	if id=="rope_cancel":rope_pending.clear();return
+	if id=="rope_confirm":
+		if rope_pending.is_empty():return
+		var expected:Dictionary=rope_pending.duplicate(true)
+		rope_pending.clear()
+		if expected!=world.save_data():
+			ui_notice="Journey changed. Inspect the rope again before confirming."
+			return
+		await perform_action("rope_cross",true)
+		return
+	if id=="rope_cross" and not confirmed:
+		if not world.rope_preview().available:return
+		rope_pending=world.save_data().duplicate(true);rope_inspecting=true;interaction=true;interaction_page=0
+		return
 	if id=="cargo_inspect": cargo_inspecting=true; interaction=true; interaction_page=0; return
 	if id=="cargo_cancel": cargo_pending=false; return
 	if id=="cargo_confirm":
@@ -919,29 +1019,30 @@ func perform_action(id: String, confirmed:=false):
 	if id=="cargo_ship" and not confirmed:
 		cargo_pending=true; interaction=true; interaction_page=0
 		return
-	if id=="winch_cancel": winch_pending=""; cargo_pending=false; cargo_inspecting=false; return
+	if id=="winch_cancel": winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; return
 	if id=="winch_confirm":
 		var choice: String=winch_pending
-		winch_pending=""; cargo_pending=false; cargo_inspecting=false
+		winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false
 		if choice!="": await perform_action(choice,true)
 		return
 	if id in ["winch_rescue","winch_armory"] and not confirmed:
 		winch_pending=id; interaction=true; interaction_page=0
 		return
 	if id=="cancel":
-		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; return
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; return
 	if id=="continue":
 		var direction := checkpoint_pending
-		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false
 		await move(direction,true)
 		return
 	reset_armed=false
 	var result: Dictionary=await session.action(id)
 	apply_session_result(result)
 func action_effect(id: String):
+	if id=="rope_cross": rope_pending.clear(); rope_inspecting=false; interaction=false
 	if id in ["cargo_ship","cargo_claim"]: cargo_pending=false
 	if id=="expedition":
-		book=false; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; battle_time=0.0
+		book=false; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; battle_time=0.0
 		checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if id in ["spring","drain","quest_bridge","camp_bridge"]: play_sound("water")
 	elif id in ["cargo_claim","expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher","audit_medicine"]: play_sound("pickup")
@@ -978,7 +1079,7 @@ func open_growth():
 	close_attunement()
 	cancel_walk()
 	comparison=false
-	growth=not growth; journal=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	growth=not growth; journal=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if growth: growth_tab=2 if not world.talent_options().is_empty() else 0
 func draw_growth():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
@@ -1036,7 +1137,7 @@ func open_journal():
 	journal=not journal
 	journal_page=0
 	journal_details=false
-	book=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	book=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 func floor_has(index: int, token: String) -> bool:
 	for row in world.floors[index]:
 		if token in row: return true
@@ -1401,7 +1502,7 @@ func _unhandled_input(event):
 			var rows := visible_actions()
 			for i in rows.size():
 				if Rect2(285,375+i*43,720,37).has_point(get_global_mouse_position()): perform_action(rows[i][0]); return
-			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 			return
 		if world.won and Rect2(395,575,490,48).has_point(get_global_mouse_position()): request_finish(); return
 		if Rect2(768,738,476,32).has_point(get_global_mouse_position()): request_finish(); return
@@ -1455,9 +1556,9 @@ func _unhandled_input(event):
 			return
 		if event.keycode==KEY_J: open_journal(); return
 		if event.keycode==KEY_C: open_growth(); return
-		if event.keycode==KEY_H: book=not book; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
-		if event.keycode==KEY_E: interaction=not interaction; winch_pending=""; cargo_pending=false; cargo_inspecting=false; interaction_page=0; journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
-		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_H: book=not book; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_E: interaction=not interaction; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; interaction_page=0; journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
 		if journal:
 			if event.keycode==KEY_TAB: journal_details=not journal_details; return
 			if not journal_details:
@@ -1513,7 +1614,7 @@ func request_restart(mode: String):
 		var result: Dictionary=await session.new_run(world.seed_value if mode=="replay" else randi_range(1,2147483646),2,true,selected_run_mode)
 		apply_session_result(result)
 		if not result.get("committed",false): return
-		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	else:
 		reset_armed=true; reset_mode=mode; selected_run_mode="safe"
 		ui_notice="Press %s again: %s. Autosave will be replaced." % ["R" if mode=="replay" else "N","replay this seed" if mode=="replay" else "start a new seed"]
@@ -1578,7 +1679,7 @@ func load_game():
 		result=await session.new_run(initial_seed())
 	apply_session_result(result)
 	if not result.get("ok",false): return
-	journal=false; journal_page=0; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; growth=result.get("committed",false) and result.get("effect",{}).get("operation","")=="create"; gear_page=0; book=false; comparison=false
+	journal=false; journal_page=0; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; growth=result.get("committed",false) and result.get("effect",{}).get("operation","")=="create"; gear_page=0; book=false; comparison=false
 	checkpoint_pending=Vector2i.ZERO; pending_reason=""; battle_time=0.0
 func retry_save():
 	if session==null or session.busy: return
@@ -1632,7 +1733,7 @@ func dispatch_committed_effect(effect: Dictionary):
 			finish_pending=""
 			close_attunement(); close_travel(); comparison=false; journal=false; book=false
 			reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0
-			interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+			interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 
 func is_terminal() -> bool:
 	return session!=null and session.get("terminal")==true
