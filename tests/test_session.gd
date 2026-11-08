@@ -1,5 +1,6 @@
 extends SceneTree
 const Session=preload("res://scripts/session.gd")
+const Strategy=preload("res://scripts/legacy_strategy.gd")
 const Profile=preload("res://scripts/legacy_profile.gd")
 const World=preload("res://scripts/world.gd")
 var checks=0
@@ -18,6 +19,7 @@ class FakeStore:
  var json_transport=false
  var response_patch:Dictionary={}
  var profile=Profile.fresh()
+ var override_create_pool=null
  func failure(status:String,retryable=false): return {"ok":false,"status":status,"reason":status,"retryable":retryable}
  func response():
   var result=record.duplicate(true);result.ok=true;result.status="archived" if record.get("status")=="archived" else "active";result.reason=""
@@ -33,7 +35,8 @@ class FakeStore:
    return response() if signature==sig else failure("conflict")
   if fail_before:fail_before=false;return failure("io_error",true)
   if not record.is_empty() and record.get("status", "active")=="active" and not replace:return failure("active_exists")
-  var w=World.new(seed_value,layout,request,mode)
+  var pool=Strategy.pool_from_profile(profile) if override_create_pool==null else override_create_pool
+  var w=World.new(seed_value,layout,request,mode,false,pool)
   record={"snapshot":w.save_data(),"run_id":request,"slot":record.get("slot",0)+1,"revision":0,"eligible":true}
   op=request;signature=sig;writes+=1
   if lost_ack:lost_ack=false;return failure("ack_lost",true)
@@ -47,6 +50,9 @@ class FakeStore:
   if fail_before:fail_before=false;return failure("io_error",true)
   if record.get("status", "active")!="active":return failure("archived")
   if record.is_empty() or expected_slot!=record.slot or expected_revision!=record.revision or run_id!=record.run_id:return failure("conflict")
+  var current=World.from_snapshot(record.snapshot)
+  if current==null or snapshot.get("draft")!=current.draft:return failure("draft_changed")
+  if current.strategy_pending() and snapshot!=current.save_data():return failure("draft_pending")
   record.snapshot=snapshot.duplicate(true);record.revision+=1;op=request;signature=sig;writes+=1
   if lost_ack:lost_ack=false;return failure("ack_lost",true)
   return response()
@@ -85,6 +91,19 @@ class FakeStore:
   profile=settled.profile
   record.snapshot=candidate.save_data();record.revision+=1;record.slot+=1
   record.status="archived";record.receipt=settled.receipt;record.profile=profile.duplicate(true)
+  op=request;signature=sig;writes+=1
+  if lost_ack:lost_ack=false;return failure("ack_lost",true)
+  return response()
+ func choose_strategy(expected_slot,expected_revision,run_id,choice,request):
+  if delay: await Engine.get_main_loop().process_frame
+  var sig=JSON.stringify([expected_slot,expected_revision,run_id,choice,"strategy"])
+  if conflict:return failure("conflict")
+  if op==request:return response() if signature==sig else failure("conflict")
+  if fail_before:fail_before=false;return failure("io_error",true)
+  if record.is_empty() or expected_slot!=record.slot or expected_revision!=record.revision or run_id!=record.run_id or record.get("status","active")!="active":return failure("conflict")
+  var candidate=World.from_snapshot(record.snapshot)
+  if candidate==null or not candidate.choose_strategy(choice):return failure("invalid")
+  record.snapshot=candidate.save_data();record.revision+=1
   op=request;signature=sig;writes+=1
   if lost_ack:lost_ack=false;return failure("ack_lost",true)
   return response()
@@ -200,6 +219,7 @@ func run():
   check(not (await broken_session.action("hero_ranger")).ok and broken_session.world.save_data()==old and broken_session.history.is_empty(),"commit rejects wrong slot or non-CAS revision without publishing")
  await settlement_cases()
  await death_cases()
+ await strategy_cases()
  print("SESSION: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
  quit(0 if failures==0 else 1)
 
@@ -258,6 +278,7 @@ func settlement_cases():
  var old_id=loaded.world.run_id
  check((await loaded.new_run(42)).ok and not loaded.terminal and loaded.world.run_id!=old_id and loaded.receipt.is_empty() and loaded.profile.receipts.size()==1,"explicit new journey has new ID, clears receipt display and retains permanent profile")
  check(store.profile.receipts.size()==1,"new journey doesn't erase permanent ledger")
+ check((await loaded.choose_strategy("none")).ok,"unlocked new journey explicitly keeps original kit")
  # Pending old settlement cannot publish over another writer's newly created run.
  check((await loaded.action("hero_ranger")).ok,"new active run usable")
  store.lost_ack=true
@@ -372,3 +393,85 @@ func death_cases():
  await conflict_store.create_run(3,2,"safe",true,"replacement_risk_0123456789")
  check(not (await conflict_session.retry_pending()).ok and conflict_session.read_only and conflict_session.world.save_data()==before,"newer run fences old death response without replacing visible world")
  check((await conflict_session.reacquire_and_reload()).ok and not conflict_session.terminal and conflict_session.world.mode=="safe","explicit reload follows newer live identity")
+
+func strategy_profile():
+ return Profile.settle(Profile.fresh(),"previous_run_0123456789",{"seed":1,"max_floor":3,"moves":100,"outcome":"withdrawn"}).profile
+func strategy_cases():
+ var empty_store=FakeStore.new();var empty=Session.new(empty_store)
+ check((await empty.new_run(0)).ok and empty.world.draft.choice=="none" and not empty.world.strategy_pending(),"no unlocked pool automatically keeps original kit")
+ check(not (await empty.choose_strategy("none")).ok,"auto-locked empty draft is not another decision")
+ var store=FakeStore.new();store.profile=strategy_profile();store.json_transport=true
+ var session=Session.new(store)
+ check((await session.new_run(42,2,false,"risk")).ok,"unlocked risk creation derives draft from authoritative profile")
+ var born=session.world.save_data().duplicate(true)
+ check(session.world.strategy_pending() and born.draft.pool==Strategy.pool_from_profile(store.profile) and born.draft.offers.size()==3,"birth pool and fixed offers validated")
+ var writes=store.writes
+ for op in ["undo"]:check((await session.call(op)).status=="draft_pending","unselected draft blocks "+op)
+ check((await session.action("hero_ranger")).status=="draft_pending","strategy chosen before hero action")
+ check((await session.step(Vector2i.RIGHT)).status=="draft_pending","strategy chosen before movement")
+ check((await session.safe_walk(Vector2i(2,1),0,Vector2i(1,1))).status=="draft_pending","strategy chosen before safe walking")
+ check((await session.finish("withdrawn")).status=="draft_pending","unselected draft cannot retire for rewards")
+ check((await session.confirm_lethal(Vector2i.RIGHT,born)).status=="draft_pending","unselected draft cannot fake death")
+ check(store.writes==writes and session.world.save_data()==born,"blocked actions do not mutate or persist")
+ check((await session.save()).ok and session.world.save_data()==born and session.history.is_empty(),"pending draft can save without choosing or rerolling")
+ check((await session.open_current()).ok and session.world.save_data()==born,"pending reload retains offers")
+ check(not (await session.choose_strategy("unknown")).ok,"unoffered strategy refused")
+ var choice=born.draft.offers[0]
+ store.fail_before=true
+ check(not (await session.choose_strategy(choice)).ok and session.world.save_data()==born and session.history.is_empty(),"selection IO failure keeps unselected World")
+ check((await session.action("hero_ranger")).status=="pending","new actions blocked while selection CAS pending")
+ store.lost_ack=true
+ check(not (await session.retry_pending()).ok and session.world.save_data()==born,"selection lost ack not published")
+ writes=store.writes
+ var result=await session.retry_pending()
+ check(result.ok and result.effect=={"operation":"strategy","input":choice} and store.writes==writes,"same nonce publishes exactly one strategy choice")
+ var locked=session.world.save_data().duplicate(true)
+ check(not session.world.strategy_pending() and locked.draft.choice==choice and locked.moves==0 and session.history.is_empty(),"choice locks without moves or undo entry")
+ for key in born:
+  if key!="draft":check(locked[key]==born[key],"choice changes no saved resource or identity: "+key)
+ check(not (await session.choose_strategy("none")).ok,"cannot rechoose original kit after locking")
+ check((await session.action("hero_ranger")).ok and (await session.undo()).ok and session.world.save_data()==locked,"undo first gameplay action retains locked draft")
+ session.history.append(born)
+ writes=store.writes
+ check(not (await session.undo()).ok and store.writes==writes and session.world.save_data()==locked,"even injected old history cannot unlock draft")
+ session.history.clear()
+ check((await session.open_current()).ok and session.world.draft.choice==choice,"read retains locked selection")
+ var old_id=session.world.run_id
+ check((await session.new_run(42,2,true,"risk")).ok and session.world.run_id!=old_id and session.world.draft.offers==born.draft.offers,"explicit same seed new identity keeps reproducible offers")
+ check(session._same_json(session.profile,store.profile) and session.profile.receipts.size()==1,"new run preserves unlock ledger")
+ check((await session.choose_strategy("none")).ok and session.world.draft.choice=="none","original kit remains always selectable")
+ # Existing eligible schema14 active run migrates to locked original, no lottery.
+ var old=World.new(0,2,"legacy_run_0123456789","safe").save_data()
+ old.version=14;old.erase("draft")
+ store.record={"snapshot":old,"run_id":old.run_id,"slot":store.record.slot+1,"revision":0,"eligible":true}
+ store.op="migration_fixture"
+ check((await session.open_current()).ok and session.world.draft=={"version":0,"pool":[],"offers":[],"choice":"none"},"old active run does not receive newly unlocked draw")
+ check(not (await session.choose_strategy(choice)).ok and (await session.action("hero_ranger")).ok,"legacy original-kit journey remains playable but cannot attach a strategy")
+ # Another writer locks first. Explicit reload, never retry against new revision.
+ var rival_store=FakeStore.new();rival_store.profile=strategy_profile()
+ var rival=Session.new(rival_store);await rival.new_run(0)
+ var before=rival.world.save_data().duplicate(true)
+ rival_store.conflict=true
+ check(not (await rival.choose_strategy("none")).ok and rival.read_only and rival.world.save_data()==before,"choice fence conflict preserves pending draft")
+ rival_store.conflict=false
+ await rival_store.choose_strategy(rival.slot,rival.revision,rival.world.run_id,before.draft.offers[0],"rival_choice_0123456789")
+ check((await rival.reacquire_and_reload()).ok and rival.world.draft.choice==before.draft.offers[0],"explicit reload follows winning writer choice")
+ check(not (await rival.choose_strategy("none")).ok,"cannot overwrite other writer choice after reload")
+ # Self-consistent World with a false birth pool is still not an authorized create.
+ var bad_store=FakeStore.new();bad_store.profile=strategy_profile();bad_store.override_create_pool=[]
+ var bad_session=Session.new(bad_store)
+ check(not (await bad_session.new_run(0)).ok and bad_session.world==null,"new-run response must use profile-derived pool, not merely valid draft")
+
+ var create_store=FakeStore.new();create_store.profile=strategy_profile();create_store.lost_ack=true
+ var create_session=Session.new(create_store)
+ check(not (await create_session.new_run(77)).ok and create_session.world==null,"profile-derived draft create ackloss stays unpublished")
+ var created=create_store.record.snapshot.duplicate(true);var create_writes=create_store.writes
+ check((await create_session.retry_pending()).ok and create_session.world.save_data()==created and create_store.writes==create_writes,"same create request restores identical ID and offers, never redraws")
+ var saved_world=create_session.world.save_data().duplicate(true)
+ create_store.profile=Profile.fresh()
+ check(not (await create_session.open_current()).ok and create_session.world.save_data()==saved_world,"valid draft with IDs unauthorized by returned ledger cannot load")
+ var ack_store=FakeStore.new();ack_store.profile=strategy_profile();var ack_session=Session.new(ack_store)
+ await ack_session.new_run(1)
+ var unchanged=ack_session.world.save_data().duplicate(true)
+ ack_store.response_patch={"revision":0}
+ check(not (await ack_session.choose_strategy("none")).ok and ack_session.world.save_data()==unchanged and ack_session.history.is_empty(),"wrong strategy acknowledgement revision cannot publish lock")

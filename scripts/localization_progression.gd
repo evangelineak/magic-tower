@@ -3,6 +3,7 @@ extends RefCounted
 # Pure display catalog. English simulation IDs and rule text remain untouched.
 # Dynamic templates retain argument order; %% is a literal percent sign.
 const EXACT = {
+"Skill training +4 levels. Brace, Precision and Mend use your total level.": "技能训练 +4 级。架盾、精准破甲和治愈按实际总等级生效。",
 "Clear focus":"澄明专注",
 "Deep focus":"深度专注",
 "Honed edge":"精磨锋刃",

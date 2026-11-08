@@ -1,4 +1,5 @@
 extends SceneTree
+const Strategy=preload("res://scripts/legacy_strategy.gd")
 const World=preload("res://scripts/world.gd")
 func _initialize():
  var first=World.new(0,2,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","safe")
@@ -24,4 +25,12 @@ func _initialize():
  assert(risk.lethal_fight(Vector2i.LEFT));payload.risk_dead=risk.save_data().duplicate(true)
  payload.schema13_active=JSON.parse_string(JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema13-active-store.json")).payload)
  payload.schema13_archived=JSON.parse_string(JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema13-archived-store.json")).payload)
+ var next_run=World.from_snapshot(payload.next_fresh)
+ for c in load("res://scripts/generation.gd").validate(next_run.floors).route:assert(next_run.step({"U":Vector2i.UP,"D":Vector2i.DOWN,"L":Vector2i.LEFT,"R":Vector2i.RIGHT}[c]))
+ payload.next_chapter_base=next_run.save_data().duplicate(true);assert(next_run.finish_run("chapter1"));payload.next_chapter_ended=next_run.save_data().duplicate(true)
+ var draft_run=World.new(51,2,"uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu","safe",false,Strategy.pool_for_milestones([3,5]))
+ payload.draft_fresh=draft_run.save_data().duplicate(true)
+ assert(draft_run.choose_strategy(draft_run.draft.offers[0]));payload.draft_selected=draft_run.save_data().duplicate(true)
+ assert(draft_run.step(Vector2i.RIGHT));payload.draft_moved=draft_run.save_data().duplicate(true)
+ payload.draft_next=World.new(51,2,"vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv","risk",false,Strategy.pool_for_milestones([3,5])).save_data().duplicate(true)
  var file=FileAccess.open("res://tools/session_bridge_fixtures.json",FileAccess.WRITE);file.store_string(JSON.stringify(payload));file.close();quit()

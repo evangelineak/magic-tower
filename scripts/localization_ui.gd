@@ -1,5 +1,17 @@
 extends RefCounted
 const EXACT = {
+"No victory rewards: this forecast is lethal or unavailable.":"预计致死或无法战斗：没有胜利奖励。",
+"Same HP, talents, run strategy, oath and armed skill for every row.":"各行使用相同生命、天赋、本局策略、誓约及备战技能。",
+"Records alone grant no stats. Only a strategy explicitly chosen for a new run applies.":"记录本身不加属性，只有新局明确选择的策略才会生效。",
+"Only newly reached floor milestones 3 / 5 / 8 are recorded. Records alone grant no stats. Only a strategy explicitly chosen for a new run applies.":"仅首次到达的第 3 / 5 / 8 层会记入档案。记录本身不加属性，只有新局明确选择的策略才会生效。",
+"LEGACY STRATEGY / ONE CHOICE THIS RUN":"轮回策略 / 本局仅选一项",
+"Choose a trade-off before the first step. Original rules remain viable. This is separate from hero, equipment and kill talents.":"第一步前选择一项取舍，原装规则也能通关。这与英雄、装备调校和击杀天赋分别选择。",
+"0  Original rules / no strategy modifier":"0  保持原装规则 / 不启用策略修正",
+"Select a card to preview. Nothing is locked until Enter.":"先选卡片查看；按回车前不会锁定。",
+"Locked for this run. Undo and reload do not reroll or undo this choice.":"确认后本局固定；撤销、读档都不会重抽或撤销策略。",
+"ENTER: LOCK STRATEGY / Esc: clear selection":"回车：锁定策略 / Esc：清除预选",
+"N: new seed / R: same seed new run / L: reload / F2: language":"N：新种子开局 / R：同种子开局 / L：读档 / F2：语言",
+
 "B: review the fatal events (read-only)":"B：复盘致命事件（只读）",
 "yes":"是",
 "no":"否",
@@ -408,6 +420,10 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+ ["Victory loot (after strategy tax, before debt): %d gold / +%d HP / +%d focus", "胜利战利（策略扣减后、还债前）：%d 金币 / +%d 生命 / +%d 专注"],
+ ["Run strategy: %s", "本局策略：%s"],
+ ["Run strategy: %s. %s", "本局策略：%s。%s"],
+  ["Skill level %d = base %d + training %d + equipment %d + strategy %d", "技能等级 %d = 基础 %d + 训练 %d + 装备 %d + 策略 %d"],
 ["Focus %d / armed skill will consume: %s","当前专注 %d / 本场消耗备战技能：%s"],
 ["Actual hero strikes %d / counters %d / HP lost %d","实际攻击 %d 次 / 反击 %d 次 / 损失生命 %d"],
 ["[ / ]: events page %d / %d","[ / ]：战报第 %d / %d 页"],

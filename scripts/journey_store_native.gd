@@ -2,6 +2,7 @@ class_name TowerJourneyStoreNative
 extends "res://scripts/legacy_store_native.gd"
 ## Production namespace, full World payloads, and idempotent operation receipts.
 ## Does not import or mutate journey-v4.json or the isolated prototype store.
+const Strategy=preload("res://scripts/legacy_strategy.gd")
 const World=preload("res://scripts/world.gd")
 var _snapshot_cache:Dictionary={}
 func _init(path:String="user://journeys-v1"):
@@ -11,7 +12,7 @@ func _init(path:String="user://journeys-v1"):
   if not c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_":allowed=false
  safe_path=allowed;root=ProjectSettings.globalize_path(path) if allowed else ""
 func _snapshot(value)->Dictionary:
- if not value is Dictionary or (value.get("version")!=13 and value.get("version")!=14) or value.get("run_id","")=="":return {}
+ if not value is Dictionary or (value.get("version")!=13 and value.get("version")!=14 and value.get("version")!=15) or value.get("run_id","")=="":return {}
  # World validates both live modes and replay-verified terminal death records.
  if value.get("mode") not in ["safe","risk"]:return {}
  var digest=JSON.stringify(value).sha256_text()
@@ -31,6 +32,9 @@ func _fresh()->Dictionary:
  var data=super._fresh();data.schema=2;return data
 func _valid(data)->bool:
  if not data is Dictionary or data.get("schema")!=2 or not data.get("runs") is Dictionary:return false
+ if not _keys(data,["schema","storageRevision","profile","runs","slot"]):return false
+ if not data.profile is Dictionary or not Profile.validate(data.profile.get("profile")).ok or not data.slot is Dictionary or not data.slot.has("activeRunId"):return false
+ var entitled=Strategy.pool_from_profile(data.profile.profile)
  var plain=data.duplicate(true);plain.schema=1
  for id in data.runs:
   var run=data.runs[id]
@@ -39,9 +43,14 @@ func _valid(data)->bool:
   if run.status!="abandoned" and (not run.snapshot is Dictionary or run.snapshot.get("run_id")!=id):return false
   if run.status=="active" and run.snapshot.get("ended_reason","")!="":return false
   if run.status=="archived" and run.snapshot.get("ended_reason","")=="":return false
+  if run.snapshot!=null:
+   var verified=_snapshot(run.snapshot)
+   if verified.is_empty():return false
+   for strategy in verified.draft.pool:
+    if not strategy in entitled:return false
   var op=run.last_op
   if not _keys(op,["request_id","kind","expected_slot","expected_revision","hash","result_slot","result_revision"]):return false
-  if not Profile.valid_run_id(op.request_id) or op.kind not in ["create","save","settle","death"]:return false
+  if not Profile.valid_run_id(op.request_id) or op.kind not in ["create","save","settle","death","strategy"]:return false
   if not _int(op.expected_slot) or not _int(op.expected_revision,-1) or not _int(op.result_slot) or not _int(op.result_revision):return false
   if not op.hash is String or op.hash.length()!=64 or op.result_revision!=run.revision:return false
   if op.kind=="create" and (op.request_id!=id or op.expected_revision!=-1 or run.revision!=0):return false
@@ -59,6 +68,7 @@ func _valid(data)->bool:
 func _operation(data:Dictionary,op:String,args:Dictionary)->Dictionary:
  if op in ["claim","renew"]:return super._operation(data,op,args)
  if op in ["settle","death"]:return _settle(data,args,op=="death")
+ if op=="strategy":return _choose(data,args)
  if op not in ["create","save"]:return _error("UNSUPPORTED_OPERATION")
  var request_id=args.get("request_id","")
  if not Profile.valid_run_id(request_id):return _error("INVALID_REQUEST_ID")
@@ -75,7 +85,7 @@ func _operation(data:Dictionary,op:String,args:Dictionary)->Dictionary:
  var digest=JSON.stringify(copied).sha256_text()
  if data.runs.has(id) and data.runs[id].last_op.request_id==request_id:
   var existing=data.runs[id];var last=existing.last_op
-  var same_hash=last.hash==digest or (existing.snapshot.get("version")==13 and _snapshot(existing.snapshot)==copied)
+  var same_hash=last.hash==digest or (existing.snapshot is Dictionary and existing.snapshot.get("version",15)<15 and _snapshot(existing.snapshot)==copied)
   if last.kind!=op or not same_hash or (op=="save" and last.expected_slot!=args.auth.expectedSlotRevision) or last.expected_revision!=expected_revision:return _error("REQUEST_CONFLICT")
   if slot.activeRunId!=id or slot.revision!=last.result_slot or existing.revision!=last.result_revision or existing.status!="active":return _error("SUPERSEDED_OPERATION")
   return {"ok":true,"run":existing.duplicate(true),"slotRevision":slot.revision,"leaseUntil":slot.writer.leaseUntil,"profile":data.profile.profile.duplicate(true),"duplicate":true,"changed":false}
@@ -85,7 +95,7 @@ func _operation(data:Dictionary,op:String,args:Dictionary)->Dictionary:
   if data.runs.has(id) or data.profile.profile.receipts.has(id):return _error("ID_COLLISION")
   if data.runs.size()>=4096:return _error("RUNS_FULL")
   if copied.mode not in ["safe","risk"]:return _error("UNSUPPORTED_MODE")
-  var fresh=World.new(int(copied.seed_value),int(copied.layout_revision),id,copied.mode).save_data()
+  var fresh=World.new(int(copied.seed_value),int(copied.layout_revision),id,copied.mode,false,Strategy.pool_from_profile(data.profile.profile)).save_data()
   if copied!=fresh:return _error("NOT_FRESH_RUN")
   if slot.activeRunId!=null and data.runs[slot.activeRunId].status=="active":
    if not args.get("replace",false):return _error("ACTIVE_RUN_EXISTS")
@@ -103,6 +113,9 @@ func _operation(data:Dictionary,op:String,args:Dictionary)->Dictionary:
  if not _int(args.expected) or run.revision!=args.expected:return _error("STALE_REVISION")
  if copied.ended_reason!="" or copied.hp<=0:return _error("SETTLEMENT_NOT_ENABLED")
  if copied.mode!=run.snapshot.mode:return _error("MODE_IMMUTABLE")
+ var prior=_snapshot(run.snapshot)
+ if prior.is_empty() or copied.draft!=prior.draft:return _error("DRAFT_IMMUTABLE")
+ if prior.draft.choice=="" and copied!=prior:return _error("DRAFT_PENDING")
  run.snapshot=copied;run.revision=int(run.revision)+1
  run.last_op={"request_id":request_id,"kind":op,"expected_slot":args.auth.expectedSlotRevision,"expected_revision":args.expected,"hash":digest,"result_slot":slot.revision,"result_revision":run.revision}
  slot.writer.leaseUntil=_now()+60000
@@ -159,3 +172,33 @@ func settle_journey(id:String,auth,expected_revision,outcome:String,request_id:S
 
 func settle_death_journey(id:String,auth,expected_revision,delta:Vector2i,request_id:String)->Dictionary:
  return _mutate("death",{"id":id,"auth":auth,"expected":expected_revision,"delta":delta,"request_id":request_id})
+
+func _choose(data:Dictionary,args:Dictionary)->Dictionary:
+ var id=str(args.get("id",""));var request_id=str(args.get("request_id",""));var choice=args.get("choice")
+ if not Profile.valid_run_id(request_id) or not choice is String:return _error("INVALID_STRATEGY")
+ var slot:Dictionary=data.slot
+ var fence_auth:Dictionary=args.auth.duplicate(true) if args.auth is Dictionary else {}
+ fence_auth.expectedSlotRevision=slot.revision
+ var error=_auth(slot,fence_auth)
+ if error!="":return _error(error)
+ if not data.runs.has(id):return _error("NOT_ACTIVE_RUN")
+ if slot.activeRunId!=id:return _error("SUPERSEDED_OPERATION")
+ var run:Dictionary=data.runs[id];var last:Dictionary=run.last_op
+ if last.request_id==request_id:
+  if last.kind!="strategy" or last.expected_slot!=args.auth.expectedSlotRevision or last.expected_revision!=args.expected:return _error("REQUEST_CONFLICT")
+  if slot.activeRunId!=id or slot.revision!=last.result_slot or run.revision!=last.result_revision or run.status!="active":return _error("SUPERSEDED_OPERATION")
+  if run.snapshot.get("draft",{}).get("choice")!=choice:return _error("REQUEST_CONFLICT")
+  return {"ok":true,"run":run.duplicate(true),"slotRevision":slot.revision,"leaseUntil":slot.writer.leaseUntil,"profile":data.profile.profile.duplicate(true),"duplicate":true,"changed":false}
+ error=_auth(slot,args.auth,id)
+ if error!="":return _error(error)
+ if run.status!="active":return _error("RUN_NOT_ACTIVE")
+ if not _int(args.expected) or run.revision!=args.expected:return _error("STALE_REVISION")
+ var world=World.from_snapshot(run.snapshot)
+ if world==null or not world.choose_strategy(choice):return _error("INVALID_STRATEGY")
+ var chosen=world.save_data()
+ run.snapshot=chosen;run.revision=int(run.revision)+1;slot.writer.leaseUntil=_now()+60000
+ run.last_op={"request_id":request_id,"kind":"strategy","expected_slot":args.auth.expectedSlotRevision,"expected_revision":args.expected,"hash":JSON.stringify(chosen).sha256_text(),"result_slot":slot.revision,"result_revision":run.revision}
+ if test_fail_at=="after_choice":return _error("INJECTED_AFTER_CHOICE")
+ return {"ok":true,"run":run.duplicate(true),"slotRevision":slot.revision,"leaseUntil":slot.writer.leaseUntil,"profile":data.profile.profile.duplicate(true),"changed":true}
+func choose_strategy(id:String,auth,expected_revision,choice:String,request_id:String)->Dictionary:
+ return _mutate("strategy",{"id":id,"auth":auth,"expected":expected_revision,"choice":choice,"request_id":request_id})

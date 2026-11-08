@@ -41,7 +41,7 @@ func _init():
  check(P.brace_percent([],"focus_light")==37 and P.brace_percent(trained,"focus_light")==47,"half-point Brace percentages round down")
  check(P.mend_heal([],"focus_light")==85 and P.mend_heal([],"focus_deep")==90 and P.mend_heal(trained,"focus_deep")==110,"healing uses current selected attunement")
  check(P.mend_heal([])==80,"switching back to original equipment does not retain a higher healing level")
- check(P.skill_level_info(trained,"focus_deep")=={"base":10,"training":4,"gear":2,"effective":16,"cap":20,"attainable_max":16},"UI receives honest level breakdown and currently reachable maximum")
+ check(P.skill_level_info(trained,"focus_deep")=={"base":10,"training":4,"gear":2,"effective":16,"cap":20,"attainable_max":16,"strategy":0},"UI receives honest level breakdown and currently reachable maximum")
  var largest=0
  for id in A.TEMPLATE_IDS:
   largest=maxi(largest,P.skill_level(trained,id))

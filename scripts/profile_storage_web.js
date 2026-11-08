@@ -21,6 +21,27 @@ const MAX_SNAPSHOT_BYTES=1048576;
 const IDS = ['legacy_scout', 'legacy_tactician', 'legacy_veteran'];
 const LEVELS = [3, 5, 8];
 const fresh = () => ({ revision: 1, milestones: [], receipts: {}, unlocked: [] });
+const STRATEGY_IDS=['study','forager','channel','reserve','ambush_hunter','last_gambit'];
+function strategyPool(profile){
+ must(validateProfile(profile),'CORRUPT_PROFILE');
+ return profile.milestones.length?STRATEGY_IDS.slice(0,profile.milestones.length+3):[];
+}
+function validStrategyPool(pool){return Array.isArray(pool)&&[0,4,5,6].includes(pool.length)&&pool.every((id,i)=>id===STRATEGY_IDS[i]);}
+function strategyRank(seed,id){let h=2166136261;for(const b of new TextEncoder().encode('legacy-strategy-v1|'+seed+'|'+id))h=Math.imul(h^b,16777619)>>>0;return h;}
+function strategyOffers(seed,pool){
+ if(!integer(seed,2147483647)||!validStrategyPool(pool))return [];
+ return [...pool].sort((a,b)=>strategyRank(seed,a)-strategyRank(seed,b)||(a<b?-1:a>b?1:0)).slice(0,3);
+}
+function strategyDraft(seed,pool){
+ if(!integer(seed,2147483647)||!validStrategyPool(pool))return {};
+ return {version:1,pool:[...pool],offers:strategyOffers(seed,pool),choice:pool.length?'':'none'};
+}
+function validDraft(seed,draft){
+ if(!keysExactly(draft,['version','pool','offers','choice'])||typeof draft.choice!=='string')return false;
+ if(draft.version===0)return Array.isArray(draft.pool)&&draft.pool.length===0&&Array.isArray(draft.offers)&&draft.offers.length===0&&draft.choice==='none';
+ if(draft.version!==1||!integer(seed,2147483647)||!validStrategyPool(draft.pool)||!same(draft.offers,strategyOffers(seed,draft.pool)))return false;
+ return draft.pool.length?draft.choice===''||draft.choice==='none'||draft.offers.includes(draft.choice):draft.choice==='none';
+}
 function snapshotCopy(snapshot, allowEnded=false) {
   const s = structuredClone(snapshot);
   let encoded; try {encoded=JSON.stringify(s);}catch{throw new StorageFault('INVALID_SNAPSHOT');}
@@ -29,7 +50,7 @@ function snapshotCopy(snapshot, allowEnded=false) {
   must(!s.floor_seen.some((seen,i) => seen && s.floor_seen.slice(0,i).includes(false)), 'INVALID_SNAPSHOT');
   must(integer(s.floor) && s.floor < s.floor_seen.length && s.floor_seen[s.floor], 'INVALID_SNAPSHOT');
   must(typeof s.won === 'boolean' && Number.isSafeInteger(s.hp) && s.hp >= 0 && integer(s.moves, 10000000) && integer(s.seed_value, 2147483647), 'INVALID_SNAPSHOT');
-  must([13,14].includes(s.version) && validId(s.run_id) && ['safe','risk'].includes(s.mode) && (s.ended_reason==='' || (allowEnded && ['retired','victory','death'].includes(s.ended_reason))), 'INVALID_WORLD');
+  must([13,14,15].includes(s.version) && validId(s.run_id) && ['safe','risk'].includes(s.mode) && (s.ended_reason==='' || (allowEnded && ['retired','victory','death'].includes(s.ended_reason))), 'INVALID_WORLD');
   must([1,2].includes(s.layout_revision) && Array.isArray(s.floors) && s.floors.length===s.floor_seen.length, 'INVALID_WORLD');
   must(integer(s.x,9)&&s.x>=1&&integer(s.y,9)&&s.y>=1&&integer(s.atk,1000000)&&s.atk>0&&integer(s.def,1000000), 'INVALID_WORLD');
   must(s.floors.every(grid=>Array.isArray(grid)&&grid.length===11&&grid.every(row=>Array.isArray(row)&&row.length===11&&row.every(t=>typeof t==='string'&&t.length===1))), 'INVALID_WORLD');
@@ -39,14 +60,18 @@ function snapshotCopy(snapshot, allowEnded=false) {
   const record=s.version===13?{}:s.death_record;
   must(record&&typeof record==='object'&&!Array.isArray(record),'INVALID_DEATH_RECORD');
   if(s.ended_reason==='death'){
-   must(s.version===14&&s.mode==='risk'&&s.hp===0&&!s.won&&s.moves>=1,'INVALID_DEATH_RECORD');
+   must(s.version>=14&&s.mode==='risk'&&s.hp===0&&!s.won&&s.moves>=1,'INVALID_DEATH_RECORD');
    must(keysExactly(record,['floor','x','y','enemy','start_hp','skill_armed'])&&integer(record.floor,7)&&record.floor===s.floor&&integer(record.x,9)&&record.x>=1&&integer(record.y,9)&&record.y>=1&&integer(record.start_hp,1000000)&&record.start_hp>0&&typeof record.skill_armed==='boolean','INVALID_DEATH_RECORD');
    must(Math.abs(record.x-s.x)+Math.abs(record.y-s.y)===1&&['s','g','u','b','w','V','K','W','H','Z','B'].includes(record.enemy)&&s.floors[s.floor][record.y][record.x]===record.enemy,'INVALID_DEATH_RECORD');
   }else must(s.hp>0&&Object.keys(record).length===0,'INVALID_DEATH_RECORD');
+  if(s.version>=15){
+   must(validDraft(s.seed_value,s.draft),'INVALID_DRAFT');
+   if(s.draft.choice==='')must(s.moves===0&&s.ended_reason===''&&s.hp>0,'DRAFT_PENDING');
+  }
   return s;
 }
 function upgradeSnapshot(snapshot){
- const s=structuredClone(snapshot);if(s.version===13){s.version=14;s.death_record={};}return s;
+ const s=structuredClone(snapshot);if(s.version===13){s.version=14;s.death_record={};}if(s.version===14){s.version=15;s.draft={version:0,pool:[],offers:[],choice:'none'};}return s;
 }
 function summaryOf(snapshot, outcome) {
  const s=snapshotCopy(snapshot,true);
@@ -97,7 +122,7 @@ function validRun(r) {
  try {
   if(!keysExactly(r,['id','revision','status','snapshot','last_op'])||!validId(r.id)||!integer(r.revision,10000000)||!['active','archived','abandoned'].includes(r.status))return false;
   const op=r.last_op;
-  if(!keysExactly(op,['request_id','kind','expected_slot','expected_revision','hash','result_slot','result_revision'])||!validId(op.request_id)||!['create','save','settle','death'].includes(op.kind))return false;
+  if(!keysExactly(op,['request_id','kind','expected_slot','expected_revision','hash','result_slot','result_revision'])||!validId(op.request_id)||!['create','save','settle','death','strategy'].includes(op.kind))return false;
   if(!integer(op.expected_slot,10000000)||!Number.isSafeInteger(op.expected_revision)||op.expected_revision< -1||op.expected_revision>10000000||!integer(op.result_slot,10000000)||!integer(op.result_revision,10000000))return false;
   if(typeof op.hash!=='string'||!/^[a-f0-9]{64}$/.test(op.hash)||op.result_revision!==r.revision)return false;
   if(op.kind==='create'&&(op.request_id!==r.id||op.expected_revision!==-1||r.revision!==0||op.result_slot!==op.expected_slot+1))return false;
@@ -114,6 +139,7 @@ function validRun(r) {
 function checkRunLedger(run,profile){
  if(!run)return;
  must(validRun(run),'CORRUPT_RUN');
+ if(run.snapshot){const pool=upgradeSnapshot(run.snapshot).draft.pool,entitled=strategyPool(profile);must(pool.every(id=>entitled.includes(id)),'UNENTITLED_DRAFT');}
  const receipt=profile.receipts[run.id];
  if(run.status==='archived')must(receipt&&same(summaryOf(run.snapshot,receipt.summary.outcome),receipt.summary),'CORRUPT_RECEIPT');
  else must(!receipt,'CLOSED_RECEIPT_ACTIVE');
@@ -259,16 +285,17 @@ class JourneyStorage extends ProfileStorage {
    const run=await req(s('runs').get(id)),expected=kind==='create'?-1:args.expected;
    if(run && run.last_op.request_id===args.request_id){
     const op=run.last_op;
-    must(op.kind===kind && (op.hash===hash || (run.snapshot?.version===13&&same(upgradeSnapshot(run.snapshot),snapshot))) && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
+    must(op.kind===kind && (op.hash===hash || (run.snapshot?.version<15&&same(upgradeSnapshot(run.snapshot),snapshot))) && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
     must(slot.activeRunId===id && slot.revision===op.result_slot && run.revision===op.result_revision && run.status==='active','SUPERSEDED_OPERATION');
     return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile,duplicate:true};
    }
-   if(run?.status==='active')must(!Object.hasOwn(profile.receipts,id),'CLOSED_RECEIPT_ACTIVE');
+   checkRunLedger(run,profile);
    checkSlot(slot,args.auth);
    if(kind==='create'){
     must(!run&&!Object.hasOwn(profile.receipts,id),'ID_COLLISION');must(await req(s('runs').count())<MAX_RUNS,'RUNS_FULL');
     // Full canonical fresh-World comparison is performed on the Godot side.
     // JS independently rejects partial stub, legacy identity and visibly progressed input.
+    must(snapshot.version===15&&same(snapshot.draft,strategyDraft(snapshot.seed_value,strategyPool(profile))),'INVALID_BIRTH_DRAFT');
     must(snapshot.moves===0 && snapshot.floor===0 && snapshot.floors.length===5 && snapshot.x===1 && snapshot.y===1 && !snapshot.won && snapshot.floor_seen.slice(1).every(v=>!v) && snapshot.inventory.length===1,'NOT_FRESH_RUN');
     const prior=slot.activeRunId?await req(s('runs').get(slot.activeRunId)):null;
     checkRunLedger(prior,profile);
@@ -279,9 +306,39 @@ class JourneyStorage extends ProfileStorage {
     return {ok:true,run:created,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
    }
    must(slot.activeRunId===id && validRun(run)&&run.status==='active','NOT_ACTIVE_RUN');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
-   must(snapshot.mode===run.snapshot.mode,'MODE_IMMUTABLE');run.snapshot=snapshot;run.revision=nextCounter(run.revision);
+   must(snapshot.mode===run.snapshot.mode,'MODE_IMMUTABLE');const prior=upgradeSnapshot(run.snapshot);must(same(snapshot.draft,prior.draft),'DRAFT_IMMUTABLE');if(prior.draft.choice==='')must(same(snapshot,prior),'DRAFT_PENDING');run.snapshot=snapshot;run.revision=nextCounter(run.revision);
    run.last_op={request_id:args.request_id,kind,expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
    slot.writer.leaseUntil=Date.now()+60000;await req(s('runs').put(run));await req(s('slots').put(slot));return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
+  });
+ }
+ async chooseStrategy(args){
+  must(validId(args.request_id)&&typeof args.choice==='string'&&(args.choice==='none'||STRATEGY_IDS.includes(args.choice)),'INVALID_STRATEGY');
+  // Prepare a digest before opening the write transaction; compare the complete
+  // prepared base again inside the transaction, in addition to slot/run CAS.
+  const prepared=await this.active();const base=prepared.run?.snapshot;
+  must(base&&prepared.run.id===args.id,'SUPERSEDED_OPERATION');
+  const chosen=upgradeSnapshot(base);chosen.draft.choice=args.choice;
+  const hash=await digestSnapshot(chosen);
+  return this.transaction(['slots','runs','profiles','receipts'],'readwrite',async s=>{
+   const slot=await loadSlot(s),profile=(await loadProfile(s)).profile;
+   checkSlot(slot,{...args.auth,expectedSlotRevision:slot.revision});
+   const run=await req(s('runs').get(args.id));must(validRun(run),'CORRUPT_RUN');checkRunLedger(run,profile);
+   const last=run.last_op;
+   if(last.request_id===args.request_id){
+    must(last.kind==='strategy'&&last.expected_slot===args.auth.expectedSlotRevision&&last.expected_revision===args.expected&&run.snapshot.draft.choice===args.choice,'REQUEST_CONFLICT');
+    must(slot.activeRunId===args.id&&slot.revision===last.result_slot&&run.revision===last.result_revision&&run.status==='active','SUPERSEDED_OPERATION');
+    return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile,duplicate:true};
+   }
+   checkSlot(slot,args.auth,args.id);must(run.status==='active','RUN_NOT_ACTIVE');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
+   must(same(run.snapshot,base),'STALE_BASE');
+   const prior=upgradeSnapshot(run.snapshot);
+   must(prior.moves===0&&prior.ended_reason===''&&prior.draft.version===1&&prior.draft.choice===''&&(args.choice==='none'||prior.draft.offers.includes(args.choice)),'INVALID_STRATEGY');
+   must(validDraft(chosen.seed_value,chosen.draft),'INVALID_DRAFT');
+   run.snapshot=chosen;run.revision=nextCounter(run.revision);slot.writer.leaseUntil=Date.now()+60000;
+   run.last_op={request_id:args.request_id,kind:'strategy',expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
+   await req(s('runs').put(run));
+   if(databaseName.startsWith('magic-tower-journeys-v1-test-')&&args.test_abort==='after_choice')throw new StorageFault('INJECTED_ABORT_after_choice');
+   await req(s('slots').put(slot));return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
   });
  }
  async settleJourney(args,isDeath=false) {
@@ -302,7 +359,7 @@ class JourneyStorage extends ProfileStorage {
    checkRunLedger(run,envelope.profile);
    const last=run.last_op;
    if(last.request_id===args.request_id){
-    must(last.kind===operation&&(last.hash===hash||(run.snapshot.version===13&&same(upgradeSnapshot(run.snapshot),ended)))&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
+    must(last.kind===operation&&(last.hash===hash||(run.snapshot.version<15&&same(upgradeSnapshot(run.snapshot),ended)))&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
     const receipt=envelope.profile.receipts[args.id];
     must(receipt&&same(receipt.summary,expectedSummary),'REQUEST_CONFLICT');
     must(slot.activeRunId===args.id&&slot.revision===last.result_slot&&run.revision===last.result_revision&&run.status==='archived','SUPERSEDED_OPERATION');
@@ -312,6 +369,7 @@ class JourneyStorage extends ProfileStorage {
    checkSlot(slot,args.auth,args.id);
    must(run.status==='active','RUN_NOT_ACTIVE');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
    must(run.snapshot.ended_reason===''&&same(run.snapshot,base),'STALE_BASE');
+   must(upgradeSnapshot(run.snapshot).draft.choice!=='','DRAFT_PENDING');
    let authoritative;
    if(isDeath){validateDeathTransition(run.snapshot,ended,args.delta);authoritative=ended;}
    else {authoritative=upgradeSnapshot(run.snapshot);authoritative.ended_reason=ended.ended_reason;must(same(authoritative,ended),'INVALID_END_TRANSITION');}
@@ -332,7 +390,7 @@ class JourneyStorage extends ProfileStorage {
   return this.transaction(['slots','runs','profiles','receipts'],'readonly',async s=>{
    const slot=await loadSlot(s),profile=(await loadProfile(s)).profile;
    const run=slot.activeRunId?await req(s('runs').get(slot.activeRunId)):null;
-   if(run){must(validRun(run),'CORRUPT_RUN');must(!(run.status==='active'&&Object.hasOwn(profile.receipts,run.id)),'CLOSED_RECEIPT_ACTIVE');if(run.status==='archived')must(profile.receipts[run.id]&&same(summaryOf(run.snapshot,profile.receipts[run.id].summary.outcome),profile.receipts[run.id].summary),'CORRUPT_RECEIPT');}
+   checkRunLedger(run,profile);
    return {ok:true,run,slotRevision:slot.revision,profile,receipt:run?profile.receipts[run.id]||null:null};
   });
  }
@@ -346,6 +404,7 @@ async function dispatch(operation,args){
  if(operation==='claim')return {ok:true,auth:await store.claimWriter(args.owner,args.lease_ms)};
  if(operation==='renew')return {ok:true,auth:await store.renewWriter(args.auth,args.lease_ms)};
  if(operation==='read')return store.active();
+ if(operation==='strategy')return store.chooseStrategy(args);
  if(operation==='settle'||operation==='death')return store.settleJourney(args,operation==='death');
  if(operation==='create'||operation==='save')return store.writeJourney(operation,args);
  throw new StorageFault('UNSUPPORTED_OPERATION');

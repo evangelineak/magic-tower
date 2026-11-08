@@ -3,6 +3,7 @@ const Fixture=preload("res://tests/ui_fixture.gd")
 const Loc=preload("res://scripts/localization.gd")
 const World=preload("res://scripts/world.gd")
 const Attunement=preload("res://scripts/attunement.gd")
+const Strategy=preload("res://scripts/legacy_strategy.gd")
 const Progression=preload("res://scripts/progression.gd")
 var checks:=0
 var failures:=0
@@ -46,6 +47,9 @@ func source_strings(source: String) -> Array:
 func _initialize():
 	call_deferred("run_tests")
 func run_tests():
+	for id in Strategy.IDS:
+		check(cjk(Loc.text(Strategy.TEMPLATES[id].name)),"strategy name localized: "+id)
+		check(cjk(Loc.text(Strategy.TEMPLATES[id].description)),"strategy tradeoff localized: "+id)
 	for id in Attunement.TEMPLATE_IDS:
 		check(cjk(Loc.text(Attunement.TEMPLATES[id].name)),"attunement name localized: "+id)
 		check(cjk(Loc.text(Attunement.TEMPLATES[id].description)),"attunement tradeoff localized: "+id)

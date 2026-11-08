@@ -62,6 +62,7 @@ func run():
  # Route B: real K defeat then explicit first-chapter ending.
  check((await session.new_run(0)).ok and session.world.run_id!=first_id,"explicit replay creates fresh identity after settlement")
  check(ledger(session)==retained and not session.terminal,"new game preserves all previously earned ledger entries")
+ check(session.world.strategy_pending() and (await session.choose_strategy("none")).ok,"earned pool requires explicit original strategy before replay route")
  w=World.from_snapshot(state(session));follow(w,proof)
  check(w.won and not w.expedition_started and w.ended_reason=="" and not w.chapter_offers().is_empty(),"K is resumable, not an automatic terminal payout")
  await checkpoint(session,w)
@@ -71,6 +72,7 @@ func run():
  retained=ledger(session)
  # Route C: K -> explicit continuation -> legal expedition witness -> Z.
  check((await session.new_run(0)).ok,"third real session starts")
+ check(session.world.strategy_pending() and (await session.choose_strategy("none")).ok,"earned pool requires explicit original strategy before replay route")
  w=World.from_snapshot(state(session));follow(w,proof)
  await checkpoint(session,w)
  check((await session.action("expedition")).ok,"K continuation is committed by Session action")

@@ -251,3 +251,31 @@
 - 字体892必需字缺0，含battle_timeline扫描，本地化80项通过；408564字节，SHA256 c73cb096e17a9312e01327910cd049f1bd7ae0a97a002265c4f103c81b016c57。永久天赋/轮回策略抽选仍待后续，本批没有付费抽取或重复死亡刷属性；公开网页保持v0.17。
 - 最终独立Linux实际验收：先恢复原safe0步及旧death账本，未改其槽；另新隔离store明确R/D/Enter风险seed0，真实26步到268HP，确认后27步0HP/8金币/1击杀/3专注，无额外奖励。关闭重启先受仍有效租约保护，等待后L恢复，B/F2复盘真实最后事件。截图risk-export-{safe-loaded,confirm,fatal,reopened,review-en}.png与只读risk-export-store.txt。保留最新独立包窗口，测试服务器已关闭。
 - 导出退出0，5项关键源码hash前后一致；Linux二进制SHA256 9db520c1bd7300e574b8f20a1f2a2d2f243e8e1f32ada496d362810a6476663e，Windows b9a8c00d999dbf1fc05f13aaea9e46f3b88c756283befb9383d6bf01b935d90f，仅交叉导出。PCK内生产JS29490字节、SHA a9efce10fed10f6ac9b5cae215f909981b5fbb08793926a81e88539c09d41246与源码一致。环境仍有VSync/ALSA无设备回落dummy告警，没有脚本错误；不宣称主观听音通过。最终UI146/本地化80再次通过。
+
+## 开局轮回策略切片（开发分支，本地验收完成）
+
+本节属于开发分支，不表示公开网页已更新。新增schema15固定候选与独立choose事务；空池自动原装，旧schema13/14活动局原装迁移、不补抽。正常save不能改出生池或锁定选择，成功选择清空Undo。
+
+- 纯策略模块49,244检查：三种解锁池×2,048种子、固定候选、实际组合变化、全局RNG不污染、条件阈值和金币向上取整。无付费、无稀有度；换种子可以换候选，不宣称防止单机修改。
+- World458检查：待选阶段阻挡、合法锁定、原装真实路线、技能20级实际来源、策略金币/治疗/专注、全部策略死亡重放、旧14活/死快照迁移。
+- 策略战斗33,344检查/11,880组合：存活总伤害和战后金币/HP/专注与事件时间线一致；六策略都记录至少一组真实可存活的有利对局及一组不利对局，不把“仍然死亡但少损血”当优势。无策略旧9,240组合/19,412检查仍完全等价。
+- Session309检查：候选选择与普通保存分离、固定nonce、丢ACK重试、错误版本、外来写者、出生池权限、Undo不能换选。旧终局路线测试新增显式原装选择后766检查通过，真实3层退役、K结算、K继续到Z流程均保留。
+- 增量回归修复的是测试旧预期：技能来源字典增加strategy=0、tooltip增加策略来源、旧快照字段比对排除新draft。未放宽生产验证。新死亡读回测试曾将JSON读回数值类型差异当不等，确认完整快照相同、全部receipt字段同内容后按原Session相同的JSON wire正规化比较，未忽略字段。
+- 真实旧14快照由git archive b20a021的旧生产程序正常302/303步生成，不是新数据改版本号。源说明及SHA见tests/fixtures/README.md。
+- 本批中文字体899必需字符、缺0；1057 cmap/2093 glyphs；LOCALIZATION92通过。字体411876 bytes，SHA256 `55f20b8f4a01643e7ab7232644454b5f33ce41077396340e8bbc54c90d26c9e9`。
+
+远端CI需另按准确提交核验。Windows仍只交叉导出，云浏览器WebGL2限制未解除，不将JS存储QA当Godot Web实际游玩。
+
+最终日志审阅另发现既有风险模式restore在检查`ended_reason`类型前与字符串比较，对恶意bool/int/Array/Dictionary值产生4条GDScript异常，虽然测试SceneTree仍退出0。这不计作零异常通过。已修复类型先验顺序，并已强化test_all：遇`SCRIPT ERROR:`即失败，即使进程退出0。独立伪Godot零退出探针已确认门禁拒绝；正常用户档案与GUI不受这类畸形输入影响，公开v0.17网页尚无该风险模式代码。
+
+
+- 补测策略与贷款：通过真实borrow/repay/checkpoint机制形成50/4欠债，再以受控遇敌位置/战力验证8金币怪税后6。大债只下降6而非8，小债4清零后余2入袋；不把这个受控fixture声称全路线GUI。
+- 真实原生GUI使用此前实际92步到3层并退役所得Profile[3]的隔离副本，未伪造里程碑。R按种子1855004959新局得到reserve/channel/forager；Esc取消预选、L重读、F2切语言均不重抽，确认forager不耗步，U不能撤销策略。8步真实战斗预览损4、恢复12、税后金币6，实际288HP/18ATK/12DEF/6金币/1击杀/2专注。原92步与0步退役两条旧收据保留。当前run `55812c7c4a287e7fc310ee614af0f3c2`；截图`strategy-gui-preview-zh/en/locked/forecast/battle-result/hero.png`，只读存档证据`strategy-store-evidence.txt`。中文卡片与V收益面板已人工查看，无截断。
+- 实际浏览器生产JS/IndexedDB74项通过；手动选择channel、原nonce重复返回duplicate、关页重开读取仍为channel且档案[3,5]，证据`strategy-bridge-*`。这是生产JSON回调与真实数据库事务，不是Godot Web引擎游玩验收。
+- 独立代码审计未发现新的事务/授权阻断缺陷。专精研习并非所有英雄的升级：游侠追加破甲可能被攻击代价抵消，应按预览和构筑选择，不宣传为普遍强化。
+
+最终强化门禁完整回归：`/tmp/tower-strategy-gated-final.log`退出0，44个Godot测试套全部完成，未出现SCRIPT ERROR或ERROR；含200首章种子、200远征种子、9条完整路线/2568次合法存读状态。四组Node检查269/17/59/473全部通过。此结果覆盖类型先验修复及新增贷款组合，不沿用此前仅退出0却有脚本异常的结果。
+
+最终独立Linux包实际启动并L恢复同一forager旅程：8步288HP/6金币，策略和两条原收据未变；hero、V、F2中英文均检查。保留最终窗口，关闭本轮跟踪的旧risk/候选窗口。截图`strategy-final-reloaded/hero/compare-en.png`，证据`strategy-final-store.txt`。游戏日志无脚本/解析错误，仅既有VSync与ALSA回退dummy提示，不声称听音验收。Linux二进制SHA `42d27cabbc7207bb130061ad9777d1d3d8b27c42e66c887e1ccbf0bf4ef102e5`；Windows交叉导出SHA `bac30dfd711712f81d083c33cc88d20c0be34fba3625e4dbc5e9991130cfbc35`，未在Windows运行。
+
+打包一致性核验：PCK JS 34131 bytes，SHA `c71cd3c9e2ec63405abcde250c87414584c68c4d49436b57b21fd4c03415ac5b`与源一致。World导出为编译.gdc，原.gd路径探针为空不能用作比较；按remap读world.gdc，再从最终源码独立export-pack重编译，两者SHA均`67d9f1fb14caa496e51b936767cd26d12ca5f0a149e90a446753c0f80e682814`。最终World源SHA `c6283ab2a39b99794277a1a0b43f4ab8fab19270d2c3452492165ec72b73f3f7`。

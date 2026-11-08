@@ -1,6 +1,7 @@
 extends RefCounted
 # Test-only storage injection. Never selected by the production factory.
 const Session=preload("res://scripts/session.gd")
+const Strategy=preload("res://scripts/legacy_strategy.gd")
 const Profile=preload("res://scripts/legacy_profile.gd")
 const World=preload("res://scripts/world.gd")
 static var serial:int=0
@@ -34,7 +35,8 @@ class MemoryAdapter:
   if fail_before:fail_before=false;return failure("io_error")
   if mode not in ["safe","risk"]:return failure("invalid")
   if not record.is_empty() and record.get("status","active")=="active" and not replace:return failure("active_exists")
-  var candidate=World.new(seed_value,layout,request,mode)
+  if not Profile.validate(profile).ok:return failure("invalid")
+  var candidate=World.new(seed_value,layout,request,mode,false,Strategy.pool_from_profile(profile))
   if not candidate.generation_valid or not candidate.reward_eligible():return failure("invalid")
   record={"snapshot":candidate.save_data(),"run_id":request,"slot":record.get("slot",0)+1,"revision":0,"eligible":true}
   return remember(request,signature)
@@ -48,7 +50,24 @@ class MemoryAdapter:
   if record.is_empty() or record.slot!=expected_slot or record.revision!=expected_revision or record.run_id!=run_id:return failure("conflict")
   var candidate=World.from_snapshot(snapshot)
   if candidate==null or candidate.run_id!=run_id or not candidate.reward_eligible() or candidate.mode not in ["safe","risk"] or candidate.ended_reason!="":return failure("invalid")
+  if snapshot.draft!=record.snapshot.draft or snapshot.mode!=record.snapshot.mode or snapshot.seed_value!=record.snapshot.seed_value:return failure("invalid")
   record.snapshot=snapshot.duplicate(true); record.revision+=1
+  return remember(request,signature)
+ func choose_strategy(expected_slot,expected_revision,run_id,choice,request):
+  if not World.valid_run_id(request) or request=="" or not choice is String:return failure("invalid")
+  var signature=JSON.stringify(["strategy",expected_slot,expected_revision,run_id,choice])
+  var prior=replay(request,signature)
+  if prior!=null:return prior
+  if fail_before:fail_before=false;return failure("io_error")
+  if record.is_empty() or record.get("status","active")!="active" or record.slot!=expected_slot or record.revision!=expected_revision or record.run_id!=run_id:return failure("conflict")
+  if not Profile.validate(profile).ok:return failure("invalid")
+  var candidate=World.from_snapshot(record.snapshot)
+  if candidate==null or candidate.run_id!=run_id or not candidate.reward_eligible():return failure("invalid")
+  var pool=Strategy.pool_from_profile(profile)
+  for id in candidate.draft.pool:
+   if not id in pool:return failure("invalid")
+  if not candidate.choose_strategy(choice):return failure("invalid")
+  record.snapshot=candidate.save_data();record.revision+=1
   return remember(request,signature)
  func settle_run(expected_slot,expected_revision,run_id,outcome,request):
   if not World.valid_run_id(request) or request=="" or not outcome in ["withdrawn","chapter1","victory"]:return failure("invalid")
@@ -86,7 +105,7 @@ class MemoryAdapter:
 static func attach(scene):
  scene.session=Session.new(MemoryAdapter.new())
 static func prepare(scene): attach(scene)
-static func bind(scene,world):
+static func bind(scene,world,fixture_profile=null):
  if scene.session==null or not scene.session.adapter is MemoryAdapter: attach(scene)
  serial+=1
  var data:Dictionary=world.save_data().duplicate(true)
@@ -95,6 +114,11 @@ static func bind(scene,world):
  var candidate=World.from_snapshot(data)
  assert(candidate!=null,"Synthetic fixture must satisfy full World validation")
  var adapter=scene.session.adapter
+ if fixture_profile!=null:
+  assert(Profile.validate(fixture_profile).ok,"Fixture profile must carry real validated receipts")
+  adapter.profile=fixture_profile.duplicate(true)
+ assert(Profile.validate(adapter.profile).ok)
+ for id in candidate.draft.pool:assert(id in Strategy.pool_from_profile(adapter.profile),"Fixture cannot grant unearned strategies")
  adapter.record={"snapshot":data,"run_id":data.run_id,"slot":adapter.record.get("slot",0)+1,"revision":0,"eligible":true}
  adapter.receipts.clear()
  scene.session=Session.new(adapter)

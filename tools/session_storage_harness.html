@@ -6,6 +6,7 @@
 <button id="create">创建真实 A 新局</button><button id="retry_create">重复同请求创建 A</button><button id="save">保存 A 合法一步</button><button id="retry_save">重复同一步请求</button><button id="replace">明确替换为真实 B</button><br>
 <button id="settle">确认退役当前测试旅程</button><br>
 <button id="risk_setup">创建真实26步风险测试局</button><button id="death">确认当前测试致死战斗</button><br>
+<button id="draft_setup">真实通关解锁并创建抽选局</button><button id="draft_choose">锁定首个实际策略</button><br>
 <button id="selftest">独立随机库生产桥自动测试</button><pre id="log">准备中…</pre>
 <script>
 const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDatabase=query.get('db')||'magic-tower-journeys-v1-test-manual';
@@ -50,6 +51,17 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
   }
   const result=await rpc('death',manualDeathArgs);
   if(result.ok){slot=result.slotRevision;auth.expectedSlotRevision=slot}return result;
+ });
+ click('#draft_setup',async()=>{
+  let r=await rpc('create',{auth,snapshot:fixtures.next_fresh,replace:true,request_id:fixtures.next_fresh.run_id});if(!r.ok)return r;auth.expectedSlotRevision=r.slotRevision;
+  r=await rpc('save',{auth,id:fixtures.next_fresh.run_id,expected:0,snapshot:fixtures.next_chapter_base,request_id:'manual_draft_chapter_save01'});if(!r.ok)return r;
+  r=await rpc('settle',{auth,id:fixtures.next_fresh.run_id,expected:1,outcome:'chapter1',request_id:'manual_draft_chapter_end_01',base:fixtures.next_chapter_base,ended:fixtures.next_chapter_ended});if(!r.ok)return r;auth.expectedSlotRevision=r.slotRevision;
+  r=await rpc('create',{auth,snapshot:fixtures.draft_fresh,replace:true,request_id:fixtures.draft_fresh.run_id});if(r.ok)auth.expectedSlotRevision=r.slotRevision;return r;
+ });
+ let manualStrategyArgs=null;
+ click('#draft_choose',async()=>{
+  if(!manualStrategyArgs){const current=await rpc('read');if(!current.ok||!current.run)return current;manualStrategyArgs={auth:{...auth,expectedSlotRevision:current.slotRevision},id:current.run.id,expected:current.run.revision,choice:current.run.snapshot.draft.offers[0],request_id:crypto.randomUUID().replaceAll('-','')};}
+  return await rpc('strategy',manualStrategyArgs);
  });
  click('#selftest',async()=>{
   // A fresh same-origin page creates an isolated production test namespace.
@@ -115,6 +127,31 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    auth.expectedSlotRevision=6;
    r=await rpc('create',{auth,snapshot:fixtures.next_fresh,replace:true,request_id:fixtures.next_fresh.run_id});check(r.ok&&Object.keys(r.profile.receipts).length===2,'new safe run preserves prior death ledger');
    r=await rpc('death',deathArgs);check(!r.ok&&r.code==='SUPERSEDED_OPERATION','old death cannot reactivate newer journey');
+   auth.expectedSlotRevision=7;
+   r=await rpc('save',{auth,id:fixtures.next_fresh.run_id,expected:0,snapshot:fixtures.next_chapter_base,request_id:'draft_real_chapter_save_0001'});check(r.ok,'actual seed17 route reaches chapter victory');
+   r=await rpc('settle',{auth,id:fixtures.next_fresh.run_id,expected:1,outcome:'chapter1',request_id:'draft_real_chapter_finish_01',base:fixtures.next_chapter_base,ended:fixtures.next_chapter_ended});check(r.ok&&eq(r.profile.milestones,[3,5]),'real archive unlocks tier5 strategy pool');
+   auth.expectedSlotRevision=8;
+   const deniedBirth=structuredClone(fixtures.draft_fresh);deniedBirth.draft={version:1,pool:[],offers:[],choice:'none'};
+   r=await rpc('create',{auth,snapshot:deniedBirth,replace:true,request_id:deniedBirth.run_id});check(!r.ok&&r.code==='INVALID_BIRTH_DRAFT','caller cannot replace profile-derived birth pool');
+   const born=await rpc('create',{auth,snapshot:fixtures.draft_fresh,replace:true,request_id:fixtures.draft_fresh.run_id});check(born.ok&&eq(born.run.snapshot.draft,fixtures.draft_fresh.draft),'transaction validates deterministic actual-profile birth draft');auth.expectedSlotRevision=9;
+   const pendingChanged=structuredClone(fixtures.draft_fresh);pendingChanged.gold+=10;
+   r=await rpc('save',{auth,id:born.run.id,expected:0,snapshot:pendingChanged,request_id:'draft_pending_resource_01'});check(!r.ok&&r.code==='DRAFT_PENDING','pending cannot change resources');
+   r=await rpc('save',{auth,id:born.run.id,expected:0,snapshot:fixtures.draft_selected,request_id:'draft_illegal_save_choice01'});check(!r.ok&&r.code==='DRAFT_IMMUTABLE','ordinary save cannot lock or change draft');
+   const untouched=await rpc('save',{auth,id:born.run.id,expected:0,snapshot:fixtures.draft_fresh,request_id:'draft_unchanged_save_00001'});check(untouched.ok&&untouched.run.revision===1,'genuinely unchanged pending save permitted');
+   const pickArgs={auth:{...auth},id:born.run.id,expected:1,choice:fixtures.draft_selected.draft.choice,request_id:'draft_choose_request_00001'};
+   r=await rpc('strategy',{...pickArgs,choice:'last_gambit'});check(!r.ok&&r.code==='INVALID_STRATEGY','unoffered tier8 choice rejected');
+   r=await rpc('strategy',{...pickArgs,test_abort:'after_choice'});check(!r.ok&&r.code==='INJECTED_ABORT_after_choice','choice abort after put rolls back');
+   r=await rpc('read');check(r.ok&&r.run.revision===1&&eq(r.run.snapshot,fixtures.draft_fresh)&&eq(r.profile,born.profile),'aborted choice preserves complete pending run and profile');
+   const picked=await rpc('strategy',pickArgs);check(picked.ok&&picked.slotRevision===9&&picked.run.revision===2&&eq(picked.run.snapshot,fixtures.draft_selected)&&eq(picked.profile,born.profile),'one atomic choice, no move or profile mutation');
+   r=await rpc('strategy',pickArgs);check(r.ok&&r.duplicate&&r.run.revision===2,'choice lost-ack retry does not choose twice');
+   r=await rpc('strategy',{...pickArgs,choice:'none'});check(!r.ok&&r.code==='REQUEST_CONFLICT','same nonce cannot switch choice');
+   r=await rpc('save',{auth,id:born.run.id,expected:2,snapshot:fixtures.draft_fresh,request_id:'draft_forbidden_undo_00001'});check(!r.ok&&r.code==='DRAFT_IMMUTABLE','ordinary undo cannot reopen draft');
+   r=await rpc('save',{auth,id:born.run.id,expected:2,snapshot:fixtures.draft_moved,request_id:'draft_real_first_move_0001'});check(r.ok,'chosen run can perform actual first move');
+   r=await rpc('read');check(r.ok&&eq(r.run.snapshot.draft,fixtures.draft_selected.draft),'read preserves entire birth and locked choice');
+   const replacedDraft=await rpc('create',{auth,snapshot:fixtures.draft_next,replace:true,request_id:fixtures.draft_next.run_id});check(replacedDraft.ok&&eq(replacedDraft.run.snapshot.draft.offers,born.run.snapshot.draft.offers),'same seed and profile offer no reroll');
+   r=await rpc('strategy',pickArgs);check(!r.ok&&r.code==='SUPERSEDED_OPERATION','old choice cannot revive replaced journey');
+   auth.expectedSlotRevision=10;
+   r=await rpc('strategy',{auth,id:fixtures.draft_next.run_id,expected:0,choice:'none',request_id:'draft_keep_original_000001'});check(r.ok&&r.run.snapshot.draft.choice==='none'&&r.run.snapshot.moves===0,'original build is explicit locked option');
    parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:window.MagicTowerJourneysTestDatabase,scope:'Production JS callback protocol + real IndexedDB, not Godot WebGL/JavaScriptBridge runtime'}},location.origin);
   }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,lastReply,checks,database:window.MagicTowerJourneysTestDatabase}},location.origin)}
  }

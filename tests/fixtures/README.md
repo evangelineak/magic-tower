@@ -176,3 +176,24 @@ or reward is invented and no old fixture is rewritten during the test.
 SHA256:
 - schema13-active-store.json: `66dbc9e255944ecba84a3c3fbe59afa39f22559f5ef404daf267342e62cbc0c8`
 - schema13-archived-store.json: `fa2b6135515bc20c9d33205c2ddeffe3499772f81c7b6731a26296921da1a664`
+
+## Authentic schema-14 risk containers for strategy migration
+
+Generated from isolated `git archive b20a021` using the included
+`generate_schema14_store.gd` under that historical code after editor import.
+The old production adapter creates a risk run; real legal World actions follow
+the main witness through K, continue to floor seven, and approach W. The living
+container is captured at 302 moves / 207 HP. Its real `settle_death(RIGHT)` then
+produces the archived container at 303 moves with a defeat receipt and genuine
+milestones `[3,5]`. No resources, position, version or reward fields are injected.
+
+`schema14-active.json` and `schema14-death.json` are only the corresponding raw
+World snapshots extracted from those containers. Schema 15 must preserve their
+old fields and use revision-0 empty/no-choice drafts, never backfill a draw.
+These are synthetic fixtures, not a person's saved game.
+
+SHA256:
+- schema14-active-store.json: `905d64f2a6b35a392167e54c671a4b673190f35bfab650d3b1b65f320010e50b`
+- schema14-active.json: `e4655575d5991084453656e7590fb4cc5285eeba89d789f34faaf748c74e3011`
+- schema14-death-store.json: `58cf150021419ca4e04fc3388646ef41c7984643f47979af9516c730b6f55645`
+- schema14-death.json: `0b5157d69eacd987576e1122a8acc5028d6c4094bb237d54ee6f5555c3a6b3f7`

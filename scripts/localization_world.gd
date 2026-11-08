@@ -3,6 +3,28 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"Dedicated study":"专精研习",
+"Skill level +4 / ATK -4 / DEF -2.":"技能等级 +4 / 攻击 -4 / 防御 -2。",
+"Battlefield forager":"战地采集",
+"Surviving a kill heals 12 HP; monster gold loses 25%, rounded up.":"击杀且存活后恢复 12 生命；怪物金币扣除 25%，扣除额向上取整。",
+"Deep channel":"猎魁蓄能",
+"DEF -3. Surviving a kill against original enemy HP 180 or more restores 1 focus, up to the cap.":"防御 -3。击杀原始生命不少于 180 的怪物且存活后，恢复 1 专注，不超过上限。",
+"Held reserve":"储备战术",
+"ATK -3. Unarmed-skill battles gain DEF +4; armed battles gain no defense.":"攻击 -3。未启用战斗技能时防御 +4；启用技能时不加防御。",
+"Ambush hunter":"先制猎手",
+"DEF -2. ATK +6 against an uncancelled enemy first strike, otherwise ATK -2.":"防御 -2。敌人的先攻未被抵消时攻击 +6，否则攻击 -2。",
+"Last gambit":"临危一搏",
+"DEF -2. Starting battle below 200 HP grants ATK +6.":"防御 -2。开战时生命低于 200，攻击 +6。",
+"Original strategy":"原装策略",
+"No strategy bonuses or costs.":"无策略加成，也无策略代价。",
+"Choose a starting strategy or the original kit before taking an action.":"行动前请先选择开局策略，或保留原装。",
+"This starting strategy is unavailable or already locked.":"此开局策略不可选，或本局已锁定选择。",
+"Choose a starting strategy before settling this journey.":"结算前请先确认开局策略。",
+"Choose a starting strategy before taking an action.":"行动前请先确认开局策略。",
+"INVALID_STRATEGY":"策略选择无效，未修改旅程。",
+"DRAFT_PENDING":"请先确认开局策略，再开始行动。",
+"DRAFT_IMMUTABLE":"已锁定的开局策略不能修改。",
+
 "INVALID_DELTA":"战斗方向无效，未修改旅程。",
 "INVALID_LETHAL_FIGHT":"当前状态不允许此致死战斗，未修改旅程。",
 "Risk combat: contact thorns resolve before your hit. A fatal contact stops that attack.":"风险战斗中先结算接触荆棘；若接触已致命，本次攻击不会击中敌人。",
@@ -324,6 +346,7 @@ const EXACT = {
 # Preserve conversion types and argument order. The display adapter matches
 # these full English templates; %s values may themselves have catalog names.
 const TEMPLATES = [
+["On surviving victory: %d gold / %d HP recovery / %d focus recovery", "获胜且存活后：%d 金币 / 恢复 %d 生命 / 恢复 %d 专注"],
 ["Attunement: %s", "调校：%s"],
 ["Equipment attunement: %s / %s", "装备调校：%s / %s"],
 ["HP %d / base ATK %d / base DEF %d", "生命 %d / 基础攻击 %d / 基础防御 %d"],

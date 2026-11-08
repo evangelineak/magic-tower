@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "c73cb096e17a9312e01327910cd049f1bd7ae0a97a002265c4f103c81b016c57",
-  "bytes": 408564,
+  "output_sha256": "55f20b8f4a01643e7ab7232644454b5f33ce41077396340e8bbc54c90d26c9e9",
+  "bytes": 411876,
   "coverage": {
-    "mapped_codepoints": 1050,
-    "glyphs": 2081,
-    "required_codepoints": 892,
+    "mapped_codepoints": 1057,
+    "glyphs": 2093,
+    "required_codepoints": 899,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -38,7 +38,7 @@
     },
     {
       "path": "scripts/battle_timeline.gd",
-      "sha256": "cf4767aa4f9c917b9684636b9512239e80a1a5fa7fd2d112f331188b1ec71e8a"
+      "sha256": "a65612c4eb5ea5af7514caa71dbc6212b0585bfc5bd2cba33357ea7fb80c9440"
     },
     {
       "path": "scripts/expedition.gd",
@@ -50,7 +50,7 @@
     },
     {
       "path": "scripts/journey_store_native.gd",
-      "sha256": "ce5f468ff4357436dadb9c6e9dec2d352b21238b7e59f1d2a00598f607712bf8"
+      "sha256": "add5bffcb229905781e11b2ded524e35c1752ad825ff2232bf0f061e76296653"
     },
     {
       "path": "scripts/layout.gd",
@@ -65,24 +65,28 @@
       "sha256": "6252c058ac8c3aadd93a3b20bb49c0e51ff40a3b607fb42824a14f608c862346"
     },
     {
+      "path": "scripts/legacy_strategy.gd",
+      "sha256": "83e2db53609b50bbeb2c93a61826791823f16fb2b66e5af322e6527c704fbc39"
+    },
+    {
       "path": "scripts/localization.gd",
       "sha256": "ac9d2c141f8d18763e0edd632a07144f2c40f70fe98c33267aa04ed3c0212553"
     },
     {
       "path": "scripts/localization_progression.gd",
-      "sha256": "95fb2c17e7bbbe38835a9ec92994cf11abc7e0e12d1e34519508e8577cacbb85"
+      "sha256": "ecb9d6c64a60649877cad62a00e6c699d14d06b342439951b619b07191430694"
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "7cdd71a85e56cba961e8524e0e5248f1de99ff98b6128f11ebde85ba93f25555"
+      "sha256": "fb55c3e71e762e4d57f9b3f7087451cdff22eb641c85f0fa2d090fab3c3c0783"
     },
     {
       "path": "scripts/localization_world.gd",
-      "sha256": "5c03593437d4aef1b8db5be21d860e3f0f257f55d28a64df041150370d49354a"
+      "sha256": "5124177f81f3bf2524003bac32ca4d250581de8bb76963f0416b9ba7c8d77231"
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "77f24f26a075f7c5680a38d13708345f908789de46489ce30bdf428d97ca6579"
+      "sha256": "8ac72b773701b939e1561574ce620db7a4e9c4da5fc1482a0007ebfad4f24830"
     },
     {
       "path": "scripts/navigation.gd",
@@ -90,7 +94,7 @@
     },
     {
       "path": "scripts/progression.gd",
-      "sha256": "a96870ec2b985d3488598f69ef1686c350cae0b172100cbfb25f13c84b1989aa"
+      "sha256": "a0078c43b6f878478526e277d189e7f9b202948d3f6a5a46c9a4f81d695841fc"
     },
     {
       "path": "scripts/riddle.gd",
@@ -98,15 +102,15 @@
     },
     {
       "path": "scripts/session.gd",
-      "sha256": "dfeed2f796a517995db0daca29cef20d66ba089cf36558c8e18476f19d996ce0"
+      "sha256": "ea618f202c0006b2f13f453594933b67bc9d5478f58ba2c020625816acf2e673"
     },
     {
       "path": "scripts/session_storage.gd",
-      "sha256": "e9961c9c74b484dcbdb1c66e6a99c8bb71bbc281acdd5562f3ca13f533ae7416"
+      "sha256": "67b077ed321df74bbc4e8c442d22ba2165108928448af47a76729c99b7337eba"
     },
     {
       "path": "scripts/world.gd",
-      "sha256": "fceae13d224f529d0b6166542f7ad3c60d8cc0fd585948ba388f8330aae66658"
+      "sha256": "c6283ab2a39b99794277a1a0b43f4ab8fab19270d2c3452492165ec72b73f3f7"
     },
     {
       "path": "project.godot",

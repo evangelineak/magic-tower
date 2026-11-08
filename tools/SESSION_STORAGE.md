@@ -1,4 +1,4 @@
-# Full-world session storage (schema 14; registered schema 13 migration)
+# Full-world session storage (schema 15; registered schema 13/14 migration)
 
 This is separate from the six-field profile prototype. The current game session
 uses `scripts/session_storage.gd`, `journey_store_native.gd` and
@@ -51,7 +51,7 @@ empty-start/create, full snapshot writes, response-loss retry, stale revisions,
 failed rename, writer contention, replacement, legacy identity rejection,
 lease renewal/expiry/reacquisition and bounded missing/late callbacks.
 
-`tools/generate_session_bridge_fixtures.gd` generates actual schema-14 new-run
+`tools/generate_session_bridge_fixtures.gd` generates actual current-schema new-run
 and one-real-step payloads. `session_storage_harness.html` loads the production
 JS through `session_storage_runtime.js`, not a fork of its implementation.
 It requires a test-prefixed IndexedDB name and uses visible buttons for writes.
@@ -166,3 +166,35 @@ archived snapshot had 27 moves, HP 0, and retained its pre-fight 8 gold / 1 kill
 no target-kill reward was granted. Test pages/server were closed and the test
 DBs retained. This validates production JavaScript/IndexedDB, not the Godot
 WebGL/JavaScriptBridge runtime itself.
+
+
+## Profile-backed strategy draft (schema 15)
+
+Creation derives the complete birth pool from the authoritative stored profile,
+not UI-provided unlocks. Reaching floors 3/5/8 enables the ordered 4/5/6-ID pools.
+Offers are the first three IDs sorted by unsigned FNV-1a rank of UTF-8
+`legacy-strategy-v1|<decimal seed>|<id>`, with ID ordering to resolve ties.
+Native and production JS are checked against GDScript-generated vectors.
+
+`choose_strategy(expected_slot, expected_revision, run_id, choice, request_id)`
+locks one offered choice or `none` while the new run is still pending at zero
+moves. It increments only run revision; slot, profile and gameplay resources are
+unchanged. Lost acknowledgements reuse the same nonce and CAS. Old requests
+cannot reactivate a replaced/tombstoned run. Ordinary save/Undo cannot change any
+birth-pool, offer, revision or choice field. Pending runs may save only the exact
+unchanged state; normal actions, retirement and fatal combat remain blocked until
+the explicit choice. Explicit new-run replacement is still permitted.
+
+Old schema-13/14 active and archived runs receive a revision-0 empty/no-choice
+draft on read. They never receive a retroactive draw or new reward. Their original
+IDs, death records and receipts remain authoritative. A run's saved birth pool
+must remain within the current profile's entitlements; it is not expanded when
+later milestones are earned.
+
+`test_strategy_storage.gd` passes 35 checks, including authentic old14 migration,
+profile-derived creation, aborted and repeated choice, pending/no-op boundaries,
+immutable ordinary save/Undo, superseded requests and a real selected-Study
+26-step risk route whose death is replay-validated with that strategy intact.
+`test_strategy_storage_protocol.mjs` passes 473 comparisons of production JS ranks,
+offers and drafts with the pure GDScript vectors. These do not claim that JS
+executes Godot combat. The expanded real-browser draft harness is separate.

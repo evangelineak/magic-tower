@@ -5,6 +5,7 @@ extends RefCounted
 # lost after commit. No file I/O fallback is permitted here.
 const World = preload("res://scripts/world.gd")
 const Profile = preload("res://scripts/legacy_profile.gd")
+const Strategy = preload("res://scripts/legacy_strategy.gd")
 var world = null
 var history:Array = []
 var busy = false
@@ -96,6 +97,9 @@ func _validated_response(result):
   if not (value is int or value is float) or not is_finite(float(value)) or value<0 or value>2147483647 or floor(float(value))!=value: return null
  var candidate=_clone(result.snapshot)
  if candidate==null or candidate.run_id!=result.run_id or not candidate.reward_eligible() or not candidate.mode in ["safe","risk"]: return null
+ var authorized_pool=Strategy.pool_from_profile(result.profile)
+ for strategy_id in candidate.draft.pool:
+  if not strategy_id in authorized_pool: return null
  if result.status=="active":
   if candidate.ended_reason!="": return null
   if result.profile.receipts.has(candidate.run_id): return null
@@ -119,10 +123,11 @@ func _perform(kind:String,value) -> Dictionary:
  var gate=_gate()
  if not gate.is_empty(): return gate
  if world==null: return _reply(false,"empty","No active journey.")
+ if kind!="save" and world.strategy_pending(): return _reply(false,"draft_pending","Choose a starting strategy or the original kit before taking an action.")
  if kind=="undo" and history.is_empty(): return _reply(false,"invalid","No move to undo in this session.")
  var before:Dictionary=world.save_data().duplicate(true)
  var candidate=_clone(history.back() if kind=="undo" else before)
- if candidate==null or candidate.run_id!=world.run_id: return _reply(false,"invalid","Journey identity or history is invalid.")
+ if candidate==null or candidate.run_id!=world.run_id or not _same_json(candidate.draft,world.draft): return _reply(false,"invalid","Journey identity or history is invalid.")
  var accepted=true
  match kind:
   "step": accepted=candidate.step(value)
@@ -140,10 +145,19 @@ func _perform(kind:String,value) -> Dictionary:
  elif kind=="action": effect.input=value
  _pending={"effect":effect,"kind":"commit","operation":kind,"candidate":candidate,"before":before,"snapshot":candidate.save_data().duplicate(true),"slot":slot,"revision":revision,"run_id":world.run_id,"request_id":_nonce()}
  return await _commit_pending()
+func choose_strategy(choice:String) -> Dictionary:
+ var gate=_gate()
+ if not gate.is_empty(): return gate
+ if world==null: return _reply(false,"empty","No active journey.")
+ var candidate=_clone(world.save_data())
+ if candidate==null or not candidate.choose_strategy(choice): return _reply(false,"rejected","This starting strategy is unavailable or already locked.")
+ _pending={"kind":"strategy","choice":choice,"candidate":candidate,"snapshot":candidate.save_data().duplicate(true),"slot":slot,"revision":revision,"run_id":world.run_id,"request_id":_nonce(),"effect":{"operation":"strategy","input":choice}}
+ return await _commit_pending()
 func finish(outcome:String) -> Dictionary:
  var gate=_gate()
  if not gate.is_empty(): return gate
  if world==null: return _reply(false,"empty","No active journey.")
+ if world.strategy_pending(): return _reply(false,"draft_pending","Choose a starting strategy before settling this journey.")
  if not outcome in ["withdrawn","chapter1","victory"]: return _reply(false,"invalid","Unsupported settlement outcome.")
  var candidate=_clone(world.save_data())
  if candidate==null or not candidate.mode in ["safe","risk"] or not candidate.finish_run(outcome): return _reply(false,"rejected","This journey cannot settle with that outcome.")
@@ -155,6 +169,7 @@ func confirm_lethal(delta:Vector2i,expected_snapshot:Dictionary) -> Dictionary:
  var gate=_gate()
  if not gate.is_empty(): return gate
  if world==null: return _reply(false,"empty","No active journey.")
+ if world.strategy_pending(): return _reply(false,"draft_pending","Choose a starting strategy before taking an action.")
  if world.mode!="risk": return _reply(false,"rejected","Lethal combat requires an explicitly selected risk journey.")
  if not _same_json(world.save_data(),expected_snapshot): return _reply(false,"stale_confirmation","The journey changed after this fight was previewed. Review the fight again.")
  var candidate=_clone(world.save_data())
@@ -173,6 +188,8 @@ func _commit_pending() -> Dictionary:
  var result
  if _pending.kind=="create":
   result=await adapter.create_run(_pending.seed,_pending.layout,_pending.mode,_pending.replace,_pending.request_id)
+ elif _pending.kind=="strategy":
+  result=await adapter.choose_strategy(_pending.slot,_pending.revision,_pending.run_id,_pending.choice,_pending.request_id)
  elif _pending.kind=="death":
   result=await adapter.settle_death(_pending.slot,_pending.revision,_pending.run_id,_pending.delta,_pending.request_id)
  elif _pending.kind=="settle":
@@ -202,18 +219,19 @@ func _commit_pending() -> Dictionary:
     return _reply(false,"invalid_response","Settlement rewards do not match the current profile ledger.")
   world=_pending.candidate
   history.clear()
- elif _pending.kind=="commit":
+ elif _pending.kind in ["commit","strategy"]:
   if result.status!="active" or int(result.slot)!=_pending.slot or int(result.revision)!=_pending.revision+1 or result.run_id!=_pending.run_id or restored.save_data()!=_pending.snapshot:
    read_only=true
    return _reply(false,"invalid_response","Commit acknowledgement does not match the pending journey.")
-  if _pending.operation=="undo": history.pop_back()
+  if _pending.kind=="strategy": history.clear()
+  elif _pending.operation=="undo": history.pop_back()
   elif _pending.operation!="save":
    history.append(_pending.before.duplicate(true))
    if history.size()>100: history.pop_front()
   # Keep the speculative transient message/battle snapshot for effects only now.
   world=_pending.candidate
  else:
-  var fresh=World.new(_pending.seed,_pending.layout,_pending.request_id,_pending.mode)
+  var fresh=World.new(_pending.seed,_pending.layout,_pending.request_id,_pending.mode,false,Strategy.pool_from_profile(result.profile))
   if result.status!="active" or int(result.revision)!=0 or int(result.slot)<=slot or restored.run_id!=_pending.request_id or restored.save_data()!=fresh.save_data():
    read_only=true
    return _reply(false,"invalid_response","Created journey does not match the requested fresh run.")

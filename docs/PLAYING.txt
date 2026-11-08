@@ -105,3 +105,10 @@ Only actual events through death occur; no kill reward or recovery is granted.
 Death and its receipt save atomically. B reviews the saved death report without replaying rewards.
 Contact thorns resolve before the hero hit. A fatal contact stops that hit.
 A new journey may be started explicitly; permanent talent effects and drafts are not enabled yet.
+
+开局策略（开发分支，网页独立发布）
+完成旅程并取得首次3/5/8层档案后，下一新局会出现三个已解锁策略候选。
+1/2/3预选候选，0选原装，Enter明确锁定。Esc取消预选，但不能绕过待选阶段行动。
+策略有收益也有代价，锁定后不能Undo改选；读档和重试不重抽。N换种子可换塔和候选。
+无已解锁池时自动原装。旧活动旅程不补抽，必须明确新局才使用档案解锁。
+策略不直接修改基础攻防，按每战条件计入预览。技能20级须基础10+训练4+装备2+研习4全部具备。

@@ -2,6 +2,7 @@ class_name TowerSessionStorage
 extends RefCounted
 ## Unified async adapter for registered full Worlds; no legacy-slot imports.
 const World=preload("res://scripts/world.gd")
+const Strategy=preload("res://scripts/legacy_strategy.gd")
 const Profile=preload("res://scripts/legacy_profile.gd")
 const Native=preload("res://scripts/journey_store_native.gd")
 signal web_reply
@@ -24,7 +25,7 @@ func _init(test_path:String=""):
 func _result(ok:bool,status:String,reason:String="",snapshot:Dictionary={},slot:int=0,revision:int=0)->Dictionary:
  return {"ok":ok,"status":status,"reason":reason,"snapshot":snapshot.duplicate(true),"run_id":str(snapshot.get("run_id","")),"slot":slot,"revision":revision,"eligible":ok and snapshot.get("run_id","")!="" and status=="active","retryable":false,"readonly":not ok or status!="active"}
 func _failure(code:String)->Dictionary:
- var retryable=code in ["AMBIGUOUS_COMMIT","WRITE_FAILED","RENAME_FAILED","BACKUP_FAILED","STORE_LOCKED","INJECTED_AFTER_PROFILE","INJECTED_AFTER_ARCHIVE","INJECTED_AFTER_SLOT","INJECTED_BEFORE_TEMP","INJECTED_AFTER_TEMP","INJECTED_BEFORE_RENAME","WEB_IO","WEB_TIMEOUT","ACK_LOST","AbortError","UnknownError"]
+ var retryable=code in ["AMBIGUOUS_COMMIT","WRITE_FAILED","RENAME_FAILED","BACKUP_FAILED","STORE_LOCKED","INJECTED_AFTER_CHOICE","INJECTED_AFTER_PROFILE","INJECTED_AFTER_ARCHIVE","INJECTED_AFTER_SLOT","INJECTED_BEFORE_TEMP","INJECTED_AFTER_TEMP","INJECTED_BEFORE_RENAME","WEB_IO","WEB_TIMEOUT","ACK_LOST","AbortError","UnknownError"]
  var conflict=code in ["WRITER_BUSY","STALE_WRITER","STALE_SLOT_REVISION","STALE_REVISION","NOT_ACTIVE_RUN","SUPERSEDED_OPERATION","REQUEST_CONFLICT","ACTIVE_RUN_EXISTS","ID_COLLISION"]
  var result=_result(false,"io_error" if retryable else ("conflict" if conflict else "invalid"),code)
  result.retryable=retryable;result.readonly=not retryable
@@ -125,7 +126,11 @@ func create_run(seed:int,layout:int=2,mode:String="safe",replace_active:bool=fal
  if mode not in ["safe","risk"] or seed<0 or seed>2147483647 or layout not in [1,2]:return _failure("INVALID_NEW_RUN")
  var claim=await _claim(false,true)
  if not claim.get("ok",false):return _failure(str(claim.get("code","WEB_IO")))
- var fresh=World.new(seed,layout,request_id,mode)
+ var current=await _read_raw()
+ if not current.get("ok",false):return _failure(str(current.get("code","WEB_IO")))
+ var ledger=current.get("profile",{})
+ if not Profile.validate(ledger).ok:return _failure("INVALID_PROFILE")
+ var fresh=World.new(seed,layout,request_id,mode,false,Strategy.pool_from_profile(ledger))
  if not fresh.generation_valid:return _failure("INVALID_NEW_RUN")
  var snapshot=fresh.save_data()
  var raw:Dictionary=await _web("create",{"auth":auth,"snapshot":snapshot,"replace":replace_active,"request_id":request_id}) if use_web else native.create_journey(auth,snapshot,replace_active,request_id)
@@ -181,5 +186,14 @@ func settle_death(expected_slot:int,expected_revision:int,run_id:String,delta:Ve
   elif probe.ended_reason!="death":return _failure("INVALID_LETHAL_FIGHT")
   raw=await _web("death",{"auth":supplied,"id":run_id,"expected":expected_revision,"delta":[delta.x,delta.y],"request_id":request_id,"base":run.snapshot,"ended":probe.save_data()})
  else:raw=native.settle_death_journey(run_id,supplied,expected_revision,delta,request_id)
+ if raw.get("ok",false) and test_drop_next_ack:test_drop_next_ack=false;return _failure("ACK_LOST")
+ return _normalize(raw)
+
+func choose_strategy(expected_slot:int,expected_revision:int,run_id:String,choice:String,request_id:String="")->Dictionary:
+ if not World.valid_run_id(request_id) or request_id=="" or not Strategy.valid_id(choice):return _failure("INVALID_STRATEGY")
+ var claim=await _claim(false,true)
+ if not claim.get("ok",false):return _failure(str(claim.get("code","WEB_IO")))
+ var supplied=auth.duplicate(true);supplied.expectedSlotRevision=expected_slot
+ var raw:Dictionary=await _web("strategy",{"auth":supplied,"id":run_id,"expected":expected_revision,"choice":choice,"request_id":request_id}) if use_web else native.choose_strategy(run_id,supplied,expected_revision,choice,request_id)
  if raw.get("ok",false) and test_drop_next_ack:test_drop_next_ack=false;return _failure("ACK_LOST")
  return _normalize(raw)
