@@ -146,8 +146,11 @@ func _draw():
 		var forecast: Dictionary=world.battle_preview(target)
 		label_at(Vector2(938,660),"Extra opening hit: %d / Shield: %d" % [int(forecast.get("feint_damage",0)),int(forecast.get("equipment_blocked",0))],12,GOLD)
 	else:
-		label_at(Vector2(938,589),token_name(target),18,TEAL)
-		label_at(Vector2(938,614),"E: interact / inspect ledger",15,MUTED)
+		var tooltip := display(token_name(target))
+		var split_at := tooltip.length()
+		while split_at>1 and font.get_string_size(tooltip.left(split_at),HORIZONTAL_ALIGNMENT_LEFT,-1,16).x>298: split_at-=1
+		label_at(Vector2(938,589),tooltip.left(split_at),16,TEAL)
+		label_at(Vector2(938,614),tooltip.substr(split_at) if split_at<tooltip.length() else "E: interact / inspect ledger",14,MUTED)
 	if not World.ENEMIES.has(target): label_at(Vector2(938,652),quest_hint(),13,GOLD)
 	label_at(Vector2(938,674),"Move   WASD / Arrow keys",15)
 	label_at(Vector2(938,699),"Click an adjacent tile to move",14,MUTED)
@@ -243,7 +246,7 @@ func token_name(t: String) -> String:
 	if t=="~" and world.bridge_built: return "Survey bridge: cross safely above the water"
 	if t=="~" and world.water_choice=="drain": return "Drained passage to the relic vault"
 	if t=="X": return world.event_title()
-	return {"M":"Merchant: trade & loans","C":"One core. Three choices.","E":"The old elevator","F":"Workshop: a lasting choice","T":"A treasure worth returning for","N":"An inscription. Read carefully.","Q":"A door with a secret","<":"Return to a lower floor",">":"Ascend: check your ledger","a":"Ruby: +5 attack","d":"Sapphire: +4 defense","h":"Spring water: +70 HP","k":"Gold key","D":"Gold door: costs 1 key","L":"Double lock: costs 2 keys","$":"Gold cache: +60 gold","A":"Blade relic: +5 attack","P":"Supplies: +140 HP / +1 focus","J":"A traveler with a request","I":"An unusual research sample","O":"Drain the route or keep the spring?","~":"Deep water blocks this route","R":"A choice of equipment","X":"A costly opportunity"}.get(t,"SCOUT BEFORE YOU STRIKE")
+	return {"M":"Merchant: calibration needs a powered lift","C":"Core: lift powers calibration; forge/sale forfeits it","E":"The old elevator","F":"Workshop: a lasting choice","T":"A treasure worth returning for","N":"An inscription. Read carefully.","Q":"A door with a secret","<":"Return to a lower floor",">":"Ascend: check your ledger","a":"Ruby: +5 attack","d":"Sapphire: +4 defense","h":"Spring water: +70 HP","k":"Gold key","D":"Gold door: costs 1 key","L":"Double lock: costs 2 keys","$":"Gold cache: +60 gold","A":"Blade relic: +5 attack","P":"Supplies: +140 HP / +1 focus","J":"A traveler with a request","I":"An unusual research sample","O":"Drain the route or keep the spring?","~":"Deep water blocks this route","R":"A choice of equipment","X":"A costly opportunity"}.get(t,"SCOUT BEFORE YOU STRIKE")
 func nearby(t: String) -> bool:
 	for d in [Vector2i.ZERO,Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 		if world.tile(world.pos+d)==t: return true
@@ -256,17 +259,29 @@ func available_actions() -> Array:
 		if pending_reason=="door": return rows
 	if world.debt()>0: rows.append(["repay","Repay using available gold (fees, interest, principal)"])
 	if nearby("M"):
+		if (world.seal_clues & 1)==0: rows.append(["seal_contract","Read the old contract: calibration clue / lift power required"])
 		rows.append(["buy","Buy armor-breaker: 60 gold / +12 ATK (once)"])
 		rows.append(["borrow","Borrow 40 gold: 2 fee / 10% per new milestone"])
-		rows.append(["sell_core","Sell core: +35 gold / lose its other uses"])
+		rows.append(["sell_core","Sell core: +35 gold / PERMANENTLY forfeit lift and calibration"])
 	if nearby("E"):
 		rows.append(["elevator","Use core: repair elevator / excludes forge & sale"])
 		rows.append(["travel","Ride repaired elevator: floors 1 <-> 3"])
 	if nearby("F"):
-		rows.append(["forge","Use core: permanent +8 DEF / excludes lift & sale"])
+		rows.append(["forge","Forge core: +8 DEF / PERMANENTLY forfeit lift and calibration"])
 		if not world.bridge_built:
 			rows.append(["quest_bridge","Spend survey (I): bridge on floor 2 / no J reward; no core"])
-	if nearby("Q"): rows.append(["secret","Inspect the mechanism using the inscription's clue"])
+	if nearby("O") and (world.seal_clues & 2)==0: rows.append(["seal_water","Read the valve plate: calibration clue / no water spent"])
+	if nearby("N") and (world.seal_clues & 4)==0: rows.append(["seal_inscription","Read the inscription: calibration clue"])
+	if nearby("Q"):
+		if world.seal_solved and world.seal_reward=="":
+			rows.append(["secret_provisions","Choose provisions: +80 HP and 1 key / forgo voucher"])
+			rows.append(["secret_voucher","Choose 50 voucher: repay %d / receive %d gold" % [mini(50,world.debt()),maxi(0,50-world.debt())]])
+		elif world.riddle_ready():
+			rows.append_array(world.riddle_options())
+			if not world.seal_input.is_empty():
+				rows.append(["secret_backspace","Erase the last symbol"])
+				rows.append(["secret_reset","Clear all four slots"])
+
 	if nearby("J"):
 		if world.quest_state==0: rows.append(["quest_accept","Accept: find survey / choose J rewards or F flood bridge"])
 		if world.quest_state==2:
@@ -286,6 +301,9 @@ func visible_actions() -> Array:
 	interaction_page=clampi(interaction_page,0,maxi(0,ceili(rows.size()/6.0)-1))
 	return rows.slice(interaction_page*6,interaction_page*6+6)
 func draw_interaction():
+	if nearby("Q") and pending_reason=="":
+		draw_calibration()
+		return
 	if pending_reason=="door":
 		draw_key_confirmation()
 		return
@@ -308,6 +326,30 @@ func draw_interaction():
 	label_at(Vector2(290,640),display(world.message).left(100),14,TEAL)
 	if available_actions().size()>6:
 		label_at(Vector2(815,218),"Page %d   [ / ]" % (interaction_page+1),13,GOLD)
+	label_at(Vector2(290,672),"Click a choice or press its number. E / Esc closes without choosing.",14,MUTED)
+func draw_calibration():
+	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
+	panel(Rect2(260,120,770,570),Color("0c1928"))
+	label_at(Vector2(290,158),"OLD TOWER CALIBRATION",25,GOLD)
+	label_at(Vector2(290,190),"Read M / O / N clues; power the lift with the core.",16,TEAL)
+	var hint := "Four unique symbols. The fourth entry checks the order; mistakes cost nothing."
+	if world.core_use in ["forge","sold"]: hint="Calibration forfeited: the core was forged or sold this run."
+	elif world.seal_solved: hint="Calibration solved. Choose ONE reward; the other is forgone."
+	elif not world.riddle_ready(): hint="Not ready: read all three clues and repair the old lift."
+	label_at(Vector2(290,218),hint,15,GOLD)
+	label_at(Vector2(290,248),"J: review only your discovered clues. E / Esc: leave without changing the input.",14,MUTED)
+	for i in range(4):
+		var slot := Rect2(290+i*175,275,160,63)
+		panel(slot,Color("253748"))
+		var symbol: String=World.Riddle.SYMBOLS.get(world.seal_input[i],"?") if i<world.seal_input.size() else "---"
+		label_at(slot.position+Vector2(12,38),"%d  %s" % [i+1,symbol],20,TEAL)
+	label_at(Vector2(290,361),"Repeated symbols are unavailable. Backspace and clear are safe.",14,MUTED)
+	action_rows=visible_actions()
+	for i in action_rows.size():
+		var r := Rect2(285,375+i*43,720,37)
+		panel(r,Color("253748"))
+		label_at(r.position+Vector2(12,24),"%d  %s" % [i+1,action_rows[i][1]],16)
+	label_at(Vector2(290,640),display(world.message).left(100),14,TEAL)
 	label_at(Vector2(290,672),"Click a choice or press its number. E / Esc closes without choosing.",14,MUTED)
 func draw_key_confirmation():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
@@ -338,13 +380,13 @@ func perform_action(id: String):
 	var before: Dictionary=world.save_data().duplicate(true)
 	if world.action(id):
 		if id in ["spring","drain","quest_bridge"]: play_sound("water")
-		elif id in ["buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret"]: play_sound("pickup")
+		elif id in ["buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher"]: play_sound("pickup")
 		if id.begins_with("hero_") or id.begins_with("talent_"): growth=false
 		history.append(before)
 		if history.size()>100: history.pop_front()
 		save_game(false)
 	else:
-		world.message={"quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"The bell is silent. Find the inscription and restore its mechanism."}.get(id,"This choice is unavailable. Check its cost and requirements.")
+		world.message={"quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"Solve the powered calibration before choosing a reward."}.get(id,world.message if id.begins_with("secret_") or id.begins_with("seal_") else "This choice is unavailable. Check its cost and requirements.")
 func quest_hint() -> String:
 	return ["J: find the researcher's request","QUEST: seek the sample (I)","SURVEY: J reward or F bridge","SURVEY: delivered to J","SURVEY: flood bridge built"][clampi(world.quest_state,0,4)]
 func skill_description() -> String:
@@ -426,7 +468,7 @@ func journal_lines() -> Array:
 	else:
 		entries.append("Debt is frozen. Future gold repays it until the balance is clear.")
 	if world.core:
-		entries.append("Core held: lift, forge (+8 DEF), or sale (+35 gold). Choose once.")
+		entries.append("Core held: lift powers calibration; forge or sale permanently forfeits it.")
 	elif world.core_use!="":
 		entries.append({"elevator":"Core used for lift. Forge and sale are forgone.","forge":"Core forged: +8 DEF. Lift and sale are forgone.","sold":"Core sold: +35 gold. Lift and forge are forgone."}[world.core_use])
 	else: entries.append("No mechanism core in your pack.")
@@ -446,9 +488,10 @@ func journal_lines() -> Array:
 		if floor_has(floor_index,token):
 			var reward: String={"$":"60 gold","A":"+5 ATK","P":"+140 HP and +1 focus"}[token]
 			entries.append("Floor %d cache: %s / %s." % [floor_index+1,reward,"double lock needs 2 keys" if floor_has(floor_index,"L") else "unclaimed, lock already opened"])
-	if world.clue:
-		entries.append('Inscription: "The silent bell opens when the old lift runs."')
-		entries.append('"Seek it above."')
+	for clue_line in world.riddle_clues(): entries.append(clue_line)
+	if world.seal_solved: entries.append("Old tower calibration solved.")
+	if world.seal_reward!="": entries.append("Calibration reward: %s" % world.seal_reward)
+	if world.core_use in ["forge","sold"]: entries.append("Calibration forfeited: the core was forged or sold this run.")
 	if world.secret: entries.append("The bell's secret has been found.")
 	var names: Array=[]
 	for id in world.talents: names.append(Progression.TALENTS[id].name)
@@ -672,7 +715,22 @@ func save_game(announce:=true):
 func load_game():
 	if not FileAccess.file_exists(save_path): world.message="No saved journey yet."; return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
-	if not parsed is Dictionary or not world.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
+	if not parsed is Dictionary: world.message="Save is invalid. Current journey is unchanged."; return
+	var upgrading: bool=parsed.get("version")==4
+	if upgrading:
+		var probe=World.new(0)
+		if not probe.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
+		var backup_path := save_path.get_basename()+".pre-schema5.json"
+		if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(backup_path)):
+			world.message="Could not back up the old save. Current journey is unchanged."
+			return
+		if not FileAccess.file_exists(backup_path):
+			var copied := DirAccess.copy_absolute(ProjectSettings.globalize_path(save_path),ProjectSettings.globalize_path(backup_path))
+			if copied!=OK:
+				world.message="Could not back up the old save. Current journey is unchanged."
+				return
+	if not world.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
+	if upgrading: save_game(false)
 	history.clear()
 	journal=false; journal_page=0; interaction=false; growth=false; book=false
 	checkpoint_pending=Vector2i.ZERO; pending_reason=""

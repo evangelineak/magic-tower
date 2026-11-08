@@ -48,7 +48,7 @@ func _init():
 	w=World.new(0); w.enter_floor(3); w.pos=Vector2i(3,5); rejected(w,"quest_bridge")
 	# Old version-four saves must remain loadable without the newly added field.
 	w=World.new(0)
-	var old: Dictionary=state(w); old.erase("bridge_built")
+	var old: Dictionary=state(w); old.version=4; old.erase("bridge_built")
 	check(w.restore(old) and not w.bridge_built and w.quest_state==0,"old v4 save without bridge field defaults false")
 	var valid: Dictionary=state(w)
 	for invalid in [{"bridge_built":true,"quest_state":2},{"bridge_built":false,"quest_state":4},{"bridge_built":true,"quest_state":4,"water_choice":"drain"},{"bridge_built":"yes"}]:

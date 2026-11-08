@@ -2,6 +2,7 @@ class_name TowerWorld
 extends RefCounted
 const Generator = preload("res://scripts/generation.gd")
 const Progression = preload("res://scripts/progression.gd")
+const Riddle = preload("res://scripts/riddle.gd")
 
 const MAPS = [
 ["###########","#@.k..#..a#","#JM#..#...#","#h.#s.D.s.#","#..#..#...#","#..a..#h..#","#.###.###.#","#...s.....#","##d.#..s..#","#$L.#....>#","###########"],
@@ -43,6 +44,10 @@ var core_use := ""
 var weapon := false
 var secret := false
 var clue := false
+var seal_clues := 0
+var seal_input: Array = []
+var seal_solved := false
+var seal_reward := ""
 var principal := 0
 var fees := 0
 var interest := 0
@@ -125,14 +130,15 @@ func step(direction: Vector2i) -> bool:
 		message="Survey: J offers gold or focus; F can build a bridge preserving the spring."
 	elif t == "C":
 		core = true
-		message = "Core: repair lift / forge +8 DEF / sell for 35. Choose once."
+		message = "Core: lift powers calibration; forge +8 DEF or sell 35 forfeits that quest."
 	elif t == "T":
 		atk += 10
 		gain_gold(45)
 		message = "Star vault: +10 ATK and 45 gold. Worth returning for!"
 	elif t == "N":
 		clue = true
-		message = "The silent bell opens when the old lift runs. Seek it above."
+		seal_clues |= 4
+		message = Riddle.clues(seed_value)[2]
 	elif t in ["M","E","F","Q","J","O","R","X"]:
 		message = "Press E to inspect choices. Nothing is spent until you choose."
 	elif t == "k":
@@ -196,6 +202,30 @@ func settle_checkpoint(number: int):
 		if principal>0: interest += ceili(principal*0.1)
 	checkpoints=number
 	if checkpoints>=2 and debt()>0: overdue=true
+func riddle_clues() -> Array:
+	var all_clues := Riddle.clues(seed_value)
+	var read: Array=[]
+	for i in range(3):
+		if seal_clues & (1<<i): read.append(all_clues[i])
+	return read
+func riddle_ready() -> bool:
+	return seal_clues==7 and core_use=="elevator" and not secret
+func riddle_options() -> Array:
+	var options: Array=[]
+	if not nearby("Q") or not riddle_ready() or seal_solved: return options
+	for id in Riddle.SYMBOL_IDS:
+		if not id in seal_input: options.append(["secret_ring_"+id,Riddle.SYMBOLS[id]])
+	return options
+func riddle_input_text() -> String:
+	var names: PackedStringArray=[]
+	for id in seal_input: names.append(Riddle.SYMBOLS[id])
+	return " > ".join(names)
+func _read_seal(bit: int):
+	seal_clues |= bit
+	if bit==4: clue=true
+	var index := 0 if bit==1 else (1 if bit==2 else 2)
+	message=Riddle.clues(seed_value)[index]
+
 func event_title() -> String:
 	return {"bargain":"The tower keeper", "smuggler":"The locked-road smuggler", "oath":"The well of resolve"}[event_kind]
 func event_offers() -> Array:
@@ -205,6 +235,26 @@ func event_offers() -> Array:
 	return [["bargain_blood","Blood bargain: pay 80 HP / gain +6 ATK"],["bargain_gold","Ward bargain: pay 25 gold / gain +5 DEF"],["bargain_leave","Decline this encounter permanently"]]
 func action(id: String) -> bool:
 	if not generation_valid or won: return false
+	if id.begins_with("secret_ring_"):
+		var symbol := id.trim_prefix("secret_ring_")
+		if not nearby("Q") or not riddle_ready() or seal_solved:
+			message="Calibration needs all three clues and the repaired lift."
+			return false
+		if not Riddle.SYMBOLS.has(symbol) or symbol in seal_input:
+			message="Use each symbol once. Backspace or clear to change the sequence."
+			return false
+		seal_input.append(symbol)
+		if seal_input.size()==4:
+			if Riddle.satisfies_clues(seed_value,seal_input):
+				seal_solved=true
+				message="Calibration solved. Choose provisions or a fixed 50-gold voucher."
+			else:
+				seal_input.clear()
+				message="The order does not fit the clues. Reset freely; nothing was spent."
+		else:
+			message="Symbol recorded. No HP, gold, focus or interest was spent."
+		moves+=1
+		return true
 	if id.begins_with("hero_"):
 		var choice:=id.trim_prefix("hero_")
 		if moves!=0 or not Progression.HEROES.has(choice): return false
@@ -227,6 +277,20 @@ func action(id: String) -> bool:
 		moves+=1
 		return true
 	match id:
+		"seal_contract":
+			if not nearby("M"): return false
+			_read_seal(1)
+		"seal_water":
+			if not nearby("O"): return false
+			_read_seal(2)
+		"seal_inscription":
+			if not nearby("N"): return false
+			_read_seal(4)
+		"secret_backspace","secret_reset":
+			if not nearby("Q") or not riddle_ready() or seal_solved or seal_input.is_empty(): return false
+			if id=="secret_backspace": seal_input.pop_back()
+			else: seal_input.clear()
+			message="Sequence edited. No resources or interest spent."
 		"arm":
 			if hero_id=="scholar" or focus<=0: return false
 			skill_armed=not skill_armed
@@ -309,36 +373,51 @@ func action(id: String) -> bool:
 		"sell_core":
 			if not nearby("M") or not core: return false
 			core=false; core_use="sold"; gain_gold(35)
-			message="Core sold. Lift and forge are now unavailable this run."
+			message="Core sold. Lift, forge and old-tower calibration are forgone."
 		"elevator":
 			if not nearby("E") or not core: return false
 			core=false; core_use="elevator"
-			message="Lift repaired: floors 1 / 3 linked. Forge and sale forgone."
+			message="Lift repaired. Calibration is powered; forge and sale forgone."
 		"forge":
 			if not nearby("F") or not core: return false
 			core=false; core_use="forge"; defense+=8
-			message="Core forged into +8 DEF. Lift and sale forgone."
+			message="Core forged: +8 DEF. Lift, sale and old-tower calibration are forgone."
 		"travel":
 			if not nearby("E") or core_use!="elevator": return false
 			enter_floor(2 if floor_index==0 else 0)
 			pos=Vector2i(4,1) if floor_index==2 else Vector2i(2,5)
 			message="The old lift remembers. No interest on revisits."
-		"secret":
-			if not nearby("Q") or not clue or core_use!="elevator" or secret: return false
-			secret=true; hp+=80
+		"secret","secret_provisions","secret_voucher":
+			if not nearby("Q") or not riddle_ready() or not seal_solved: return false
+			secret=true
+			seal_reward="voucher" if id=="secret_voucher" else "provisions"
+			if seal_reward=="provisions":
+				hp+=80; keys+=1
+				message="Calibration provisions: +80 HP / +1 key. Voucher forgone."
+			else:
+				var cleared := mini(50,debt())
+				# Credit is consumed by debt before its remainder becomes cash.
+				# pay() keeps the normal fee/interest/principal order; no existing
+				# player gold is spent, and loan/checkpoint history is preserved.
+				gold+=cleared
+				pay(cleared)
+				gain_gold(50-cleared)
+				message="Calibration voucher: %d debt cleared / %d gold received." % [cleared,50-cleared]
 			consume_nearby("Q")
-			message="The bell rings! A forgotten traveler left +80 HP."
 		_: return false
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":4,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":5,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
 	"core":core,"core_use":core_use,"weapon":weapon,"secret":secret,"clue":clue,"principal":principal,"fees":fees,"interest":interest,"loan_used":loan_used,"overdue":overdue,"checkpoints":checkpoints}
 func restore(d: Dictionary) -> bool:
-	if d.get("version") != 4: return false
+	var save_version = d.get("version")
+	if not (save_version is int or save_version is float): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5): return false
+	var old_seal: bool = save_version==4
 	if not d.get("bridge_built",false) is bool: return false
 	if d.get("bridge_built",false)!=(d.get("quest_state")==4): return false
 	if d.get("bridge_built",false) and d.get("water_choice")=="drain": return false
@@ -378,16 +457,40 @@ func restore(d: Dictionary) -> bool:
 	if not d.loan_used and balance>0: return false
 	if d.overdue != (d.checkpoints==2 and balance>0): return false
 	if d.secret and (not d.clue or d.core_use!="elevator"): return false
+	var saved_seal_clues := 7 if old_seal and d.secret else 0
+	var saved_seal_input: Array = Riddle.solution(int(d.seed_value)) if old_seal and d.secret else []
+	var saved_seal_solved: bool = old_seal and d.secret
+	var saved_seal_reward := "legacy" if old_seal and d.secret else ""
+	if not old_seal:
+		if not (d.get("seal_version") is int or d.get("seal_version") is float) or d.seal_version!=Riddle.VERSION: return false
+		if not (d.get("seal_clues") is int or d.get("seal_clues") is float): return false
+		if not is_finite(float(d.seal_clues)) or d.seal_clues!=floor(d.seal_clues) or d.seal_clues<0 or d.seal_clues>7: return false
+		if not d.get("seal_input") is Array or not Riddle.valid_input(d.seal_input): return false
+		if not d.get("seal_solved") is bool or not d.get("seal_reward") in ["","provisions","voucher","legacy"]: return false
+		saved_seal_clues=int(d.seal_clues); saved_seal_input=d.seal_input.duplicate()
+		saved_seal_solved=d.seal_solved; saved_seal_reward=d.seal_reward
+		if d.secret!=(saved_seal_reward!=""): return false
+		if saved_seal_reward=="voucher" and balance!=0: return false
+		if saved_seal_clues & 4 and not d.clue: return false
+		if saved_seal_solved:
+			if saved_seal_clues!=7 or d.core_use!="elevator" or saved_seal_input!=Riddle.solution(int(d.seed_value)): return false
+		elif saved_seal_input.size()>3 or d.secret: return false
+		if not saved_seal_input.is_empty() and (saved_seal_clues!=7 or d.core_use!="elevator"): return false
 	if not d.get("floors") is Array or d.floors.size()!=MAPS.size(): return false
 	var cores_remaining := 0
+	var seals_remaining := 0
 	for grid in d.floors:
 		if not grid is Array or grid.size()!=11: return false
 		for row in grid:
 			if not row is Array or row.size()!=11: return false
 			for c in row:
 				if c=="C": cores_remaining+=1
+				if c=="Q": seals_remaining+=1
 				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","w","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">"]: return false
 	if cores_remaining>1 or (cores_remaining>0 and (d.core or d.core_use!="")): return false
+	if old_seal and d.secret:
+		if seals_remaining>1: return false
+	elif seals_remaining!=(0 if d.secret else 1): return false
 	if d.floor >= MAPS.size() or d.x < 1 or d.x > 9 or d.y < 1 or d.y > 9 or d.hp <= 0 or d.atk <= 0: return false
 	if d.floors[int(d.floor)][int(d.y)][int(d.x)] == "#": return false
 	if not d.floor_seen[int(d.floor)]: return false
@@ -397,6 +500,14 @@ func restore(d: Dictionary) -> bool:
 	quest_state=int(d.quest_state); bridge_built=d.get("bridge_built",false); event_done=d.event_done; event_kind=d.event_kind; water_choice=d.water_choice; chest_claimed=d.chest_claimed
 	last_battle={}
 	floors = d.floors.duplicate(true)
+	if old_seal and d.secret:
+		# Some historical saves retained the bell tile after claiming its old
+		# reward. Remove it without granting the new reward or changing stats.
+		for grid in floors:
+			for row in grid:
+				for x in row.size():
+					if row[x]=="Q": row[x]="."
+	seal_clues=saved_seal_clues; seal_input=saved_seal_input; seal_solved=saved_seal_solved; seal_reward=saved_seal_reward
 	floor_index = int(d.floor)
 	pos = Vector2i(int(d.x),int(d.y))
 	hp=int(d.hp); atk=int(d.atk); defense=int(d.def); keys=int(d.keys); gold=int(d.gold); moves=int(d.moves)

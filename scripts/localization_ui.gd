@@ -1,5 +1,35 @@
 extends RefCounted
 const EXACT = {
+ "Could not back up the old save. Current journey is unchanged.": "无法备份旧存档，当前旅程未改变。",
+  "Merchant: calibration needs a powered lift": "商人：校准需要升降梯供能",
+  "Core: lift powers calibration; forge/sale forfeits it": "机关芯：修梯可供能；锻造或出售将放弃校准",
+  "Sell core: +35 gold / PERMANENTLY forfeit lift and calibration": "出售机关芯：35 金币 / 永久放弃升降梯与校准",
+  "Forge core: +8 DEF / PERMANENTLY forfeit lift and calibration": "锻造机关芯：防御 +8 / 永久放弃升降梯与校准",
+  "Read the old contract: calibration clue / lift power required": "阅读旧契约：校准线索 / 需要升降梯供能",
+  "Read the valve plate: calibration clue / no water spent": "阅读水阀铭牌：校准线索 / 不消耗泉水",
+  "Read the inscription: calibration clue": "阅读碑文：校准线索",
+  "Choose provisions: +80 HP and 1 key / forgo voucher": "选择补给：生命 +80、钥匙 +1 / 放弃账券",
+  "Erase the last symbol": "擦除最后一个符号",
+  "Clear all four slots": "清空四个输入槽",
+  "OLD TOWER CALIBRATION": "旧塔校准",
+  "Read M / O / N clues; power the lift with the core.": "阅读 M / O / N 的线索；用机关芯为升降梯供能。",
+  "Four unique symbols. The fourth entry checks the order; mistakes cost nothing.": "输入四个不同符号；第四个输入后自动校验，答错无惩罚。",
+  "Calibration forfeited: the core was forged or sold this run.": "校准已永久放弃：本局机关芯已锻造或出售。",
+  "Calibration solved. Choose ONE reward; the other is forgone.": "校准已解开。奖励只能选一项，另一项将放弃。",
+  "Not ready: read all three clues and repair the old lift.": "尚未就绪：请读齐三条线索并修好古老升降梯。",
+  "J: review only your discovered clues. E / Esc: leave without changing the input.": "J 查看已发现线索；E / Esc 离开，保留当前输入。",
+  "Repeated symbols are unavailable. Backspace and clear are safe.": "已选符号不能重复输入。退格和清空均无惩罚。",
+  "Solve the powered calibration before choosing a reward.": "先为机关供能并解开校准，再选择奖励。",
+  "Core held: lift powers calibration; forge or sale permanently forfeits it.": "持有机关芯：修梯可为校准供能；锻造或出售将永久放弃校准。",
+  "Old tower calibration solved.": "旧塔校准已解开。",
+  "provisions": "补给（生命与钥匙）",
+  "voucher": "固定账券",
+  "legacy": "旧版已领取奖励",
+  "Sun": "太阳",
+  "Moon": "月亮",
+  "Tower": "高塔",
+  "Key": "钥匙",
+
   'Inscription: "The silent bell opens when the old lift runs."': '碑文：“旧梯运转之时，沉寂之钟便会开启。”',
   '"Seek it above."': '“向上寻找。”',
   "N O C T U R N E   /   G A M E S": "夜曲游戏",
@@ -222,6 +252,8 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+  ["Choose 50 voucher: repay %d / receive %d gold", "选择固定 50 账券：抵债 %d / 入袋 %d 金币"],
+  ["Calibration reward: %s", "校准奖励：%s"],
   ["%s: costs %d gold keys", "%s：消耗 %d 把金钥匙"],
   [
     "SEED %d  /  THE KEY OF THE SKY",

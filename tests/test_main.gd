@@ -159,7 +159,7 @@ func run_tests():
 	scene.world.floors[2][3][9]="."
 	notes="\n".join(scene.journal_lines())
 	check("treasure has been claimed" in notes,"journal records claimed vault")
-	scene.world.clue=true
+	scene.world.enter_floor(3); scene.world.pos=Vector2i(1,2); scene.world.step(Vector2i.DOWN)
 	check("Inscription:" in "\n".join(scene.journal_lines()),"journal retains learned clue")
 	scene.save_game(false)
 	event.keycode=KEY_J; scene._unhandled_input(event)

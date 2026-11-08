@@ -80,11 +80,17 @@ func run_tests():
 	check(learned=="已学："+Loc.text("Iron skin")+"、"+Loc.text("Trained focus"),"nested learned talent list translates every dynamic name")
 	var equipped: String=Loc.text("Equipped: Heavy buckler. "+str(Progression.GEAR.buckler.description))
 	check(cjk(equipped) and not "Equipped" in equipped and not "Heavy buckler" in equipped and not "Block the" in equipped and "+6" in equipped and "-4" in equipped,"equipment prefix, dynamic name and full description all translate")
+	for id in World.Riddle.SYMBOLS:
+		check(cjk(Loc.text(World.Riddle.SYMBOLS[id])),"riddle symbol name translates: "+id)
+	for seed_number in [0,23]:
+		for clue_line in World.Riddle.clues(seed_number):
+			var translated: String=Loc.text(clue_line)
+			check(cjk(translated) and not "Sun" in translated and not "Moon" in translated and not "Tower" in translated and not "Key" in translated,"seed-specific relation clue fully translates: "+clue_line)
 	# Audit only UI-like string literals, excluding fragments that are always
 	# joined to a complete translated string and technical engine labels.
 	var allow := [" (cancel armed skill)"," / 1 focus"," [EQUIPPED]","BLENDER  +  GODOT"]
 	var words:=RegEx.new(); words.compile("[A-Za-z]{3,}")
-	for path in ["res://scripts/main.gd","res://scripts/world.gd","res://scripts/progression.gd"]:
+	for path in ["res://scripts/main.gd","res://scripts/world.gd","res://scripts/progression.gd","res://scripts/riddle.gd"]:
 		var missing: Array=[]
 		for source in source_strings(FileAccess.get_file_as_string(path)):
 			if not " " in source or source in allow or source.begins_with("res://") or words.search(source)==null: continue

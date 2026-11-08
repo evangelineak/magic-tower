@@ -69,8 +69,15 @@ func _init():
 	w.enter_floor(4); w.pos=Vector2i(1,3)
 	check(not w.action("secret"),"secret requires clue")
 	w.clue=true
+	check(not w.action("secret"),"old single-clue flag cannot bypass three-clue calibration")
+	w.enter_floor(0); w.pos=Vector2i(2,1); w.action("seal_contract")
+	w.enter_floor(1); w.pos=Vector2i(1,4); w.action("seal_water")
+	w.enter_floor(3); w.pos=Vector2i(1,2); w.step(Vector2i.DOWN)
+	w.enter_floor(4); w.pos=Vector2i(1,3)
+	check(not w.action("secret"),"three clues and lift still require correct sequence")
+	for symbol in World.Riddle.solution(w.seed_value): w.action("secret_ring_"+symbol)
 	var old_hp: int=w.hp
-	check(w.action("secret") and w.hp==old_hp+80,"learned clue and running lift reveal secret")
+	check(w.action("secret") and w.hp==old_hp+80,"solved calibration and running lift grant one secret reward")
 	check(not w.action("secret") and w.hp==old_hp+80,"secret rewards once")
 	w=World.new(0); w.enter_floor(4); w.pos=Vector2i(1,3); w.clue=true
 	check(not w.action("secret"),"clue alone insufficient")

@@ -30,9 +30,6 @@ jobs:
           bash tools/test_all.sh
       - name: Export both previews and smoke test Linux
         run: bash tools/export_desktop.sh
-      - name: Keep build identity alongside notices
-        run: |
-          printf 'Source commit: %s\nUnsigned development preview, not a production release.\nWindows cross-export only, not Windows runtime certification.\n' "$GITHUB_SHA" | tee export/linux/BUILD.txt > export/windows/BUILD.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: magic-tower-desktop-preview-${{ github.sha }}

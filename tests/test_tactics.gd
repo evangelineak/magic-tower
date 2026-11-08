@@ -52,7 +52,7 @@ func run_tests():
 	# Legacy v4 had identical equipment IDs/stats, no bridge field, and a Sentinel
 	# in the new heavy enemy's slot. Loading it must preserve its actual map.
 	w=fixture("duelist"); var legacy: Dictionary=state(w)
-	legacy.erase("bridge_built"); legacy.floors[3][8][7]="g"
+	legacy.version=4; legacy.erase("bridge_built"); legacy.floors[3][8][7]="g"
 	var loaded=World.new(0)
 	check(loaded.restore(legacy) and loaded.equipped=="duelist" and loaded.inventory.has("duelist") and loaded.tile(Vector2i(7,8))=="g","legacy v4 gear save loads without silently replacing old map enemy")
 	check(loaded.battle_preview("g").feint_damage>0,"loaded legacy gear receives current documented combat rule")

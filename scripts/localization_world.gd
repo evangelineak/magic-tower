@@ -3,6 +3,18 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+	"Core: lift powers calibration; forge +8 DEF or sell 35 forfeits that quest.":"机关芯：修梯可为校准供能；锻造加8防御或卖35金币，将永久放弃此支线。",
+	"Calibration needs all three clues and the repaired lift.":"校准需要读齐三条线索，并修好升降梯。",
+	"Use each symbol once. Backspace or clear to change the sequence.":"每个符号只能使用一次。退格或清空可修改顺序。",
+	"Calibration solved. Choose provisions or a fixed 50-gold voucher.":"校准已解开。可选择补给，或固定价值50金币的账券。",
+	"The order does not fit the clues. Reset freely; nothing was spent.":"顺序不符合线索。可自由清空重试，没有消耗任何资源。",
+	"Symbol recorded. No HP, gold, focus or interest was spent.":"符号已记入。没有消耗生命、金币、专注，也没有新增利息。",
+	"Sequence edited. No resources or interest spent.":"输入已修改。没有消耗资源，也没有新增利息。",
+	"Core sold. Lift, forge and old-tower calibration are forgone.":"机关芯已出售。升降梯、锻造与旧塔校准均永久放弃。",
+	"Lift repaired. Calibration is powered; forge and sale forgone.":"升降梯已修好，校准已获供能；锻造和出售已放弃。",
+	"Core forged: +8 DEF. Lift, sale and old-tower calibration are forgone.":"机关芯已锻造，防御+8。升降梯、出售与旧塔校准均永久放弃。",
+	"Calibration provisions: +80 HP / +1 key. Voucher forgone.":"校准补给已领取：生命+80、钥匙+1。账券已放弃。",
+
 	"Mossling":"苔藓怪",
 	"Sentinel":"哨卫",
 	"Veil Stalker":"帷影潜猎者",
@@ -81,6 +93,11 @@ const EXACT = {
 # Preserve conversion types and argument order. The display adapter matches
 # these full English templates; %s values may themselves have catalog names.
 const TEMPLATES = [
+	["Contract: %s is neither first nor last.", "契约线索：%s既不在第一位，也不在最后一位。"],
+	["Valve: %s must be immediately before %s.", "水阀线索：%s必须紧挨在%s前面。"],
+	["Inscription: %s is before %s.", "碑文线索：%s在%s前面。"],
+	["Calibration voucher: %d debt cleared / %d gold received.", "校准账券：抵债%d，入袋%d金币。"],
+
 	["%s defeated. -%d HP", "击败%s，损失%d点生命。"],
 	["Floor %d. Debt %d. Interest settles only on first entry to floors 4 / 5.", "第%d层，欠款%d。仅首次进入第4、5层时计息。"],
 	["%s chosen. Every hero can clear the main route.", "已选择%s。所有英雄都能完成主线。"],
