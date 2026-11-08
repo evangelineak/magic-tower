@@ -279,3 +279,31 @@
 最终独立Linux包实际启动并L恢复同一forager旅程：8步288HP/6金币，策略和两条原收据未变；hero、V、F2中英文均检查。保留最终窗口，关闭本轮跟踪的旧risk/候选窗口。截图`strategy-final-reloaded/hero/compare-en.png`，证据`strategy-final-store.txt`。游戏日志无脚本/解析错误，仅既有VSync与ALSA回退dummy提示，不声称听音验收。Linux二进制SHA `42d27cabbc7207bb130061ad9777d1d3d8b27c42e66c887e1ccbf0bf4ef102e5`；Windows交叉导出SHA `bac30dfd711712f81d083c33cc88d20c0be34fba3625e4dbc5e9991130cfbc35`，未在Windows运行。
 
 打包一致性核验：PCK JS 34131 bytes，SHA `c71cd3c9e2ec63405abcde250c87414584c68c4d49436b57b21fd4c03415ac5b`与源一致。World导出为编译.gdc，原.gd路径探针为空不能用作比较；按remap读world.gdc，再从最终源码独立export-pack重编译，两者SHA均`67d9f1fb14caa496e51b936767cd26d12ca5f0a149e90a446753c0f80e682814`。最终World源SHA `c6283ab2a39b99794277a1a0b43f4ab8fab19270d2c3452492165ec72b73f3f7`。
+
+## 局内天赋册切片（schema16，本地验收完成）
+
+此批未混入已部署的可选策略预览。前两册各四选三、第三册保留原三项，候选开局固定；真实3/7/12杀解锁，暂存选择不增加新货币。新战术复盘影响同种连战，逆境蓄能影响40点实际损血与技能使用时机。
+
+- World667项：实际seed0第一层第3杀、第二层第7杀解锁与选择，预览等于实际结果；完整首章继续远征后通过正常验货签/重训动作确认不重抽、不返还HP/focus/击杀；真实旧15活/死迁移保留全部旧字段、不补抽。
+- 战斗13603项/6600组合：实际39/40/41损血、架盾61→40、不屈60→40阈值，首次/同种/异种击杀，死亡不回专注、不更新上次击杀；已有channel策略与蓄能共同返还仍在扣技能后统一受cap限制。旧9240组原装时序等价测试继续通过。
+- 两阶各200种子候选检查忽略顺序比较实际集合，各四种遗漏均覆盖；Godot/JS独立FNV候选一致。JSON1.0版本验证曾因Array.has严格类型拒绝，已改严格finite整数校验后显式数值比较，不接受bool/截断小数。
+- Session332、天赋存储176项通过：普通保存/Undo不能更改出生候选，真实Undo可以恢复上次击杀种类，死亡不改。真实schema15夹具来自已提交cca5b738旧生产代码，不是改版本字段。
+- 旧测试里指定固定构筑的oath/回访fixture明确使用旧rev0候选，不让新随机缺卡破坏另一个系统的测试目的；其他旧字段比较只排除新增talent_draft/last_kill_kind，未放宽生产验证。
+- 全树预检47个Godot套退出0，无SCRIPT ERROR/ERROR；五组Node269/17/59/473/52通过，包含400种子、9真实路线3882次合法存读。最后UI及字库定稿后再核最终产物。
+- 字体906必需字符、缺0；1064 cmap/2107 glyphs，415732字节，SHA `f46442f07e35f430f278127c0059064b47b44e9dba022376c0e6e2b95c121b3e`。
+
+远端CI需按最终准确提交另核。传承技能点仍未实现，不把本局未花天赋选择冒充跨局点数。
+
+另做玩法而非仅接口审查：66条真实合法学者首章模拟（7 seed×3天赋基础路线，另5 seed×3天赋×3装备策略）；每一步/技能/装备/遗物选择均走World动作，无伪造HP、击杀或奖励。seed1取重盾支路，4层潜伏者用盾损32不返专注，改原装损66返1、随后Mend80，净多46生命；该敌只死一次。多数前三层逆境略弱，首章末偏强，不能宣称全构筑平衡。日志`/tmp/adversity_routes.jsonl`与`/tmp/adversity_buckler_scan.jsonl`。保留可解释组合，记录40阈值可能导致过度切装的体验风险，尚未扩大为无限刷点。
+
+真实新局GUI：独立空档、seed0、护卫、无跨局策略，正常逐格操作到第3/7杀选册；首册预选、Esc回地图再C确认有效。战术复盘在下一只同类怪将预览2损血变0，实际不损血、HP414一致。第二册选择逆境蓄能后继续正常路线，第14战使用架盾消耗专注，再取消备战，第15战对4F黄铜巨像未开技能，实际60损血：635→575HP、专注2→3、金币184→208、击杀14→15。run `d403fbce5d67ec45fe66aab1268d706c`，202步，前后真实store.bak/store.json保留为`folio-native-before-store.json`与`folio-native-store.json`。没有写入伪造击杀/HP/候选。
+
+选择第三册战地救护后，正常L恢复三个已学天赋，只读卡中英文可查看；数字/Enter不重复学习或消耗资源。实玩审查修复了提前return导致旧已学列表不可达的回归，也修复无法破甲组合文本漏译。最终UI177项通过，本地化96项通过。截图`folio-first-unlocked/first-preview/tactical-actual/second-unlocked/second-preview/adversity-before/adversity-battle/adversity-after/learned-zh/learned-en.png`。
+
+真实浏览器生产JS/IndexedDB schema16 harness77项全部通过，证据`folio-browser-77.png`；仍不当作Godot Web实际游玩。已发布`/preview/`仅上一策略源186400d3，根v0.17保持不变，分别实际读取BUILD验证部署e3826aa，Pages run42504598243成功。
+
+最终独立Linux包 `c4ff0e50b1d5c02dd7e84ff0d85a1bf480467bdef746112b654d0f5ca1356b55` 实际启动并L恢复203步、575HP、208金币、三天赋，数字/Enter只读前后完整World/profile与runrevision203不变。中英已学卡可读，保留最终窗口6376。截图`folio-export-zh/en/world.png`。游戏无脚本/解析错误，仅已知VSync/ALSA回退dummy提示，未声称听音验收。Windows交叉导出SHA `cd2c46612b8644313ede52557bc3b6b1dc875b688a437b6bd96f612262ec47b0`，未在Windows运行。
+
+PCK JS SHA `2bc4bafce2f6738d111b9d42d5ea9583ff8fec9d5c8eeb2a5ee3807350f459b9` 与源码一致；PCK World.gdc `f7c5a8da96d10ea1c1adc8129eae3707ba906edd59b0c5994c9d329b39f88cf1`、main.gdc `bb60d3b608cb150a008da7d7ea3cba2cb917d2e293e8ae14997a7a46c2d141ca` 均与最终源码独立重编译一致，见`folio-pck-verified.log`。
+
+最终冻结后强化门禁完整回归`/tmp/tower-talent-verified-final.log`退出0：47个Godot套全部通过，UI177/本地化96，200首章+200远征种子、9条路线3882个合法存读状态；五组Node共870项通过。无SCRIPT ERROR/ERROR。此结果包含最后已学只读卡与无法破甲中文修复，不沿用早期UI截图作为最终包证据。

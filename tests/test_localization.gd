@@ -47,6 +47,9 @@ func source_strings(source: String) -> Array:
 func _initialize():
 	call_deferred("run_tests")
 func run_tests():
+	for id in ["tactical_review","adversity_charge"]:
+		check(cjk(Loc.text(Progression.TALENTS[id].name)),"new folio name localized: "+id)
+		check(cjk(Loc.text(Progression.TALENTS[id].description)),"new folio effect localized: "+id)
 	for id in Strategy.IDS:
 		check(cjk(Loc.text(Strategy.TEMPLATES[id].name)),"strategy name localized: "+id)
 		check(cjk(Loc.text(Strategy.TEMPLATES[id].description)),"strategy tradeoff localized: "+id)

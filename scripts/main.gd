@@ -50,6 +50,11 @@ var journal_page := 0
 var growth := true
 var growth_tab := 0
 var gear_page := 0
+var talent_selected := ""
+var talent_submitted := false
+var talent_target_index := 0
+var talent_notice_tier := -1
+var talent_notice_time := 0.0
 var reset_mode := ""
 var battle_details: Dictionary = {}
 var battle_kind := "s"
@@ -122,6 +127,7 @@ func _process(delta):
 	tick += delta
 	advance_walk(delta)
 	battle_time = maxf(0.0, battle_time-delta)
+	if battle_time<=0.0 and not modal_open(): talent_notice_time=maxf(0.0,talent_notice_time-delta)
 	queue_redraw()
 func display(source: String) -> String:
 	return Localization.text(source,language)
@@ -203,7 +209,9 @@ func _draw():
 	if comparison: draw_comparison()
 	if travel_menu: draw_travel()
 	if attuning: draw_attunement()
-	if not modal_open(): draw_tooltip()
+	if not modal_open():
+		draw_tooltip()
+		if talent_notice_time>0.0: draw_talent_notice()
 	if finish_pending!="": draw_finish_confirmation()
 	if is_terminal(): draw_terminal()
 	if strategy_pending(): draw_strategy_draft()
@@ -226,8 +234,8 @@ func draw_sidebar():
 		label_at(p+Vector2(10,21),values[i][0],13,MUTED)
 		label_at(p+Vector2(10,48),values[i][1],23,values[i][2])
 	if ui_notice!="": label_at(Vector2(768,422),"F5: retry pending save / L: reload stored journey",13,MUTED)
-	label_at(Vector2(768,326),"Kills %d  /  Talents %d" % [world.kills,world.talents.size()],16,GOLD)
-	label_at(Vector2(768,354),"NEW TALENT AVAILABLE  [C]" if not Progression.talent_options(world.kills,world.talents).is_empty() else "C: hero, equipment and skills",15,TEAL)
+	label_at(Vector2(768,326),folio_progress_text(),16,GOLD)
+	label_at(Vector2(768,354),"NEW TALENT AVAILABLE  [C]" if not world.talent_options().is_empty() else "C: hero, equipment and skills",15,TEAL)
 	draw_wrapped(Vector2(768,388),quest_hint(),460,16,GOLD,2)
 	draw_wrapped(Vector2(768,441),status_message(),460,15,TEAL,3)
 	label_at(Vector2(768,512),"Walking safely... Any key or click stops." if not walk_route.is_empty() else "Click clear floor to walk. Other objects: inspect only.",14,MUTED)
@@ -839,6 +847,7 @@ func action_effect(id: String):
 	if id in ["spring","drain","quest_bridge","camp_bridge"]: play_sound("water")
 	elif id in ["expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher","audit_medicine"]: play_sound("pickup")
 	if id.begins_with("hero_") or id.begins_with("talent_"): growth=false
+	if id.begins_with("talent_"): talent_selected=""; talent_submitted=false; talent_notice_time=0.0
 func quest_hint() -> String:
 	return ["J: find the researcher's request","QUEST: seek the sample (I)","SURVEY: J reward or F bridge","SURVEY: delivered to J","SURVEY: flood bridge built"][clampi(world.quest_state,0,4)]
 func skill_description() -> String:
@@ -856,7 +865,7 @@ func growth_actions() -> Array:
 			for id in world.inventory:
 				if Progression.GEAR.has(id): rows.append(["equip_"+id,Progression.GEAR[id].name+(" [EQUIPPED]" if world.equipped==id else ""),Progression.GEAR[id].description])
 		2:
-			for id in Progression.talent_options(world.kills,world.talents): rows.append(["talent_"+id,Progression.TALENTS[id].name,Progression.TALENTS[id].description])
+			for id in world.talent_options(): rows.append(["talent_"+id,Progression.TALENTS[id].name,Progression.TALENTS[id].description])
 	return rows
 func visible_growth_actions() -> Array:
 	var rows: Array=growth_actions()
@@ -864,11 +873,13 @@ func visible_growth_actions() -> Array:
 	gear_page=clampi(gear_page,0,maxi(0,ceili(rows.size()/3.0)-1))
 	return rows.slice(gear_page*3,gear_page*3+3)
 func open_growth():
+	if not talent_submitted: talent_selected=""
+	talent_target_index=0
 	close_attunement()
 	cancel_walk()
 	comparison=false
 	growth=not growth; journal=false; interaction=false; winch_pending=""; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
-	if growth: growth_tab=2 if not Progression.talent_options(world.kills,world.talents).is_empty() else 0
+	if growth: growth_tab=2 if not world.talent_options().is_empty() else 0
 func draw_growth():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
 	panel(Rect2(195,80,890,650),Color("0c1928"))
@@ -879,6 +890,9 @@ func draw_growth():
 		panel(r,Color("345c62") if growth_tab==i else Color("253748"))
 		label_at(r.position+Vector2(15,26),["HERO & SKILL","EQUIPMENT","TALENTS"][i],17)
 	var subtitle: String = ["Choose before your first action. Later: use your hero's skill.","Switch owned gear freely. Check the battle forecast after switching.","One choice at 3 / 7 / 12 kills. Each tier's choices are exclusive."][growth_tab]
+	if growth_tab==2:
+		draw_talent_folio()
+		return
 	label_at(Vector2(225,245),subtitle,16,MUTED)
 	var rows := visible_growth_actions()
 	for i in rows.size():
@@ -1175,6 +1189,7 @@ func _unhandled_input(event):
 				if Rect2(915,548,120,38).has_point(get_global_mouse_position()): gear_page+=1; return
 			for i in 3:
 				if Rect2(225+i*270,175,250,40).has_point(get_global_mouse_position()): growth_tab=i; return
+			if growth_tab==2: talent_folio_click(get_global_mouse_position()); return
 			var choices := visible_growth_actions()
 			for i in choices.size():
 				if Rect2(225,270+i*87,830,76).has_point(get_global_mouse_position()): perform_action(choices[i][0]); return
@@ -1246,6 +1261,12 @@ func _unhandled_input(event):
 			return
 		if growth:
 			if event.keycode==KEY_TAB: growth_tab=(growth_tab+1)%3; return
+			if growth_tab==2:
+				if event.keycode==KEY_BRACKETLEFT: cycle_talent_target(-1)
+				elif event.keycode==KEY_BRACKETRIGHT: cycle_talent_target(1)
+				elif event.keycode==KEY_ENTER: confirm_talent()
+				elif event.keycode>=KEY_1 and event.keycode<=KEY_3: select_talent(event.keycode-KEY_1)
+				return
 			if growth_tab==1 and event.keycode==KEY_BRACKETLEFT: gear_page=maxi(0,gear_page-1); return
 			if growth_tab==1 and event.keycode==KEY_BRACKETRIGHT: gear_page+=1; return
 			var index: int=event.keycode-KEY_1
@@ -1316,6 +1337,10 @@ func move(direction: Vector2i, confirmed:=false):
 		return
 	apply_session_result(await session.step(direction))
 func step_effect(enemy: String, hero_before: String):
+	if World.ENEMIES.has(enemy) and not world.won:
+		for i in Progression.TALENT_TIERS.size():
+			if world.kills==Progression.TALENT_TIERS[i].kills:
+				talent_notice_tier=i; talent_notice_time=6.0
 	if World.ENEMIES.has(enemy): play_sound("victory" if world.won else "impact")
 	elif enemy in ["D","L"]: play_sound("door")
 	elif enemy in ["k","h","a","d","C","I","T","$","A","P","m"]: play_sound("pickup")
@@ -1338,6 +1363,7 @@ func save_game(_announce:=true):
 func load_game():
 	if session==null or session.busy: return
 	strategy_selection=""; strategy_submitted=false
+	talent_selected=""; talent_submitted=false; talent_notice_time=0.0
 	close_attunement(); cancel_walk(); close_travel(); finish_pending=""; clear_lethal(); death_report=false; reset_armed=false
 	var result: Dictionary=await session.reacquire_and_reload()
 	if result.get("status")=="empty" and world==null:
@@ -1381,7 +1407,7 @@ func dispatch_committed_effect(effect: Dictionary):
 		"step": step_effect(str(effect.get("token",".")),str(effect.get("hero",world.hero_id)))
 		"action": action_effect(str(effect.get("input","")))
 		"walk": play_sound("move")
-		"undo": battle_time=0.0
+		"undo": battle_time=0.0; talent_selected=""; talent_submitted=false; talent_notice_time=0.0
 		"death":
 			clear_lethal(); cancel_walk(); battle_time=0.0; death_report=true; death_page=0; play_sound("impact")
 		"settle":
@@ -1389,6 +1415,7 @@ func dispatch_committed_effect(effect: Dictionary):
 		"strategy":
 			strategy_selection=""; strategy_submitted=false; cancel_walk(); growth=true; growth_tab=0
 		"create":
+			talent_selected=""; talent_submitted=false; talent_notice_time=0.0
 			strategy_selection=""; strategy_submitted=false
 			clear_lethal(); death_report=false
 			finish_pending=""
@@ -1530,3 +1557,87 @@ func draw_strategy_draft():
 	panel(Rect2(220,650,840,45),Color("345c62") if strategy_selection!="" else Color("203343"))
 	label_at(Vector2(235,679),"ENTER: LOCK STRATEGY / Esc: clear selection",18)
 	draw_wrapped(Vector2(220,715),ui_notice if ui_notice!="" else "N: new seed / R: same seed new run / L: reload / F2: language",840,13,GOLD if ui_notice!="" else MUTED,1)
+
+func folio_progress_text() -> String:
+	var progress: Dictionary=world.talent_progress()
+	if progress.available: return "TALENT FOLIO READY / %d kills / C" % world.kills
+	if int(progress.next_kills)>0: return "Next folio: %d / %d kills" % [world.kills,progress.next_kills]
+	return "All talent folios chosen / %d kills" % world.kills
+func draw_talent_notice():
+	panel(Rect2(40,650,670,100),Color("173d48"))
+	label_at(Vector2(58,678),"TALENT FOLIO %d UNLOCKED" % (talent_notice_tier+1),22,GOLD)
+	draw_wrapped(Vector2(58,711),"C: inspect three fixed choices. You can keep exploring and choose later.",630,17,INK,2)
+func talent_targets() -> Array:
+	return world.talent_preview_targets()
+func cycle_talent_target(direction: int):
+	var targets:=talent_targets()
+	if not targets.is_empty(): talent_target_index=posmod(talent_target_index+direction,targets.size())
+func talent_card_preview(id: String) -> Dictionary:
+	var targets:=talent_targets()
+	if targets.is_empty(): return world.talent_preview(id)
+	talent_target_index=clampi(talent_target_index,0,targets.size()-1)
+	var target: Dictionary=targets[talent_target_index]
+	return world.talent_preview(id,target.kind,target.pos,target.floor)
+func select_talent(index: int):
+	if talent_submitted: return
+	var options: Array=world.talent_options()
+	if index>=0 and index<options.size(): talent_selected=options[index]
+func confirm_talent():
+	if talent_selected=="" or talent_submitted or not can_mutate(): return
+	if not world.talent_preview(talent_selected).get("can_choose",false): return
+	talent_submitted=true
+	await perform_action("talent_"+talent_selected)
+func talent_folio_click(mouse: Vector2):
+	if Rect2(815,225,105,38).has_point(mouse): cycle_talent_target(-1); return
+	if Rect2(935,225,105,38).has_point(mouse): cycle_talent_target(1); return
+	for i in world.talent_options().size():
+		if Rect2(225,290+i*103,830,96).has_point(mouse): select_talent(i); return
+	if Rect2(225,640,830,40).has_point(mouse): confirm_talent(); return
+	if not Rect2(195,80,890,650).has_point(mouse): growth=false
+func talent_loss_text(preview: Dictionary) -> String:
+	if not preview.get("valid",false): return display("Cannot penetrate defense")
+	return str(int(preview.damage))+display(" HP loss")+(" / "+display("LETHAL") if not preview.get("survivable",false) else "")
+func learned_talent_cards() -> Array:
+	var cards: Array=[]
+	for id in world.talents:
+		cards.append({"id":id,"name":Progression.TALENTS[id].name,"description":Progression.TALENTS[id].description})
+	return cards
+func draw_talent_folio():
+	var learned:=learned_talent_cards()
+	if world.talent_options().is_empty():
+		label_at(Vector2(225,248),folio_progress_text(),19,TEAL)
+		label_at(Vector2(225,278),"Learned talents (read-only)",17,GOLD)
+		for i in learned.size():
+			var r:=Rect2(225,295+i*100,830,90)
+			panel(r,Color("203343"))
+			label_at(r.position+Vector2(12,26),learned[i].name,20,GOLD)
+			draw_wrapped(r.position+Vector2(12,52),learned[i].description,805,16,INK,2)
+		label_at(Vector2(225,620),"Run talents are separate from legacy strategy and equipment attunement.",15,MUTED)
+		label_at(Vector2(225,666),"Esc: return to the map. Learned talents remain active.",16,TEAL)
+		return
+	var targets:=talent_targets()
+	if not targets.is_empty():
+		talent_target_index=clampi(talent_target_index,0,targets.size()-1)
+		var target: Dictionary=targets[talent_target_index]
+		label_at(Vector2(225,248),"%s / F%d (%d,%d)" % [display(World.ENEMIES[target.kind].name),target.floor+1,target.pos.x,target.pos.y],17,TEAL)
+		panel(Rect2(815,225,105,38),Color("253748"));label_at(Vector2(825,250),"[ PREV TARGET",12)
+		panel(Rect2(935,225,105,38),Color("253748"));label_at(Vector2(945,250),"NEXT TARGET ]",12)
+	else: label_at(Vector2(225,248),"No known living target. Descriptions remain available.",16,TEAL)
+	label_at(Vector2(225,277),"Same current build; remote previews grant no flank barrier.",14,MUTED)
+	var options: Array=world.talent_options()
+	for i in options.size():
+		var preview:=talent_card_preview(options[i])
+		var r:=Rect2(225,290+i*103,830,96)
+		panel(r,Color("345c62") if talent_selected==options[i] else Color("203343"))
+		label_at(r.position+Vector2(12,23),"%d  %s" % [i+1,display(preview.name)],19,GOLD)
+		draw_wrapped(r.position+Vector2(12,44),preview.description,805,14,INK,2)
+		if preview.get("before",{}).has("damage"):
+			label_at(r.position+Vector2(12,74),"%s  ->  %s" % [talent_loss_text(preview.before),talent_loss_text(preview.after)],14,TEAL)
+			label_at(r.position+Vector2(12,91),world.victory_reward_text(preview.after),12,MUTED)
+	if options.is_empty(): draw_wrapped(Vector2(225,330),folio_progress_text(),800,21,GOLD,2)
+	var learned_names: Array[String]=[]
+	for card in learned: learned_names.append(display(card.name))
+	label_at(Vector2(225,620),"Learned: %s" % (", ".join(learned_names) if not learned_names.is_empty() else display("None")),15,MUTED)
+	panel(Rect2(225,640,830,40),Color("345c62") if talent_selected!="" else Color("203343"))
+	label_at(Vector2(240,666),"1-3: preview / Enter: learn selected talent / Esc: decide later",16,TEAL)
+	draw_wrapped(Vector2(225,704),ui_notice if ui_notice!="" else "Fixed offers. Viewing does not spend resources or reroll choices.",830,14,GOLD if ui_notice!="" else MUTED,1)

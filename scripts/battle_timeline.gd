@@ -4,14 +4,14 @@ const P=preload("res://scripts/progression.gd")
 const LIMIT=8192
 # Contact thorns happen before the corresponding hero hit. A lethal contact
 # stops that hit; this is explicit risk-mode ordering, not an old death rule.
-static func simulate(attack:int,defense:int,hp:int,enemy:Dictionary,hero:String,skill:bool,equipment:String,talents:Array,oath:String="none",flank:bool=false,attunement:String="none",strategy:String="none")->Dictionary:
+static func simulate(attack:int,defense:int,hp:int,enemy:Dictionary,hero:String,skill:bool,equipment:String,talents:Array,oath:String="none",flank:bool=false,attunement:String="none",strategy:String="none",last_kill_kind:String="")->Dictionary:
  var invalid={"valid":false,"reason":"Invalid timeline input.","events":[]}
  for value in [attack,defense,hp]:
   if value<0 or value>10000000:return invalid
  for key in ["hp","atk","def","thorns"]:
   var value=enemy.get(key,0)
   if not (value is int or value is float) or not is_finite(float(value)) or value<0 or value>10000000:return invalid
- var forecast=P.battle(attack,defense,hp,enemy,hero,skill,equipment,talents,oath,flank,attunement,strategy)
+ var forecast=P.battle(attack,defense,hp,enemy,hero,skill,equipment,talents,oath,flank,attunement,strategy,last_kill_kind)
  if not forecast.valid:return invalid
  var r=forecast.duplicate(true)
  r.forecast=forecast.duplicate(true);r.events=[];r.start_hp=hp;r.remaining_hp=hp;r.enemy_hp=int(enemy.hp)

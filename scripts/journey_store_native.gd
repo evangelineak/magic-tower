@@ -12,7 +12,7 @@ func _init(path:String="user://journeys-v1"):
   if not c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_":allowed=false
  safe_path=allowed;root=ProjectSettings.globalize_path(path) if allowed else ""
 func _snapshot(value)->Dictionary:
- if not value is Dictionary or (value.get("version")!=13 and value.get("version")!=14 and value.get("version")!=15) or value.get("run_id","")=="":return {}
+ if not value is Dictionary or (value.get("version")!=13 and value.get("version")!=14 and value.get("version")!=15 and value.get("version")!=16) or value.get("run_id","")=="":return {}
  # World validates both live modes and replay-verified terminal death records.
  if value.get("mode") not in ["safe","risk"]:return {}
  var digest=JSON.stringify(value).sha256_text()
@@ -85,7 +85,7 @@ func _operation(data:Dictionary,op:String,args:Dictionary)->Dictionary:
  var digest=JSON.stringify(copied).sha256_text()
  if data.runs.has(id) and data.runs[id].last_op.request_id==request_id:
   var existing=data.runs[id];var last=existing.last_op
-  var same_hash=last.hash==digest or (existing.snapshot is Dictionary and existing.snapshot.get("version",15)<15 and _snapshot(existing.snapshot)==copied)
+  var same_hash=last.hash==digest or (existing.snapshot is Dictionary and existing.snapshot.get("version",16)<16 and _snapshot(existing.snapshot)==copied)
   if last.kind!=op or not same_hash or (op=="save" and last.expected_slot!=args.auth.expectedSlotRevision) or last.expected_revision!=expected_revision:return _error("REQUEST_CONFLICT")
   if slot.activeRunId!=id or slot.revision!=last.result_slot or existing.revision!=last.result_revision or existing.status!="active":return _error("SUPERSEDED_OPERATION")
   return {"ok":true,"run":existing.duplicate(true),"slotRevision":slot.revision,"leaseUntil":slot.writer.leaseUntil,"profile":data.profile.profile.duplicate(true),"duplicate":true,"changed":false}
@@ -115,6 +115,7 @@ func _operation(data:Dictionary,op:String,args:Dictionary)->Dictionary:
  if copied.mode!=run.snapshot.mode:return _error("MODE_IMMUTABLE")
  var prior=_snapshot(run.snapshot)
  if prior.is_empty() or copied.draft!=prior.draft:return _error("DRAFT_IMMUTABLE")
+ if copied.talent_draft!=prior.talent_draft:return _error("TALENT_DRAFT_IMMUTABLE")
  if prior.draft.choice=="" and copied!=prior:return _error("DRAFT_PENDING")
  run.snapshot=copied;run.revision=int(run.revision)+1
  run.last_op={"request_id":request_id,"kind":op,"expected_slot":args.auth.expectedSlotRevision,"expected_revision":args.expected,"hash":digest,"result_slot":slot.revision,"result_revision":run.revision}

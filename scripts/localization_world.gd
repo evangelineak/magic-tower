@@ -346,6 +346,7 @@ const EXACT = {
 # Preserve conversion types and argument order. The display adapter matches
 # these full English templates; %s values may themselves have catalog names.
 const TEMPLATES = [
+["%s / floor %d", "%s / 第 %d 层"],
 ["On surviving victory: %d gold / %d HP recovery / %d focus recovery", "获胜且存活后：%d 金币 / 恢复 %d 生命 / 恢复 %d 专注"],
 ["Attunement: %s", "调校：%s"],
 ["Equipment attunement: %s / %s", "装备调校：%s / %s"],

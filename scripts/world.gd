@@ -50,6 +50,8 @@ var attunement_version := Attunement.REVISION
 var gear_offers: Dictionary = {}
 var gear_choices: Dictionary = {}
 var talents: Array = []
+var talent_draft: Dictionary = {}
+var last_kill_kind := ""
 var kills := 0
 var floor_seen: Array = [true,false,false,false,false]
 var quest_state := 0
@@ -109,6 +111,7 @@ func _init(run_seed: int = 0, run_layout: int = 2, session_run_id: String = "", 
 	layout_revision=run_layout if Layout.valid_revision(run_layout) else Layout.CURRENT
 	seed_value=clampi(run_seed,0,2147483647)
 	draft=Strategy.draft(seed_value,strategy_pool)
+	talent_draft=Progression.talent_draft(seed_value)
 	gear_offers=_new_gear_offers(seed_value)
 	audit_puzzle=AuditPuzzle.generate(seed_value)
 	event_kind=["bargain","smuggler","oath"][seed_value%3]
@@ -182,6 +185,38 @@ func choose_strategy(id: String) -> bool:
 func strategy_preview(id: String) -> Dictionary:
 	if not Strategy.valid_choice(draft.get("offers",[]),id): return {"valid":false}
 	return {"valid":true,"id":id,"name":"Original strategy" if id=="none" else Strategy.TEMPLATES[id].name,"description":"No strategy bonuses or costs." if id=="none" else Strategy.TEMPLATES[id].description,"skill_level":Progression.skill_level(talents,gear_attunement(),id),"skill_level_info":Progression.skill_level_info(talents,gear_attunement(),id),"skill_description":Progression.skill_description(hero_id,talents,gear_attunement(),id),"mend_heal":Progression.mend_heal(talents,gear_attunement(),id),"selected":draft.get("choice")==id,"can_choose":generation_valid and ended_reason=="" and not won and moves==0 and strategy_pending()}
+func talent_candidates() -> Array:
+	if talents.size()>=3 or not talent_draft.has("offers"): return []
+	return talent_draft.offers[talents.size()].duplicate()
+func talent_options() -> Array:
+	if strategy_pending() or ended_reason!="" or not generation_valid or won or talents.size()>=3: return []
+	if kills<int(Progression.TALENT_TIERS[talents.size()].kills): return []
+	return talent_candidates()
+func talent_progress() -> Dictionary:
+	return {"available":not talent_options().is_empty(),"next_kills":int(Progression.TALENT_TIERS[talents.size()].kills) if talents.size()<3 else 0,"kills":kills,"tier":talents.size()}
+func talent_preview_targets() -> Array:
+	var result:Array=[]
+	if floors.is_empty(): return result
+	for f in range(floors.size()):
+		if f!=floor_index and (f!=2 or not floor_seen[2]): continue
+		for y in range(1,10):
+			for x in range(1,10):
+				var kind:String=floors[f][y][x]
+				if not ENEMIES.has(kind) or (f!=floor_index and kind!="V"): continue
+				result.append({"kind":kind,"floor":f,"pos":Vector2i(x,y),"label":"%s / floor %d" % [ENEMIES[kind].name,f+1]})
+	return result
+func talent_preview(id:String,kind:String="",target:Vector2i=Vector2i(-1,-1),target_floor:int=-1) -> Dictionary:
+	if not id in talent_candidates(): return {"valid":false}
+	var result={"valid":true,"id":id,"name":Progression.TALENTS[id].name,"description":Progression.TALENTS[id].description,"can_choose":id in talent_options(),"before":{},"after":{}}
+	var f:=floor_index if target_floor==-1 else target_floor
+	var allowed:=false
+	for entry in talent_preview_targets():
+		if entry.floor==f and entry.pos==target and entry.kind==kind: allowed=true;break
+	if not allowed: return result
+	var next:=talents.duplicate();next.append(id)
+	result.before=_battle_preview_with_talents(kind,equipped,target,talents,f)
+	result.after=_battle_preview_with_talents(kind,equipped,target,next,f)
+	return result
 func _new_gear_offers(run_seed:int)->Dictionary:
 	var result:Dictionary={}
 	for gear in ATTUNABLE_GEAR: result[gear]=Attunement.offers(run_seed,gear)
@@ -441,17 +476,18 @@ func flank_position(target: Vector2i) -> Vector2i:
 	return candidate if Expedition.flanking_position(floors.slice(5),floor_index-5,target,candidate,layout_revision) else Vector2i(-1,-1)
 func battle_preview(kind: String, equipment_override: String = "", target: Vector2i = Vector2i(-1,-1)) -> Dictionary:
 	var gear := equipped if equipment_override=="" else equipment_override
-	# Comparisons share live context; only a real, adjacent target earns flanking.
+	return _battle_preview_with_talents(kind,gear,target,talents,floor_index)
+func _battle_preview_with_talents(kind:String,gear:String,target:Vector2i,chosen:Array,target_floor:int) -> Dictionary:
 	if not gear in inventory: gear="invalid_unowned"
-	var flank := false
-	if expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H":
-		flank=flank_position(target)==pos
-	return Progression.battle(atk,defense,hp,ENEMIES.get(kind,{}),hero_id,skill_armed and focus>0,gear,talents,"watch" if oath_state=="active" else "none",flank,gear_attunement(gear),current_strategy())
+	var flank:=target_floor==floor_index and expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H" and flank_position(target)==pos
+	var enemy:Dictionary=ENEMIES.get(kind,{}).duplicate();enemy.kind=kind
+	return Progression.battle(atk,defense,hp,enemy,hero_id,skill_armed and focus>0,gear,chosen,"watch" if oath_state=="active" else "none",flank,gear_attunement(gear),current_strategy(),last_kill_kind)
 func battle_timeline(target: Vector2i) -> Dictionary:
 	var kind:=tile(target)
 	if not ENEMIES.has(kind): return {"valid":false,"reason":"Not an enemy.","events":[]}
 	var flank:=expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H" and flank_position(target)==pos
-	return BattleTimeline.simulate(atk,defense,hp,ENEMIES[kind],hero_id,skill_armed and focus>0,equipped,talents,"watch" if oath_state=="active" else "none",flank,gear_attunement(),current_strategy())
+	var enemy:Dictionary=ENEMIES[kind].duplicate();enemy.kind=kind
+	return BattleTimeline.simulate(atk,defense,hp,enemy,hero_id,skill_armed and focus>0,equipped,talents,"watch" if oath_state=="active" else "none",flank,gear_attunement(),current_strategy(),last_kill_kind)
 func lethal_fight(delta: Vector2i) -> bool:
 	# Explicit Session confirmation is separate from ordinary movement.
 	if strategy_pending() or mode!="risk" or ended_reason!="" or not generation_valid or won or hp<=0 or moves>=1000000 or absi(delta.x)+absi(delta.y)!=1: return false
@@ -521,6 +557,7 @@ func step(direction: Vector2i) -> bool:
 		kills+=1
 		gain_gold(int(last_battle.gold_after))
 		focus=mini(focus_cap,focus+int(last_battle.focus_after))
+		last_kill_kind=t
 		message = "%s defeated. -%d HP" % [ENEMIES[t].name, cost]
 		if t in ["K","Z"]: won = true
 	elif t == "m":
@@ -742,7 +779,7 @@ func action(id: String) -> bool:
 		return true
 	if id.begins_with("talent_"):
 		var choice:=id.trim_prefix("talent_")
-		if not choice in Progression.talent_options(kills,talents): return false
+		if not choice in talent_options(): return false
 		talents.append(choice)
 		message="Talent learned: %s" % Progression.TALENTS[choice].name
 		moves+=1
@@ -939,7 +976,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":15,"draft":draft.duplicate(true),"death_record":death_record.duplicate(true),"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":16,"talent_draft":talent_draft.duplicate(true),"last_kill_kind":last_kill_kind,"draft":draft.duplicate(true),"death_record":death_record.duplicate(true),"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -947,7 +984,7 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13 and save_version!=14 and save_version!=15): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13 and save_version!=14 and save_version!=15 and save_version!=16): return false
 	if save_version>=14:
 		if not d.get("death_record") is Dictionary or not d.get("ended_reason") is String: return false
 		if d.get("ended_reason")=="death": return _restore_death(d)
@@ -960,6 +997,13 @@ func restore(d: Dictionary) -> bool:
 		if saved_draft.choice=="":
 			if not (d.get("moves") is int or d.get("moves") is float) or not d.get("won") is bool: return false
 			if d.moves!=0 or d.ended_reason!="" or d.won: return false
+	var saved_talent_draft:Dictionary=Progression.talent_draft(0,0)
+	var saved_last_kill:=""
+	if save_version>=16:
+		if not Progression.valid_talent_draft(d.get("seed_value"),d.get("talent_draft")): return false
+		if not d.get("last_kill_kind") is String or (d.last_kill_kind!="" and not ENEMIES.has(d.last_kill_kind)): return false
+		saved_talent_draft=d.talent_draft.duplicate(true);saved_talent_draft.version=int(saved_talent_draft.version)
+		saved_last_kill=d.last_kill_kind
 	var saved_run_id := ""
 	var saved_mode := "safe"
 	var saved_end := ""
@@ -1051,6 +1095,9 @@ func restore(d: Dictionary) -> bool:
 	else:
 		saved_gear_offers=_new_gear_offers(int(d.seed_value))
 	if not d.get("talents") is Array or not Progression.valid_talents(d.talents): return false
+	for tier in range(d.talents.size()):
+		if not d.talents[tier] in saved_talent_draft.offers[tier]: return false
+	if d.kills==0 and saved_last_kill!="": return false
 	if d.talents.size()>0 and d.kills<3: return false
 	if d.talents.size()>1 and d.kills<7: return false
 	if d.talents.size()>2 and d.kills<12: return false
@@ -1180,6 +1227,7 @@ func restore(d: Dictionary) -> bool:
 	if not d.floor_seen[int(d.floor)]: return false
 	if saved_end=="victory" and (not d.won or not saved_expedition or not d.floor_seen[7]): return false
 	if saved_end=="retired" and d.won and (saved_expedition or not d.floor_seen[4] or first_boss_remaining!=0): return false
+	talent_draft=saved_talent_draft;last_kill_kind=saved_last_kill
 	draft=saved_draft
 	death_record={}
 	run_id=saved_run_id; mode=saved_mode; ended_reason=saved_end
@@ -1241,8 +1289,11 @@ func _restore_death(d: Dictionary) -> bool:
 	var delta:=Vector2i(int(record.x),int(record.y))-probe.pos
 	if not probe.lethal_fight(delta): return false
 	var expected:=d.duplicate(true)
+	expected.version=16
+	if int(d.version)<16:
+		expected.talent_draft=Progression.talent_draft(0,0)
+		expected.last_kill_kind=""
 	if int(d.version)<15:
-		expected.version=15
 		expected.draft={"version":0,"pool":[],"offers":[],"choice":"none"}
 	if JSON.parse_string(JSON.stringify(probe.save_data()))!=JSON.parse_string(JSON.stringify(expected)): return false
 	if not restore(before): return false

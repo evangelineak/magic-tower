@@ -3,6 +3,11 @@ extends RefCounted
 # Pure display catalog. English simulation IDs and rule text remain untouched.
 # Dynamic templates retain argument order; %% is a literal percent sign.
 const EXACT = {
+"Tactical review":"战术复盘",
+"DEF +4 when this enemy has the same kind as your last surviving kill. No bonus before your first kill.":"敌人与上次实际击杀的怪物同种时，防御 +4；首次击杀前无此加成。",
+"Adversity charge":"逆境蓄能",
+"After a surviving kill that actually costs at least 40 HP, restore 1 focus, up to the cap. Recovery cannot rescue a lethal battle.":"击杀且存活、实际损失至少 40 生命时，恢复 1 专注，不超过上限；无法靠战后恢复挽救致死战斗。",
+
 "Skill training +4 levels. Brace, Precision and Mend use your total level.": "技能训练 +4 级。架盾、精准破甲和治愈按实际总等级生效。",
 "Clear focus":"澄明专注",
 "Deep focus":"深度专注",

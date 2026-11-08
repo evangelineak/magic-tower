@@ -133,9 +133,48 @@ func run_tests():
 	event.keycode=KEY_C; scene._unhandled_input(event)
 	check(scene.growth_tab==2 and scene.growth_actions().size()==3,"unlocked talent tier opens three mutually exclusive choices")
 	event.keycode=KEY_1; scene._unhandled_input(event)
-	check(scene.world.talents.size()==1 and not scene.growth,"talent key commits one choice")
+	check(scene.world.talents.is_empty() and scene.talent_selected!="" and scene.growth,"talent key previews without committing")
+	await scene.confirm_talent()
+	check(scene.world.talents.size()==1 and not scene.growth,"Enter confirms the preselected talent")
 	await scene.undo()
 	check(scene.world.talents.is_empty(),"talent selection reversible via whole-state undo")
+	var folio_snapshot=scene.world.save_data().duplicate(true)
+	scene.growth=true;scene.growth_tab=2;scene.select_talent(0)
+	var folio_selected=scene.talent_selected
+	var folio_forecast=scene.talent_card_preview(folio_selected)
+	check(folio_forecast.valid and not folio_forecast.before.is_empty(),"folio preview uses a real known enemy")
+	check(scene.world.save_data()==folio_snapshot,"talent preview neither learns nor changes current build")
+	check(scene.talent_targets().all(func(t):return t.floor==scene.world.floor_index),"unseen third-floor vault is not disclosed")
+	scene.world.floor_seen[1]=true;scene.world.floor_seen[2]=true
+	await Fixture.sync(scene)
+	check(scene.talent_targets().any(func(t):return t.floor==2 and t.kind=="V"),"seen surviving vault becomes a remote comparison target")
+	var folio_targets=scene.talent_targets()
+	for i in folio_targets.size():
+		if folio_targets[i].floor==2:scene.talent_target_index=i;break
+	var vault_comparison=scene.talent_card_preview(folio_selected)
+	check(not vault_comparison.after.get("flank_active",false),"remote vault forecast cannot gain current-position flank")
+	scene.session.adapter.lost_ack=true
+	await scene.confirm_talent()
+	check(scene.world.talents.is_empty() and scene.talent_submitted,"talent lost ACK keeps the old live build")
+	scene.select_talent(1)
+	check(scene.talent_selected==folio_selected,"pending talent choice cannot silently change retry target")
+	await scene.retry_save()
+	check(scene.world.talents==[folio_selected] and not scene.talent_submitted,"F5 publishes exactly the confirmed talent")
+	await scene.undo()
+	check(scene.world.talent_draft==folio_snapshot.talent_draft,"talent Undo restores the same fixed booklet")
+	# Cosmetic folio toast is generated only by a committed milestone kill.
+	scene.growth=false;scene.world.kills=3
+	scene.step_effect("s","warden")
+	check(scene.battle_time>0 and scene.talent_notice_tier==0 and scene.talent_notice_time>0,"third kill queues a noticeable folio notice behind battle replay")
+	var notice_before=scene.talent_notice_time
+	scene._process(0.1)
+	check(scene.talent_notice_time==notice_before,"folio notice does not expire underneath the battle replay")
+	scene.battle_time=0
+	scene._process(0.5)
+	check(scene.talent_notice_time<notice_before,"folio notice countdown begins only after combat feedback")
+	await scene.load_game()
+	check(scene.talent_notice_time==0,"load does not replay folio acquisition feedback")
+
 	var seed_before: int=scene.world.seed_value
 	event.keycode=KEY_R; scene._unhandled_input(event); scene._unhandled_input(event)
 	check(scene.world.seed_value==seed_before and scene.world.moves==0,"replay retains same seed")
@@ -502,5 +541,19 @@ func run_tests():
 		check(scene.lethal_preview.get("skill_consumed",false),"lethal confirmation uses actual armed "+armed_hero+" consumption, not survivor forecast flag")
 		await scene.confirm_lethal()
 		check(scene.is_terminal() and scene.world.focus==1 and not scene.world.skill_armed,"armed "+armed_hero+" death consumes exactly one focus")
+	var learned_world=load("res://scripts/world.gd").new(0,2)
+	learned_world.kills=7;learned_world.talents=["tactical_review","adversity_charge"]
+	await Fixture.bind(scene,learned_world)
+	scene.language="zh"
+	check(scene.talent_loss_text({"valid":false})=="无法破防","folio combined forecast translates impossible damage before joining")
+	var learned_before=Fixture.snapshot(scene)
+	var learned_cards=scene.learned_talent_cards()
+	check(learned_cards.size()==2 and learned_cards[0].id=="tactical_review" and learned_cards[1].id=="adversity_charge","learned folio preserves both names after choices exhaust")
+	check(learned_cards[0].description!="" and learned_cards[1].description!="","learned folio retains actual ability descriptions")
+	check(Fixture.snapshot(scene)==learned_before and scene.world.talent_options().is_empty(),"learned card review is read-only and not selectable")
+	scene.growth=true;scene.growth_tab=2;scene.talent_selected=""
+	event.keycode=KEY_1;scene._unhandled_input(event)
+	await scene.confirm_talent()
+	check(Fixture.snapshot(scene)==learned_before,"learned card number and confirmation cannot learn twice or spend resources")
 	print("UI integration: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
 	quit(0 if failures==0 else 1)

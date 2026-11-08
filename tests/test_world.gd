@@ -68,6 +68,9 @@ func _init():
 	check(not w.loan_used and w.debt()==0,"baseline wins with no borrowing")
 	var return_world = World.new(0,1)
 	check(return_world.restore(before_boss),"restore later-growth state")
+	# This legacy-route regression intentionally exercises the historical fixed build.
+	# New seed-specific offers are covered by the talent-draft suites.
+	return_world.talent_draft=load("res://scripts/progression.gd").talent_draft(0,0)
 	# A late optional boss requires a build, not merely vacuuming floor loot.
 	# Walk all the way back to the real merchant and pay with earned gold.
 	for i in range(4):

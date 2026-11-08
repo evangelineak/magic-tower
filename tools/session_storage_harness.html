@@ -152,6 +152,11 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    r=await rpc('strategy',pickArgs);check(!r.ok&&r.code==='SUPERSEDED_OPERATION','old choice cannot revive replaced journey');
    auth.expectedSlotRevision=10;
    r=await rpc('strategy',{auth,id:fixtures.draft_next.run_id,expected:0,choice:'none',request_id:'draft_keep_original_000001'});check(r.ok&&r.run.snapshot.draft.choice==='none'&&r.run.snapshot.moves===0,'original build is explicit locked option');
+   const talentCurrent=await rpc('read');
+   check(talentCurrent.ok&&talentCurrent.run.snapshot.version===16&&talentCurrent.run.snapshot.talent_draft.version===1,'new schema16 keeps deterministic talent birth candidates');
+   const downgraded=structuredClone(talentCurrent.run.snapshot);downgraded.talent_draft={version:0,offers:[['iron_skin','keen_edge','clean_finish'],['last_stand','sentinel_lore','trained_focus'],['giant_slayer','battle_medic','unbroken']]};
+   r=await rpc('save',{auth,id:talentCurrent.run.id,expected:talentCurrent.run.revision,snapshot:downgraded,request_id:'talent_illegal_downgrade01'});check(!r.ok&&r.code==='TALENT_DRAFT_IMMUTABLE','ordinary save cannot downgrade or redraw talent candidates');
+   r=await rpc('read');check(r.ok&&eq(r.run,talentCurrent.run)&&eq(r.profile,talentCurrent.profile),'rejected talent redraw leaves full run and ledger unchanged');
    parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:window.MagicTowerJourneysTestDatabase,scope:'Production JS callback protocol + real IndexedDB, not Godot WebGL/JavaScriptBridge runtime'}},location.origin);
   }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,lastReply,checks,database:window.MagicTowerJourneysTestDatabase}},location.origin)}
  }
