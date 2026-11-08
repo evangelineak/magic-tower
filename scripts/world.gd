@@ -3,6 +3,8 @@ extends RefCounted
 const Generator = preload("res://scripts/generation.gd")
 const Progression = preload("res://scripts/progression.gd")
 const Expedition = preload("res://scripts/expedition.gd")
+const AuditPuzzle = preload("res://scripts/audit_puzzle.gd")
+const Navigation = preload("res://scripts/navigation.gd")
 const Riddle = preload("res://scripts/riddle.gd")
 
 const MAPS = [
@@ -66,6 +68,11 @@ var atk := 18
 var defense := 8
 var keys := 0
 var gold := 0
+var audit_puzzle: Dictionary = {}
+var audit_read := false
+var audit_solved := false
+var audit_reward := ""
+var travel_anchors: Array = []
 var oath_state := "fresh"
 var expedition_revision := 0
 var rescue_state := 0
@@ -79,6 +86,7 @@ var moves := 0
 var message := "Find the keys. Read your enemies. Ascend."
 func _init(run_seed: int = 0):
 	seed_value=clampi(run_seed,0,2147483647)
+	audit_puzzle=AuditPuzzle.generate(seed_value)
 	event_kind=["bargain","smuggler","oath"][seed_value%3]
 	var generated: Dictionary = Generator.generate(seed_value, MAPS)
 	floors=generated.maps
@@ -93,6 +101,49 @@ func floor_title() -> String:
 func chapter_offers() -> Array:
 	if won and not expedition_started and floors.size()==5 and _count_token("K")==0:
 		return [["expedition","Continue expedition: 3 more floors / +120 HP once"]]
+	return []
+func _navigation_state() -> Dictionary:
+	return {"floors":floors,"floor_seen":floor_seen,"anchors":travel_anchors,"floor":floor_index,"x":pos.x,"y":pos.y,"water_choice":water_choice,"bridge_built":bridge_built,"expedition_bridge":expedition_bridge,"core_use":core_use,"clue":clue,"seal_clues":seal_clues}
+func _anchor_id(anchor: Dictionary) -> String:
+	return "%d:%d:%d" % [int(anchor.floor),int(anchor.marker_x),int(anchor.marker_y)]
+func _register_anchor(token: String):
+	if not token in Navigation.ANCHORS: return
+	for direction in [Vector2i.ZERO,Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+		var marker: Vector2i=pos+direction
+		if tile(marker)!=token: continue
+		var record={"floor":floor_index,"x":pos.x,"y":pos.y,"marker_x":marker.x,"marker_y":marker.y,"token":token}
+		for known in travel_anchors:
+			if _anchor_id(known)==_anchor_id(record): return
+		if travel_anchors.size()<64 and Navigation.anchor_valid(_navigation_state(),record): travel_anchors.append(record)
+		return
+func travel_available() -> bool:
+	return generation_valid and expedition_started and not won
+func travel_options() -> Array:
+	var options: Array=[]
+	if not travel_available(): return options
+	var names={"J":"Ilen's workshop","N":"Watch inscription","F":"Old forge","M":"Merchant","U":"Expedition camp","Y":"Roadworks","E":"The old elevator","O":"Waterworks"}
+	var state:=_navigation_state()
+	for anchor in travel_anchors:
+		var proof:=Navigation.route(state,anchor)
+		var available: bool=proof.ok and int(proof.steps)>0
+		options.append({"id":_anchor_id(anchor),"name":names.get(anchor.token,anchor.token),"floor":int(anchor.floor),"reachable":available,"steps":int(proof.steps),"reason":"Already at this anchor" if proof.ok and int(proof.steps)==0 else str(proof.reason)})
+	return options
+func audit_lines() -> Array:
+	if not audit_read: return []
+	var lines:=AuditPuzzle.lines(audit_puzzle)
+	if audit_solved: lines.append_array(AuditPuzzle.explanation(audit_puzzle))
+	return lines
+func audit_offers() -> Array:
+	if won or not expedition_started or not nearby("Y") or audit_reward!="": return []
+	if not audit_read: return [["audit_read","Inspect Ilen's three supply labels: a deduction, not a gamble"]]
+	if not audit_solved:
+		return [["audit_guess_0","Choose box A"],["audit_guess_1","Choose box B"],["audit_guess_2","Choose box C"]]
+	return [["audit_retrain","Retrain chosen talents once: clear choices, keep kills; no HP or focus refunded"],["audit_medicine","Take ready medicine: +140 HP now; retraining forgone"]]
+func audit_journal() -> Array:
+	if audit_reward=="retrain": return ["The genuine certificate funded one talent retraining. Choose again at C; medicine is forgone."]
+	if audit_reward=="medicine": return ["The genuine certificate bought ready medicine. Talent retraining is forgone."]
+	if audit_solved: return ["Supply labels solved. Return to Y for one retraining or +140 HP. Claim before defeating Z."]
+	if audit_read: return ["Ilen's supply labels await a solution at Y. Wrong guesses cost no resources."]
 	return []
 func oath_offers() -> Array:
 	if won or not nearby("N"): return []
@@ -239,6 +290,7 @@ func step(direction: Vector2i) -> bool:
 		pos = Vector2i(9,9)
 		message = "Backtracking is wisdom, not defeat."
 	elif not t in [".","M","E","F","N","Q","J","O","R","X","U","Y","~","="]: floors[floor_index][target.y][target.x] = "."
+	_register_anchor(t)
 	return true
 func debt() -> int:
 	return principal + fees + interest
@@ -305,6 +357,17 @@ func event_offers() -> Array:
 		"oath": return [["oath_power","Surrender ALL focus (at least 2) for +7 ATK"],["oath_renew","Pay 60 HP to restore 2 focus (up to capacity)"],["bargain_leave","Decline this encounter permanently"]]
 	return [["bargain_blood","Blood bargain: pay 80 HP / gain +6 ATK"],["bargain_gold","Ward bargain: pay 25 gold / gain +5 DEF"],["bargain_leave","Decline this encounter permanently"]]
 func action(id: String) -> bool:
+	if id.begins_with("fast_travel_"):
+		if not travel_available(): return false
+		var requested:=id.trim_prefix("fast_travel_")
+		for anchor in travel_anchors:
+			if _anchor_id(anchor)!=requested: continue
+			var proof:=Navigation.route(_navigation_state(),anchor)
+			if not proof.ok or int(proof.steps)<=0: return false
+			floor_index=int(anchor.floor); pos=Vector2i(int(anchor.x),int(anchor.y)); moves+=1
+			message="Safe return: skipped %d cleared steps. No supplies, clues or focus changed." % int(proof.steps)
+			return true
+		return false
 	if id=="expedition":
 		if not generation_valid or chapter_offers().is_empty(): return false
 		var generated: Dictionary=Expedition.generate(seed_value)
@@ -324,6 +387,18 @@ func action(id: String) -> bool:
 		message="Expedition begun: +120 HP once. Old floors and all earlier choices remain."
 		return true
 	if not generation_valid or won: return false
+	if id.begins_with("audit_guess_"):
+		if not expedition_started or not nearby("Y") or not audit_read or audit_solved: return false
+		if not id in ["audit_guess_0","audit_guess_1","audit_guess_2"]: return false
+		var chosen:=int(id.trim_prefix("audit_guess_"))
+		if chosen==int(audit_puzzle.solution):
+			audit_solved=true
+			message="Certificate found by deduction. Inspect the label explanations, then choose one reward before Z."
+		else:
+			message="That box does not fit the stated truth count. Reread the labels; no resources were spent."
+		_register_anchor("Y")
+		moves+=1
+		return true
 	if id.begins_with("secret_ring_"):
 		var symbol := id.trim_prefix("secret_ring_")
 		if not nearby("Q") or not riddle_ready() or seal_solved:
@@ -366,6 +441,21 @@ func action(id: String) -> bool:
 		moves+=1
 		return true
 	match id:
+		"audit_read":
+			if not expedition_started or not nearby("Y") or audit_read: return false
+			audit_read=true
+			message="Read all three labels and the truth-count rule. You may reconsider without paying."
+		"audit_retrain","audit_medicine":
+			if not expedition_started or not nearby("Y") or not audit_solved or audit_reward!="": return false
+			if id=="audit_retrain":
+				if talents.is_empty():
+					message="No chosen talents to retrain. Choose talents at C first, or leave this reward unclaimed."
+					return false
+				talents.clear(); audit_reward="retrain"
+				message="Talents cleared once. Kills remain; no HP, focus or earlier rewards are refunded. Choose again at C."
+			else:
+				hp+=140; audit_reward="medicine"
+				message="Ready medicine: +140 HP. Talent retraining is permanently forgone."
 		"oath_accept":
 			if not nearby("N") or oath_state!="fresh": return false
 			oath_state="active"
@@ -509,6 +599,7 @@ func action(id: String) -> bool:
 			message="Core forged: +8 DEF. Lift, sale and old-tower calibration are forgone."
 		"travel":
 			if not nearby("E") or core_use!="elevator": return false
+			_register_anchor("E")
 			enter_floor(2 if floor_index==0 else 0)
 			pos=Vector2i(4,1) if floor_index==2 else Vector2i(2,5)
 			message="The old lift remembers. No interest on revisits."
@@ -530,10 +621,12 @@ func action(id: String) -> bool:
 				message="Calibration voucher: %d debt cleared / %d gold received." % [cleared,50-cleared]
 			consume_nearby("Q")
 		_: return false
+	var interaction_anchor={"audit_read":"Y","audit_retrain":"Y","audit_medicine":"Y","borrow":"M","buy":"M","sell_core":"M","seal_contract":"M","quest_accept":"J","quest_gold":"J","quest_scroll":"J","rescue_accept":"J","rescue_repeater":"J","forge":"F","quest_bridge":"F","seal_inscription":"N","oath_accept":"N","oath_renounce":"N","elevator":"E","travel":"E","camp_medicine":"U","camp_focus":"U","rescue_supplies":"U","camp_bridge":"Y"}
+	if interaction_anchor.has(id): _register_anchor(interaction_anchor[id])
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":8,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":9,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -541,7 +634,7 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9): return false
 	var old_seal: bool = save_version==4
 	var saved_oath := "fresh"
 	if save_version>=8:
@@ -674,6 +767,32 @@ func restore(d: Dictionary) -> bool:
 			if d.floors[f][1][1]!="<" or d.floors[f][3][5]!="=": return false
 			if f<7 and d.floors[f][9][9]!=">": return false
 	elif last_boss_remaining!=0: return false
+	var saved_puzzle: Dictionary=AuditPuzzle.generate(int(d.seed_value))
+	var saved_audit_read := false
+	var saved_audit_solved := false
+	var saved_audit_reward := ""
+	if save_version>=9:
+		if not AuditPuzzle.valid(d.get("audit_puzzle")): return false
+		if not d.get("audit_read") is bool or not d.get("audit_solved") is bool: return false
+		if not d.get("audit_reward") in ["","retrain","medicine"]: return false
+		saved_puzzle=AuditPuzzle.canonical(d.audit_puzzle)
+		saved_audit_read=d.audit_read; saved_audit_solved=d.audit_solved; saved_audit_reward=d.audit_reward
+		if saved_audit_read and not saved_expedition: return false
+		if saved_audit_solved and not saved_audit_read: return false
+		if saved_audit_reward!="" and not saved_audit_solved: return false
+		if saved_audit_reward=="retrain" and d.kills<3: return false
+	var saved_anchors: Array=[]
+	if save_version>=9:
+		if not d.get("travel_anchors") is Array or d.travel_anchors.size()>64: return false
+		var navigation_state:=d.duplicate()
+		navigation_state["anchors"]=d.travel_anchors
+		var anchor_ids: Dictionary={}
+		for anchor in d.travel_anchors:
+			if not anchor is Dictionary or anchor.size()!=6 or not Navigation.anchor_valid(navigation_state,anchor): return false
+			var stable_id:=_anchor_id(anchor)
+			if anchor_ids.has(stable_id): return false
+			anchor_ids[stable_id]=true
+			saved_anchors.append({"floor":int(anchor.floor),"x":int(anchor.x),"y":int(anchor.y),"marker_x":int(anchor.marker_x),"marker_y":int(anchor.marker_y),"token":anchor.token})
 	if d.floor >= expected_floors or d.x < 1 or d.x > 9 or d.y < 1 or d.y > 9 or d.hp <= 0 or d.atk <= 0: return false
 	if d.floors[int(d.floor)][int(d.y)][int(d.x)] == "#": return false
 	if not d.floor_seen[int(d.floor)]: return false
@@ -696,6 +815,8 @@ func restore(d: Dictionary) -> bool:
 	hp=int(d.hp); atk=int(d.atk); defense=int(d.def); keys=int(d.keys); gold=int(d.gold); moves=int(d.moves)
 	core=d.core; core_use=d.core_use; weapon=d.weapon; secret=d.secret; clue=d.clue
 	principal=int(d.principal); fees=int(d.fees); interest=int(d.interest); loan_used=d.loan_used; overdue=d.overdue; checkpoints=int(d.checkpoints)
+	audit_puzzle=saved_puzzle; audit_read=saved_audit_read; audit_solved=saved_audit_solved; audit_reward=saved_audit_reward
+	travel_anchors=saved_anchors
 	oath_state=saved_oath
 	expedition_revision=saved_revision; rescue_state=saved_rescue; rescue_reward=saved_reward
 	expedition_started=saved_expedition; expedition_bridge=saved_bridge

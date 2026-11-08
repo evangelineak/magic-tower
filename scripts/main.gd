@@ -22,6 +22,11 @@ var last_sound_event := ""
 const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"regent","Z":"archivist","H":"stalker","W":"sentinel"}
 var history: Array = []
 var save_path := "user://journey-v4.json"
+var travel_menu := false
+var travel_page := 0
+var travel_rows: Array=[]
+var travel_refresh_count := 0
+var travel_pending := ""
 var comparison := false
 var compare_pos := Vector2i(-1,-1)
 var compare_floor := -1
@@ -78,7 +83,7 @@ func _ready():
 	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent","archivist","ilen","mira"]:
 		var path := "res://assets/combat/%s.png" % id
 		if ResourceLoader.exists(path): combat_art[id]=load(path)
-	buttons = [Rect2(350,720,120,38),Rect2(482,720,120,38),Rect2(614,720,120,38),Rect2(746,720,143,38),Rect2(938,745,300,35),Rect2(36,710,272,38),Rect2(36,66,272,30)]
+	buttons = [Rect2(350,720,120,38),Rect2(482,720,120,38),Rect2(614,720,120,38),Rect2(746,720,143,38),Rect2(938,745,300,35),Rect2(36,710,272,38),Rect2(36,66,272,30),Rect2(675,66,272,30)]
 	queue_redraw()
 func _process(delta):
 	tick += delta
@@ -161,7 +166,7 @@ func _draw():
 	label_at(Vector2(938,699),"Click an adjacent tile to move",14,MUTED)
 	label_at(Vector2(938,734),"U  undo     L  load     H  guide",14,MUTED)
 	label_at(Vector2(350,711),display(world.message) if display(world.message).length()<=68 else display(world.message).left(65)+"...",13,TEAL)
-	var titles := ["UNDO  U","SAVE  S*","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J"]
+	var titles := ["UNDO  U","SAVE  S*","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J","SAFE TRAVEL  T"]
 	for i in buttons.size():
 		panel(buttons[i],Color("253748"))
 		label_at(buttons[i].position+Vector2(13,25),titles[i],14)
@@ -173,9 +178,79 @@ func _draw():
 	if world.won and battle_time<=0.0 and not (book or growth or interaction): draw_victory()
 	if journal: draw_journal()
 	if comparison: draw_comparison()
+	if travel_menu: draw_travel()
+func close_travel():
+	travel_menu=false
+	travel_pending=""
+	travel_rows.clear()
+func refresh_travel():
+	travel_rows=world.travel_options()
+	travel_refresh_count+=1
+func open_travel():
+	if travel_menu: close_travel(); return
+	if battle_time>0.0 or comparison or book or journal or growth or interaction: return
+	travel_menu=true; travel_page=0; travel_pending=""
+	refresh_travel()
+func visible_travel_options() -> Array:
+	var rows: Array=travel_rows
+	travel_page=clampi(travel_page,0,maxi(0,ceili(rows.size()/6.0)-1))
+	return rows.slice(travel_page*6,travel_page*6+6)
+func select_travel(index: int):
+	var rows: Array=visible_travel_options()
+	if index<0 or index>=rows.size(): return
+	var selected: String=rows[index].id
+	refresh_travel()
+	for row in travel_rows:
+		if row.id==selected and row.reachable: travel_pending=selected; return
+func confirm_travel():
+	# Refresh before confirmation; World also revalidates the route atomically.
+	refresh_travel()
+	for row in travel_rows:
+		if row.id==travel_pending and row.reachable:
+			var action_id: String="fast_travel_"+row.id
+			var before_moves: int=world.moves
+			close_travel()
+			perform_action(action_id)
+			if world.moves==before_moves:
+				travel_menu=true; refresh_travel()
+			return
+	travel_pending=""
+func draw_travel():
+	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
+	panel(Rect2(195,110,890,580),Color("0c1928"))
+	label_at(Vector2(225,151),"SAFE TRAVEL / REGISTERED LANDMARKS",24,GOLD)
+	label_at(Vector2(225,184),"Free travel follows a currently safe walking route. No rewards are collected.",15,MUTED)
+	if not world.travel_available():
+		label_at(Vector2(225,240),"Available only during an unfinished expedition.",18,TEAL)
+	elif travel_pending!="":
+		for row in travel_rows:
+			if row.id!=travel_pending: continue
+			label_at(Vector2(225,245),"Travel to floor %d: %s?" % [row.floor+1,display(row.name)],22,TEAL)
+			label_at(Vector2(225,284),"Safe route: skip %d walking / lift operations" % row.steps,17)
+			label_at(Vector2(225,326),"Travel takes one action. NPC choices and oaths remain yours.",16,MUTED)
+			panel(Rect2(225,435,390,48),Color("253748"))
+			label_at(Vector2(240,466),"Enter: confirm destination",18,GOLD)
+			panel(Rect2(635,435,390,48),Color("253748"))
+			label_at(Vector2(650,466),"Esc: back to landmarks",18)
+	else:
+		var rows: Array=visible_travel_options()
+		if rows.is_empty(): label_at(Vector2(225,240),"No registered landmarks yet. Visit them on foot first.",18,TEAL)
+		for i in rows.size():
+			var row: Dictionary=rows[i]
+			var r := Rect2(225,220+i*61,830,55)
+			panel(r,Color("253748"))
+			label_at(r.position+Vector2(12,22),"%d  Floor %d: %s" % [i+1,row.floor+1,display(row.name)],17,TEAL if row.reachable else MUTED)
+			label_at(r.position+Vector2(12,44),"Safe route: skip %d walking / lift operations" % row.steps if row.reachable else str(row.get("reason","No safe walking route from here.")),14,MUTED)
+		panel(Rect2(815,595,110,38),Color("253748"))
+		label_at(Vector2(828,620),"PREV",14)
+		panel(Rect2(935,595,110,38),Color("253748"))
+		label_at(Vector2(948,620),"NEXT",14)
+		label_at(Vector2(225,620),"[ / ]: pages    %d / %d" % [travel_page+1,maxi(1,ceili(travel_rows.size()/6.0))],14,MUTED)
+	label_at(Vector2(225,662),"T: close / Esc: back. Viewing and selecting cost nothing.",15,MUTED)
+
 func open_comparison():
 	if comparison: comparison=false; return
-	if battle_time>0.0 or book or journal or growth or interaction: return
+	if battle_time>0.0 or book or journal or growth or interaction or travel_menu: return
 	if not World.ENEMIES.has(world.tile(hover)): return
 	compare_pos=hover; compare_floor=world.floor_index; comparison=true
 func comparison_rows() -> Array:
@@ -336,6 +411,7 @@ func available_actions() -> Array:
 	rows.append_array(world.camp_offers())
 	rows.append_array(world.npc_offers())
 	rows.append_array(world.oath_offers())
+	rows.append_array(world.audit_offers())
 	if nearby("M"):
 		if (world.seal_clues & 1)==0: rows.append(["seal_contract","Read the old contract: calibration clue / lift power required"])
 		rows.append(["buy","Buy armor-breaker: 60 gold / +12 ATK (once)"])
@@ -400,13 +476,16 @@ func draw_interaction():
 		return
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
 	panel(Rect2(260,120,770,570),Color("0c1928"))
+	var audit_context: bool=nearby("Y") and pending_reason=="" and checkpoint_pending==Vector2i.ZERO
 	var inscription_context: bool=nearby("N") and pending_reason=="" and checkpoint_pending==Vector2i.ZERO
-	label_at(Vector2(290,158),"INSCRIPTION & OATH" if inscription_context else (world.event_title().to_upper() if nearby("X") and not world.event_done else "CHOICES & THE LEDGER"),25,GOLD)
+	label_at(Vector2(290,158),"INSCRIPTION & OATH" if inscription_context else ("ENGINEER & SUPPLY LABELS" if audit_context else world.event_title().to_upper() if nearby("X") and not world.event_done else "CHOICES & THE LEDGER"),25,GOLD)
 	label_at(Vector2(290,190),"Gold %d   |   Debt %d   |   Core: %s" % [world.gold,world.debt(),"held" if world.core else (world.core_use if world.core_use!="" else "none")],18,TEAL)
-	label_at(Vector2(290,218),("Watch oath ACTIVE" if world.oath_state=="active" else ("Oath released permanently" if world.oath_state=="spent" else "No watch oath")) if inscription_context else "Principal %d  +  fees %d  +  interest %d" % [world.principal,world.fees,world.interest],16)
+	label_at(Vector2(290,218),("Watch oath ACTIVE" if world.oath_state=="active" else ("Oath released permanently" if world.oath_state=="spent" else "No watch oath")) if inscription_context else "J: review discovered labels and the explanation." if audit_context else "Principal %d  +  fees %d  +  interest %d" % [world.principal,world.fees,world.interest],16)
 	var terms := ["Borrow once, before floor 4. Receive 40; owe 42. Max total 50.","First entry to floors 4 and 5: ceil(remaining principal x 10%).", "No compound interest. Walking, waiting & backtracking cost nothing.", "After maturity: debt freezes; future gold repays it. No new loans.", "Repay early to reduce interest. No real money. Debt ends with this run."]
 	if inscription_context:
 		terms=["Clues and oaths are independent. Reading costs no resources."]
+	elif audit_context and world.audit_read:
+		terms=world.audit_lines().slice(4) if world.audit_solved else world.audit_lines()
 	elif nearby("U") or nearby("Y"):
 		terms=["Camp stock is finite and shared across all three new floors.","Medicine is used immediately. Focus purchases require missing focus.","Roadworks open all expedition bridges once; old water is unchanged.","Bridges bypass guards, but also their gold and kill rewards.","You may return for supplies or fight bypassed guards later."]
 	for i in terms.size(): label_at(Vector2(290,248+i*23),terms[i],15,MUTED)
@@ -479,13 +558,13 @@ func perform_action(id: String):
 			book=false; journal=false; growth=false; interaction=false; battle_time=0.0
 			checkpoint_pending=Vector2i.ZERO; pending_reason=""
 		if id in ["spring","drain","quest_bridge","camp_bridge"]: play_sound("water")
-		elif id in ["expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher"]: play_sound("pickup")
+		elif id in ["expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher","audit_medicine"]: play_sound("pickup")
 		if id.begins_with("hero_") or id.begins_with("talent_"): growth=false
 		history.append(before)
 		if history.size()>100: history.pop_front()
 		save_game(false)
 	else:
-		world.message={"camp_medicine":"Need 70 gold, remaining medicine stock, and a nearby camp (U).","camp_focus":"Need 55 gold, remaining focus stock, missing focus, and a nearby camp (U).","camp_bridge":"Need 80 gold, an unbuilt bridge, and a nearby engineer (Y).","quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"Solve the powered calibration before choosing a reward."}.get(id,world.message if id.begins_with("secret_") or id.begins_with("seal_") or id.begins_with("camp_") or id=="expedition" or id.begins_with("rescue_") or id.begins_with("oath_") else "This choice is unavailable. Check its cost and requirements.")
+		world.message={"camp_medicine":"Need 70 gold, remaining medicine stock, and a nearby camp (U).","camp_focus":"Need 55 gold, remaining focus stock, missing focus, and a nearby camp (U).","camp_bridge":"Need 80 gold, an unbuilt bridge, and a nearby engineer (Y).","quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"Solve the powered calibration before choosing a reward."}.get(id,world.message if id.begins_with("secret_") or id.begins_with("seal_") or id.begins_with("camp_") or id=="expedition" or id.begins_with("rescue_") or id.begins_with("oath_") or id.begins_with("fast_travel_") or id.begins_with("audit_") else "This choice is unavailable. Check its cost and requirements.")
 func quest_hint() -> String:
 	return ["J: find the researcher's request","QUEST: seek the sample (I)","SURVEY: J reward or F bridge","SURVEY: delivered to J","SURVEY: flood bridge built"][clampi(world.quest_state,0,4)]
 func skill_description() -> String:
@@ -572,6 +651,8 @@ func journal_lines() -> Array:
 	entries.append("Seed %d / %s / floor %d / %d steps" % [world.seed_value,Progression.HEROES[world.hero_id].name,world.floor_index+1,world.moves])
 	if world.rescue_state in [1,2]: entries.append_array(world.npc_journal())
 	entries.append_array(world.oath_journal())
+	entries.append_array(world.audit_journal())
+	entries.append_array(world.audit_lines())
 	if world.expedition_started:
 		entries.append("Chapter II: supplies are finite; old floors remain available.")
 		entries.append("Camp stock: medicine %d / focus %d. Bridges: %s." % [world.camp_medicine_left,world.camp_focus_left,"open" if world.expedition_bridge else "closed"])
@@ -710,6 +791,18 @@ func _unhandled_input(event):
 		hover = Vector2i((get_global_mouse_position()-ORIGIN)/CELL)
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 		if battle_time>0.0: battle_time=0.0; return
+		if travel_menu:
+			var mouse: Vector2=get_global_mouse_position()
+			if not Rect2(195,110,890,580).has_point(mouse): close_travel(); return
+			if travel_pending!="":
+				if Rect2(225,435,390,48).has_point(mouse): confirm_travel()
+				elif Rect2(635,435,390,48).has_point(mouse): travel_pending=""
+			else:
+				if Rect2(815,595,110,38).has_point(mouse): travel_page=maxi(0,travel_page-1); return
+				if Rect2(935,595,110,38).has_point(mouse): travel_page+=1; return
+				for i in visible_travel_options().size():
+					if Rect2(225,220+i*61,830,55).has_point(mouse): select_travel(i); return
+			return
 		if comparison:
 			if not Rect2(195,110,890,580).has_point(get_global_mouse_position()): comparison=false
 			return
@@ -752,11 +845,24 @@ func _unhandled_input(event):
 					4: interaction=true; interaction_page=0
 					5: open_growth()
 					6: open_journal()
+					7: open_travel()
 				return
 		var diff: Vector2i = hover-world.pos
 		if absi(diff.x)+absi(diff.y)==1: move(diff)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if battle_time>0.0: battle_time=0.0; return
+		if event.keycode==KEY_T: open_travel(); return
+		if travel_menu:
+			if event.keycode==KEY_ESCAPE:
+				if travel_pending!="": travel_pending=""
+				else: close_travel()
+			elif travel_pending!="":
+				if event.keycode==KEY_ENTER: confirm_travel()
+			else:
+				if event.keycode==KEY_BRACKETLEFT: travel_page=maxi(0,travel_page-1)
+				elif event.keycode==KEY_BRACKETRIGHT: travel_page+=1
+				else: select_travel(event.keycode-KEY_1)
+			return
 		if event.keycode==KEY_V: open_comparison(); return
 		if comparison:
 			if event.keycode==KEY_ESCAPE: comparison=false
@@ -801,6 +907,7 @@ func _unhandled_input(event):
 			KEY_R: request_restart("replay")
 			KEY_N: request_restart("new")
 func request_restart(mode: String):
+	close_travel()
 	comparison=false
 	if reset_armed and reset_mode==mode:
 		world=World.new(world.seed_value if mode=="replay" else randi_range(1,2147483646))
@@ -842,6 +949,7 @@ func move(direction: Vector2i, confirmed:=false):
 		if history.size()>100: history.pop_front()
 		save_game(false)
 func undo():
+	close_travel()
 	if history.is_empty(): world.message="No move to undo in this session."; return
 	world.restore(history.pop_back())
 	battle_time=0.0
@@ -853,15 +961,16 @@ func save_game(announce:=true):
 	f.store_string(JSON.stringify(world.save_data()))
 	if announce: world.message="Journey saved locally."
 func load_game():
+	close_travel()
 	comparison=false
 	if not FileAccess.file_exists(save_path): world.message="No saved journey yet."; return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
 	if not parsed is Dictionary: world.message="Save is invalid. Current journey is unchanged."; return
-	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6 or parsed.get("version")==7
+	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6 or parsed.get("version")==7 or parsed.get("version")==8
 	if upgrading:
 		var probe=World.new(0)
 		if not probe.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
-		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else (".pre-schema7.json" if parsed.get("version")==6 else ".pre-schema8.json")))
+		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else (".pre-schema7.json" if parsed.get("version")==6 else (".pre-schema8.json" if parsed.get("version")==7 else ".pre-schema9.json"))))
 		if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(backup_path)):
 			world.message="Could not back up the old save. Current journey is unchanged."
 			return

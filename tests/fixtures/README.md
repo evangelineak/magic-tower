@@ -34,3 +34,16 @@ resource/position fixtures elsewhere in the test; its three stocks are earned.
 The old World writes these files directly with `JSON.stringify(save_data())`.
 Schema 8 must add only a fresh oath: maps, earned gear, rescue outcome, money,
 loan state and both three-use camp inventories must remain intact.
+
+## Schema 8 oath and reward combinations
+
+`schema8-repeater.json` and `schema8-supplies.json` were written by the actual
+World from published local commit `a3b9bdd`, exported into an isolated directory.
+Starting from the genuine schema 7 reward fixtures above, its own migration is
+applied, then the character walks via real stairs to fourth-floor N. The repeater
+branch binds the oath; the supplies branch binds and permanently releases it.
+Capture `JSON.stringify(world.save_data())` immediately afterward, asserting
+version 8. Neither version numbers nor gameplay fields are manually changed.
+These synthetic, non-user fixtures preserve active/spent oath and earned
+repeater/three-stock rewards. Their visited floors must not create fast-travel
+anchors when migrating to schema 9, nor count as reading/solving the new audit.

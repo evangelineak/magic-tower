@@ -1,5 +1,18 @@
 extends RefCounted
 const EXACT = {
+"ENGINEER & SUPPLY LABELS":"工程师与验货签",
+"J: review discovered labels and the explanation.":"J：回看已读题面与解答。",
+"SAFE TRAVEL  T":"安全快旅  T",
+"SAFE TRAVEL / REGISTERED LANDMARKS":"安全快旅 / 已登记地标",
+"Free travel follows a currently safe walking route. No rewards are collected.":"免费沿当前安全通路快旅，不会自动领取奖励。",
+"Available only during an unfinished expedition.":"仅主动续章后、远征尚未结束时可用。",
+"No registered landmarks yet. Visit them on foot first.":"尚无已登记地标，请先亲自到访。",
+"No safe walking route from here.":"当前没有安全步行通路。",
+"Enter: confirm destination":"回车：确认目的地",
+"Esc: back to landmarks":"Esc：返回地标列表",
+"T: close / Esc: back. Viewing and selecting cost nothing.":"T关闭 / Esc返回；查看和选择不消耗资源。",
+"Travel takes one action. NPC choices and oaths remain yours.":"快旅计一次行动，不会代你交任务或处理誓约。",
+
 "INSCRIPTION & OATH":"碑文与誓约",
 "Clues and oaths are independent. Reading costs no resources.":"线索与誓约独立，阅读不消耗资源。",
 "Watch oath ACTIVE":"守望誓约：生效中",
@@ -300,6 +313,10 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["Travel to floor %d: %s?","前往第%d层：%s？"],
+["Safe route: skip %d walking / lift operations","安全通路：省去%d次行走或电梯操作"],
+["%d  Floor %d: %s","%d  第%d层：%s"],
+["[ / ]: pages    %d / %d","[ / ]翻页    第%d / %d页"],
 ["Shield %d / oath %d / total reduction %d","盾挡 %d / 誓约 %d / 总减伤 %d"],
 ["After battle: %d HP","战后生命：%d"],
 ["Loss %s / hero strikes %d / retaliations %d","损血 %s / 攻击 %d 次 / 反击 %d 次"],

@@ -3,6 +3,39 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"Roadworks":"桥梁工程",
+"Merchant":"商人",
+"Inspect Ilen's three supply labels: a deduction, not a gamble":"查看伊莲的三张验货签：凭推理，不靠运气",
+"Choose box A":"选择A箱",
+"Choose box B":"选择B箱",
+"Choose box C":"选择C箱",
+"Retrain chosen talents once: clear choices, keep kills; no HP or focus refunded":"重训一次：清空已选天赋，保留击败数；不返还生命或专注",
+"Take ready medicine: +140 HP now; retraining forgone":"领取现成药剂：立即+140生命，放弃重训",
+"The genuine certificate funded one talent retraining. Choose again at C; medicine is forgone.":"真凭证已用于重训，可在C重新选择天赋；已放弃药剂。",
+"The genuine certificate bought ready medicine. Talent retraining is forgone.":"真凭证已换取现成药剂，已放弃天赋重训。",
+"Supply labels solved. Return to Y for one retraining or +140 HP. Claim before defeating Z.":"验货签已解：回Y选重训或+140生命；须在击败Z前领取。",
+"Ilen's supply labels await a solution at Y. Wrong guesses cost no resources.":"伊莲的验货签等待你在Y解答，猜错不扣资源。",
+"Certificate found by deduction. Inspect the label explanations, then choose one reward before Z.":"已推理出真凭证，请查看逐签解释，并在击败Z前选择一种奖励。",
+"That box does not fit the stated truth count. Reread the labels; no resources were spent.":"该箱不符合真标签数，请重读题面；未消耗资源。",
+"Read all three labels and the truth-count rule. You may reconsider without paying.":"已阅读三张标签及真假数量规则，可免费重新考虑。",
+"No chosen talents to retrain. Choose talents at C first, or leave this reward unclaimed.":"没有已选天赋可重训。可先在C选择天赋，或暂不领取奖励。",
+"Talents cleared once. Kills remain; no HP, focus or earlier rewards are refunded. Choose again at C.":"已重训一次：保留击败数，不返还生命、专注或先前奖励；可在C重选。",
+"Ready medicine: +140 HP. Talent retraining is permanently forgone.":"现成药剂：+140生命，永久放弃此次天赋重训。",
+
+"Ilen's workshop":"伊莲的工作室",
+"Watch inscription":"守望碑文",
+"Old forge":"旧锻造炉",
+"Expedition camp":"远征营地",
+"Repaired lift":"已修复电梯",
+"Waterworks":"水利设施",
+"Already at this anchor":"你已在此地标。",
+"Invalid navigation state":"导航状态无效。",
+"Invalid origin":"出发位置无效。",
+"Invalid clue state":"线索状态无效。",
+"Destination is not a registered anchor":"目的地尚未实际登记。",
+"Anchor is not currently safe":"地标当前无法安全抵达。",
+"No cleared, cost-free route connects these anchors":"地标之间没有已清理且无消耗的通路。",
+
 "Watch oath: -10 ATK / cancel ambush / halve each thorn hit. Return here to release; never bind again.":"守望誓约：攻击 -10 / 免先制 / 每击荆棘减半；回此处可退约，退后永不可重立。",
 "Release the oath here for free. Its protection and attack penalty end; NEVER bind again.":"在此免费退约：保护与攻击惩罚同时结束；本局永不可再次立约。",
 "Watch oath active: -10 ATK, no ambush loss, each thorn hit halved down. Return to N to release once, forever.":"守望誓约生效：攻击 -10，免先制损血，每击荆棘向下减半；回 N 可永久退约。",
@@ -130,6 +163,14 @@ const EXACT = {
 # Preserve conversion types and argument order. The display adapter matches
 # these full English templates; %s values may themselves have catalog names.
 const TEMPLATES = [
+["One box holds the genuine certificate. Exactly %d labels are true.", "只有一箱装真凭证，恰好%d张标签为真。"],
+["Label %s: the certificate is in box %s.", "标签%s：真凭证在%s箱。"],
+["Label %s: the certificate is NOT in box %s.", "标签%s：真凭证不在%s箱。"],
+["Only box %s satisfies the stated truth count.", "只有%s箱符合题面规定的真标签数。"],
+["Label %s is true.", "标签%s为真。"],
+["Label %s is false.", "标签%s为假。"],
+
+["Safe return: skipped %d cleared steps. No supplies, clues or focus changed.","安全快旅：省去%d次通路操作，补给、线索和专注不变。"],
 ["Medicine: 70 gold / +140 HP now / %d left","药剂：70 金币 / 立即生命 +140 / 剩余 %d 份"],
 ["Focus: 55 gold / +1 now / %d left","专注：55 金币 / 立即 +1 / 剩余 %d 份"],
 	["Contract: %s is neither first nor last.", "契约线索：%s既不在第一位，也不在最后一位。"],

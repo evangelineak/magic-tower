@@ -56,6 +56,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema7-"+name+".json"))
   check(w.restore(old) and w.oath_state=="fresh","real old schema7 state upgrades with fresh oath: "+name)
   var now=state(w); now.erase("oath_state"); now.version=7
+  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward"]: now.erase(field)
   check(JSON.parse_string(JSON.stringify(now))==old,"migration preserves all old resources, maps, NPC choices, inventory: "+name)
   restore_check(w)
   if name=="supplies": check(w.camp_medicine_left==3 and w.camp_focus_left==3,"old earned camp expansion is not clamped to two")
@@ -131,7 +132,7 @@ func run_tests():
  var backup=scene.save_path.get_basename()+".pre-schema8.json"
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.camp_medicine_left==3 and scene.world.oath_state=="fresh" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==8,"schema7 reward backup preserves exact bytes and finite expanded supplies")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.camp_medicine_left==3 and scene.world.oath_state=="fresh" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==9,"schema7 reward backup preserves exact bytes and finite expanded supplies")
  scene.queue_free(); await process_frame
  print("OATH: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)
