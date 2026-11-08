@@ -3,6 +3,7 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"Emergency reserve used: +1 focus. One supply consumed.":"已使用应急补给：专注 +1，消耗一份补给。",
 "Dedicated study":"专精研习",
 "Skill level +4 / ATK -4 / DEF -2.":"技能等级 +4 / 攻击 -4 / 防御 -2。",
 "Battlefield forager":"战地采集",
@@ -346,6 +347,8 @@ const EXACT = {
 # Preserve conversion types and argument order. The display adapter matches
 # these full English templates; %s values may themselves have catalog names.
 const TEMPLATES = [
+["Legacy points: study %d (+%d levels) / reserve %d / capacity %d. Supplies left: %d. Skill level %d (raw %d; overflow %d).", "传承配点：研习 %d（等级 +%d）/ 补给 %d / 总点数 %d。剩余补给：%d。技能等级 %d（原始 %d；溢出 %d）。"],
+["Skill level %d = base %d + training %d + equipment %d + strategy %d + legacy %d (raw %d; overflow %d)", "技能等级 %d = 基础 %d + 训练 %d + 装备 %d + 策略 %d + 传承 %d（原始 %d；溢出 %d）"],
 ["%s / floor %d", "%s / 第 %d 层"],
 ["On surviving victory: %d gold / %d HP recovery / %d focus recovery", "获胜且存活后：%d 金币 / 恢复 %d 生命 / 恢复 %d 专注"],
 ["Attunement: %s", "调校：%s"],

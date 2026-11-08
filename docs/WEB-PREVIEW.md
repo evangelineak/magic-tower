@@ -1,24 +1,19 @@
-# Optional talent folio Web preview
+# Optional legacy allocation Web preview
 
-The stable root remains the v0.17 game, rebuilt from fixed Web source
-`4122fa416091eb3d89c7825b6d9eabd55d7c273e`.
-The optional `/preview/` path uses verified development game source
-`32b8228cfddb99995fb822ef6516693323c8af94`.
+Root remains v0.17, rebuilt from pinned Web source `4122fa416091eb3d89c7825b6d9eabd55d7c273e`.
+Optional `/preview/` game source is `add23ffbf8e17549f9eb34ffc478f3da46190333`.
 
-Native Linux gameplay, persistence, actual strategy and talent folio effects and production
-JavaScript IndexedDB transactions are verified. The cloud browser explicitly
-blocklists WebGL2; a normal fresh Chromium profile has the same result, and no
-other installed supported browser was found. No sandbox, blocklist or security
-setting was bypassed. **Godot Web gameplay and the engine-to-JavaScript bridge
-remain unverified.** Export success is not a substitute for this test.
+Actual Linux gameplay, finite legacy point allocation, emergency focus, persistence,
+and production JavaScript IndexedDB transactions are verified. The cloud Chromium
+browser blocklists WebGL2; no security setting was bypassed. **Godot Web gameplay
+and its engine-to-JavaScript bridge remain unverified.** Export is not runtime QA.
 
-The new Session database does not import or delete legacy v0.17 save files.
-Keep the stable root available while this opt-in path receives real playtesting.
-This Web preset includes `scripts/*.js`, required by the Session bridge. The Web
-PCK's production JS and compiled World match the verified desktop package.
-Single-thread export needs WebGL2, but no SharedArrayBuffer/COOP/COEP or service
-worker. Windows binaries remain cross-exported, not Windows runtime certified.
+The Session database does not import or delete old v0.17 saves. Schema16 and older
+journeys retain zero allocation and their original talent offers. Start an explicit
+new journey to allocate capacity earned from first recorded floors3/5/8. Repeated
+death does not earn more. Existing records remain. Close old game tabs before
+reloading the new version; concurrent stale writers cannot overwrite newer data.
 
-Existing schema15 journeys keep their original talent choices on upgrade. Start
-an explicit new journey for the new four-choose-three folios; old profiles and
-receipts are retained.
+Single-thread Web includes `scripts/*.js`; no SharedArrayBuffer, COOP/COEP or service
+worker is required. Root remains separate while this optional build is playtested.
+Windows exports are not actual Windows runtime validation; audio remains unaudited.

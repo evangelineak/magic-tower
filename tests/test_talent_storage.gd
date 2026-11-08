@@ -21,13 +21,13 @@ func run():
   var loaded=await store.read_active()
   if not need(loaded,"read actual15 "+label):return
   var raw=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema15-"+label+".json"))
-  check(loaded.snapshot.version==16 and loaded.snapshot.talent_draft.version==0 and loaded.snapshot.last_kill_kind=="","old15 retains legacy offer policy, no invented kill history")
+  check(loaded.snapshot.version==17 and loaded.snapshot.talent_draft.version==0 and loaded.snapshot.last_kill_kind=="","old15 retains legacy offer policy, no invented kill history")
   for key in raw:
    if key!="version":check(JSON.parse_string(JSON.stringify(loaded.snapshot[key]))==JSON.parse_string(JSON.stringify(raw[key])),"old15 preserved "+label+" "+key)
  var store=Store.new("user://journeys-v1-test-talent-"+nonce())
  var created=await store.create_run(0,2,"risk",false,nonce())
  if not need(created,"new schema16"):return
- check(created.snapshot.version==16 and created.snapshot.talent_draft.version==1 and created.snapshot.last_kill_kind=="","new birth draft and empty history")
+ check(created.snapshot.version==17 and created.snapshot.talent_draft.version==1 and created.snapshot.last_kill_kind=="","new birth draft and empty history")
  var before=store.native.read().data
  var forged=created.snapshot.duplicate(true)
  forged.talent_draft={"version":0,"offers":[["iron_skin","keen_edge","clean_finish"],["last_stand","sentinel_lore","trained_focus"],["giant_slayer","battle_medic","unbroken"]]}

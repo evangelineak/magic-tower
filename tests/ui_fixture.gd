@@ -50,12 +50,12 @@ class MemoryAdapter:
   if record.is_empty() or record.slot!=expected_slot or record.revision!=expected_revision or record.run_id!=run_id:return failure("conflict")
   var candidate=World.from_snapshot(snapshot)
   if candidate==null or candidate.run_id!=run_id or not candidate.reward_eligible() or candidate.mode not in ["safe","risk"] or candidate.ended_reason!="":return failure("invalid")
-  if snapshot.draft!=record.snapshot.draft or snapshot.mode!=record.snapshot.mode or snapshot.seed_value!=record.snapshot.seed_value:return failure("invalid")
+  if snapshot.draft!=record.snapshot.draft or snapshot.mode!=record.snapshot.mode or snapshot.seed_value!=record.snapshot.seed_value or snapshot.legacy_points!=record.snapshot.legacy_points:return failure("invalid")
   record.snapshot=snapshot.duplicate(true); record.revision+=1
   return remember(request,signature)
- func choose_strategy(expected_slot,expected_revision,run_id,choice,request):
+ func choose_strategy(expected_slot,expected_revision,run_id,choice,request,allocation:Dictionary={}):
   if not World.valid_run_id(request) or request=="" or not choice is String:return failure("invalid")
-  var signature=JSON.stringify(["strategy",expected_slot,expected_revision,run_id,choice])
+  var signature=JSON.stringify(["strategy",expected_slot,expected_revision,run_id,choice,allocation.duplicate(true)])
   var prior=replay(request,signature)
   if prior!=null:return prior
   if fail_before:fail_before=false;return failure("io_error")
@@ -66,7 +66,7 @@ class MemoryAdapter:
   var pool=Strategy.pool_from_profile(profile)
   for id in candidate.draft.pool:
    if not id in pool:return failure("invalid")
-  if not candidate.choose_strategy(choice):return failure("invalid")
+  if not candidate.choose_strategy(choice,allocation.duplicate(true)):return failure("invalid")
   record.snapshot=candidate.save_data();record.revision+=1
   return remember(request,signature)
  func settle_run(expected_slot,expected_revision,run_id,outcome,request):

@@ -415,7 +415,7 @@ func run_tests():
 	check(scene.sound_event_count==pre_finish_audio+1,"duplicate terminal retry does not replay reward effect")
 	await scene.load_game()
 	check(scene.is_terminal() and scene.world.save_data()==settled_snapshot and scene.sound_event_count==pre_finish_audio+1,"L restores settled record without replaying effects")
-	check("Records alone grant no stats" in "\n".join(scene.terminal_lines()),"archive labels do not advertise implemented permanent stat rewards")
+	check("capacity for each new run" in "\n".join(scene.terminal_lines()) and "repeated records grant nothing" in "\n".join(scene.terminal_lines()),"archive labels explain per-run capacity and no repeated-record farming")
 	check(scene.settlement_notice()=="","archive does not show restored exploration message")
 	check(scene.milestone_text([3.0,5.0])=="[3, 5]","JSON milestone numbers display as floor integers")
 	var terminal_id=scene.world.run_id
@@ -429,23 +429,34 @@ func run_tests():
 	var draft_sounds=scene.sound_event_count
 	event.keycode=KEY_1;scene._unhandled_input(event)
 	var selected_strategy: String=scene.strategy_selection
+	var expected_setup_level: int=12+(4 if selected_strategy=="study" else 0)
+	var earned_setup_profile: Dictionary=scene.session.adapter.profile.duplicate(true)
+	event.keycode=KEY_Q;scene._unhandled_input(event)
+	check(scene.setup_allocation=={"study":1,"reserve":0} and scene.setup_preview().skill_level==expected_setup_level,"study previews actual +2 levels without spending capacity")
+	event.keycode=KEY_W;scene._unhandled_input(event)
+	check(scene.setup_allocation=={"study":1,"reserve":0},"cannot allocate beyond earned first milestone capacity")
 	event.keycode=KEY_F2;scene._unhandled_input(event)
 	check(scene.strategy_selection==selected_strategy and scene.world.save_data()==draft_before,"strategy preview/F2 change no World state")
 	event.keycode=KEY_D;scene._unhandled_input(event)
 	event.keycode=KEY_U;scene._unhandled_input(event)
 	check(Fixture.snapshot(scene)==draft_record and scene.sound_event_count==draft_sounds,"mandatory strategy modal blocks movement/Undo and writes no preview")
 	event.keycode=KEY_ESCAPE;scene._unhandled_input(event)
+	check(scene.setup_allocation=={"study":0,"reserve":0},"Escape clears only local allocation")
 	check(scene.strategy_selection=="" and scene.strategy_pending(),"Escape clears preview but cannot skip mandatory choice")
 	await scene.load_game()
 	check(scene.world.draft==draft_before.draft and scene.strategy_selection=="","L restores exact offers without rerolling")
 	event.keycode=KEY_1;scene._unhandled_input(event)
+	scene.adjust_setup("study",1)
 	scene.session.adapter.fail_before=true
 	await scene.confirm_strategy()
 	check(scene.strategy_pending() and scene.world.save_data()==draft_before,"strategy IO failure does not lock live draft")
 	event.keycode=KEY_0;scene._unhandled_input(event)
+	scene.adjust_setup("study",-1)
+	check(scene.setup_allocation.study==1,"failed whole-plan commit freezes original allocation for F5")
 	check(scene.strategy_selection==selected_strategy,"pending strategy retry keeps the originally submitted preview, not a different card")
 	await scene.retry_save()
 	check(not scene.strategy_pending() and scene.world.current_strategy()==selected_strategy and scene.world.moves==0 and scene.history.is_empty(),"strategy retry locks exactly once without a move and clears Undo")
+	check(scene.world.legacy_points.study==1 and scene.world.skill_level()==expected_setup_level,"retry atomically locks study with selected strategy")
 	var locked_strategy=scene.world.save_data().duplicate(true)
 	await scene.undo()
 	await scene.load_game()
@@ -456,15 +467,30 @@ func run_tests():
 	check(scene.strategy_pending(),"same-seed new journey offers a fresh explicit strategy choice")
 	var same_seed_offers=scene.world.draft.offers.duplicate()
 	event.keycode=KEY_0;scene._unhandled_input(event)
+	scene.adjust_setup("reserve",1)
 	scene.session.adapter.lost_ack=true
 	await scene.confirm_strategy()
 	check(scene.strategy_pending() and scene.strategy_selection=="none","lost acknowledgement leaves old live draft and original-rules preview")
 	var strategy_writes=scene.session.adapter.writes
 	await scene.retry_save()
 	check(not scene.strategy_pending() and scene.world.current_strategy()=="none" and scene.session.adapter.writes==strategy_writes,"ack retry publishes original rules once without another write")
+	check(scene.world.legacy_reserves==1 and scene.world.legacy_points.reserve==1,"original strategy can lock one reserve with one ACK retry")
 	await scene.retry_save()
 	await scene.load_game()
 	check(scene.world.draft.offers==same_seed_offers and scene.world.draft.choice=="none","repeat retry and load retain deterministic offers and locked original rules")
+	await scene.perform_action("hero_warden")
+	scene.growth_tab=0
+	check(scene.growth_actions().size()==2 and scene.growth_actions()[1][0]=="legacy_focus","hero page exposes separate emergency supply action after hero choice")
+	var reserve_before=scene.world.save_data().duplicate(true)
+	await scene.perform_action("legacy_focus")
+	check(scene.world.focus==3 and scene.world.legacy_reserves==0,"emergency supply adds one focus and spends exactly one owned charge")
+	var full_before=Fixture.snapshot(scene)
+	await scene.perform_action("legacy_focus")
+	check(Fixture.snapshot(scene)==full_before,"full focus or exhausted supply cannot spend resources")
+	await scene.undo()
+	check(scene.world.save_data()==reserve_before,"Undo restores supply and focus together without changing locked allocation")
+	await scene.load_game()
+	check(scene.world.save_data()==reserve_before,"reload keeps restored supply and chosen setup")
 	# Actual first-chapter proof supplies a legitimate K-victory UI fixture.
 	var first_win=load("res://scripts/world.gd").new(0,1)
 	var route=load("res://scripts/generation.gd").validate(first_win.floors,1).route
@@ -555,5 +581,25 @@ func run_tests():
 	event.keycode=KEY_1;scene._unhandled_input(event)
 	await scene.confirm_talent()
 	check(Fixture.snapshot(scene)==learned_before,"learned card number and confirmation cannot learn twice or spend resources")
+	# Explicit deterministic coverage: study strategy adds +4 on top of the
+	# same +2 legacy allocation; non-study retains level 12. No random-card assumption.
+	var SetupWorld=load("res://scripts/world.gd")
+	var setup_pool=SetupWorld.Strategy.pool_from_profile(earned_setup_profile)
+	for chosen in ["study","reserve"]:
+		var fixture_world
+		for fixture_seed in range(32):
+			fixture_world=SetupWorld.new(fixture_seed,2,"", "safe",false,setup_pool)
+			if chosen in fixture_world.draft.offers: break
+		check(chosen in fixture_world.draft.offers,"deterministic setup fixture offers "+chosen)
+		await Fixture.bind(scene,fixture_world,earned_setup_profile)
+		scene.strategy_selection=chosen;scene.setup_allocation={"study":0,"reserve":0};scene.strategy_submitted=false
+		var base_level=int(scene.setup_preview().skill_level)
+		scene.adjust_setup("study",1)
+		var expected_level=12+(4 if chosen=="study" else 0)
+		check(scene.setup_preview().skill_level==expected_level and scene.setup_preview().skill_level==base_level+2,"allocation preview adds exactly two for "+chosen)
+		await scene.confirm_strategy()
+		check(scene.world.skill_level()==expected_level and scene.world.legacy_points.study==1,"atomic setup stores additive skill level for "+chosen)
+	var effects_preview=scene.world.setup_preview("none",{})
+	check(scene.setup_hero_effects_text(effects_preview).contains("Scholar: heal"),"preparation exposes all three model-backed hero effects")
 	print("UI integration: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
 	quit(0 if failures==0 else 1)

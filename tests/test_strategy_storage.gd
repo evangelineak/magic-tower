@@ -27,7 +27,7 @@ func run():
  for label in ["active","death"]:
   var s=prepared(label);var old=await s.read_active()
   if not need(old,"old14 migration "+label):return
-  check(old.snapshot.version==16 and old.snapshot.draft=={"version":0,"pool":[],"offers":[],"choice":"none"},"old14 gets no retroactive draw "+label)
+  check(old.snapshot.version==17 and old.snapshot.draft=={"version":0,"pool":[],"offers":[],"choice":"none"},"old14 gets no retroactive draw "+label)
   var prior=s.native.read().data
   var denied=await s.choose_strategy(old.slot,old.revision,old.run_id,"study",nonce())
   check(not denied.ok and s.native.read().data==prior,"old14 cannot claim new choice "+label)

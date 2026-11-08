@@ -97,6 +97,7 @@ func _validated_response(result):
   if not (value is int or value is float) or not is_finite(float(value)) or value<0 or value>2147483647 or floor(float(value))!=value: return null
  var candidate=_clone(result.snapshot)
  if candidate==null or candidate.run_id!=result.run_id or not candidate.reward_eligible() or not candidate.mode in ["safe","risk"]: return null
+ if int(candidate.legacy_points.capacity)>result.profile.milestones.size(): return null
  var authorized_pool=Strategy.pool_from_profile(result.profile)
  for strategy_id in candidate.draft.pool:
   if not strategy_id in authorized_pool: return null
@@ -127,7 +128,7 @@ func _perform(kind:String,value) -> Dictionary:
  if kind=="undo" and history.is_empty(): return _reply(false,"invalid","No move to undo in this session.")
  var before:Dictionary=world.save_data().duplicate(true)
  var candidate=_clone(history.back() if kind=="undo" else before)
- if candidate==null or candidate.run_id!=world.run_id or not _same_json(candidate.draft,world.draft) or not _same_json(candidate.talent_draft,world.talent_draft): return _reply(false,"invalid","Journey identity or history is invalid.")
+ if candidate==null or candidate.run_id!=world.run_id or not _same_json(candidate.draft,world.draft) or not _same_json(candidate.talent_draft,world.talent_draft) or not _same_json(candidate.legacy_points,world.legacy_points): return _reply(false,"invalid","Journey identity or history is invalid.")
  var accepted=true
  match kind:
   "step": accepted=candidate.step(value)
@@ -145,13 +146,13 @@ func _perform(kind:String,value) -> Dictionary:
  elif kind=="action": effect.input=value
  _pending={"effect":effect,"kind":"commit","operation":kind,"candidate":candidate,"before":before,"snapshot":candidate.save_data().duplicate(true),"slot":slot,"revision":revision,"run_id":world.run_id,"request_id":_nonce()}
  return await _commit_pending()
-func choose_strategy(choice:String) -> Dictionary:
+func choose_strategy(choice:String,allocation:Dictionary={}) -> Dictionary:
  var gate=_gate()
  if not gate.is_empty(): return gate
  if world==null: return _reply(false,"empty","No active journey.")
  var candidate=_clone(world.save_data())
- if candidate==null or not candidate.choose_strategy(choice): return _reply(false,"rejected","This starting strategy is unavailable or already locked.")
- _pending={"kind":"strategy","choice":choice,"candidate":candidate,"snapshot":candidate.save_data().duplicate(true),"slot":slot,"revision":revision,"run_id":world.run_id,"request_id":_nonce(),"effect":{"operation":"strategy","input":choice}}
+ if candidate==null or not candidate.choose_strategy(choice,allocation): return _reply(false,"rejected","This starting strategy is unavailable or already locked.")
+ _pending={"kind":"strategy","choice":choice,"allocation":{"study":int(candidate.legacy_points.study),"reserve":int(candidate.legacy_points.reserve)},"candidate":candidate,"snapshot":candidate.save_data().duplicate(true),"slot":slot,"revision":revision,"run_id":world.run_id,"request_id":_nonce(),"effect":{"operation":"strategy","input":choice}}
  return await _commit_pending()
 func finish(outcome:String) -> Dictionary:
  var gate=_gate()
@@ -189,7 +190,7 @@ func _commit_pending() -> Dictionary:
  if _pending.kind=="create":
   result=await adapter.create_run(_pending.seed,_pending.layout,_pending.mode,_pending.replace,_pending.request_id)
  elif _pending.kind=="strategy":
-  result=await adapter.choose_strategy(_pending.slot,_pending.revision,_pending.run_id,_pending.choice,_pending.request_id)
+  result=await adapter.choose_strategy(_pending.slot,_pending.revision,_pending.run_id,_pending.choice,_pending.request_id,_pending.allocation.duplicate(true))
  elif _pending.kind=="death":
   result=await adapter.settle_death(_pending.slot,_pending.revision,_pending.run_id,_pending.delta,_pending.request_id)
  elif _pending.kind=="settle":

@@ -4,6 +4,7 @@ const Layout = preload("res://scripts/layout.gd")
 const Generator = preload("res://scripts/generation.gd")
 const BattleTimeline = preload("res://scripts/battle_timeline.gd")
 const Progression = preload("res://scripts/progression.gd")
+const LegacyPoints = preload("res://scripts/legacy_points.gd")
 const Strategy = preload("res://scripts/legacy_strategy.gd")
 const Attunement = preload("res://scripts/attunement.gd")
 const ATTUNABLE_GEAR = ["buckler","duelist","repeater","maul"]
@@ -52,6 +53,8 @@ var gear_choices: Dictionary = {}
 var talents: Array = []
 var talent_draft: Dictionary = {}
 var last_kill_kind := ""
+var legacy_points:Dictionary={"version":0,"capacity":0,"study":0,"reserve":0}
+var legacy_reserves:=0
 var kills := 0
 var floor_seen: Array = [true,false,false,false,false]
 var quest_state := 0
@@ -111,6 +114,7 @@ func _init(run_seed: int = 0, run_layout: int = 2, session_run_id: String = "", 
 	layout_revision=run_layout if Layout.valid_revision(run_layout) else Layout.CURRENT
 	seed_value=clampi(run_seed,0,2147483647)
 	draft=Strategy.draft(seed_value,strategy_pool)
+	legacy_points=LegacyPoints.allocate(LegacyPoints.capacity_for_pool(strategy_pool))
 	talent_draft=Progression.talent_draft(seed_value)
 	gear_offers=_new_gear_offers(seed_value)
 	audit_puzzle=AuditPuzzle.generate(seed_value)
@@ -178,13 +182,32 @@ func strategy_pending() -> bool:
 	return draft.get("choice","")==""
 func current_strategy() -> String:
 	return "none" if strategy_pending() else str(draft.get("choice","none"))
-func choose_strategy(id: String) -> bool:
+func choose_strategy(id: String, allocation: Dictionary = {}) -> bool:
 	if not generation_valid or ended_reason!="" or won or moves!=0 or not strategy_pending() or not Strategy.valid_choice(draft.offers,id): return false
-	draft.choice=id
+	var points:=LegacyPoints.allocate(int(legacy_points.capacity),allocation)
+	if points.is_empty(): return false
+	if int(legacy_points.version)==0: points=LegacyPoints.legacy()
+	draft.choice=id;legacy_points=points;legacy_reserves=int(points.reserve)
 	return true
-func strategy_preview(id: String) -> Dictionary:
+func legacy_study() -> int:
+	return int(legacy_points.get("study",0))
+func setup_preview(id:String,allocation:Dictionary={}) -> Dictionary:
 	if not Strategy.valid_choice(draft.get("offers",[]),id): return {"valid":false}
-	return {"valid":true,"id":id,"name":"Original strategy" if id=="none" else Strategy.TEMPLATES[id].name,"description":"No strategy bonuses or costs." if id=="none" else Strategy.TEMPLATES[id].description,"skill_level":Progression.skill_level(talents,gear_attunement(),id),"skill_level_info":Progression.skill_level_info(talents,gear_attunement(),id),"skill_description":Progression.skill_description(hero_id,talents,gear_attunement(),id),"mend_heal":Progression.mend_heal(talents,gear_attunement(),id),"selected":draft.get("choice")==id,"can_choose":generation_valid and ended_reason=="" and not won and moves==0 and strategy_pending()}
+	var points:=LegacyPoints.allocate(int(legacy_points.get("capacity",0)),allocation)
+	if points.is_empty(): return {"valid":false}
+	var study:int=points.study
+	var hero_descriptions:Dictionary={}
+	for hero in ["warden","ranger","scholar"]:
+		hero_descriptions[hero]=Progression.skill_description(hero,talents,gear_attunement(),id,study)
+	var hero_effects:Dictionary={"warden_block_percent":Progression.brace_percent(talents,gear_attunement(),id,study),"ranger_ignore_def":Progression.skill_level(talents,gear_attunement(),id,study),"scholar_heal":Progression.mend_heal(talents,gear_attunement(),id,study)}
+	return {"hero_effects":hero_effects,"hero_skill_descriptions":hero_descriptions,"valid":true,"id":id,"name":"Original strategy" if id=="none" else Strategy.TEMPLATES[id].name,"description":"No strategy bonuses or costs." if id=="none" else Strategy.TEMPLATES[id].description,"capacity":points.capacity,"study":study,"reserve":points.reserve,"remaining":int(points.capacity)-study-int(points.reserve),"reserve_remaining":points.reserve,"skill_level":Progression.skill_level(talents,gear_attunement(),id,study),"skill_level_info":Progression.skill_level_info(talents,gear_attunement(),id,study),"skill_description":Progression.skill_description(hero_id,talents,gear_attunement(),id,study),"mend_heal":Progression.mend_heal(talents,gear_attunement(),id,study),"selected":draft.get("choice")==id,"can_choose":generation_valid and ended_reason=="" and not won and moves==0 and strategy_pending()}
+func strategy_preview(id: String) -> Dictionary:
+	return setup_preview(id,{"study":legacy_study(),"reserve":int(legacy_points.get("reserve",0))})
+func legacy_focus_available() -> bool:
+	return generation_valid and not strategy_pending() and ended_reason=="" and not won and hp>0 and legacy_reserves>0 and focus<focus_cap
+func legacy_summary() -> String:
+	var info:=skill_level_info()
+	return "Legacy points: study %d (+%d levels) / reserve %d / capacity %d. Supplies left: %d. Skill level %d (raw %d; overflow %d)." % [legacy_study(),legacy_study()*2,int(legacy_points.reserve),int(legacy_points.capacity),legacy_reserves,int(info.effective),int(info.raw),int(info.overflow)]
 func talent_candidates() -> Array:
 	if talents.size()>=3 or not talent_draft.has("offers"): return []
 	return talent_draft.offers[talents.size()].duplicate()
@@ -226,13 +249,13 @@ func gear_attunement(gear_id:String="")->String:
 	if not gear in inventory or not gear in ATTUNABLE_GEAR: return "none"
 	return str(gear_choices.get(gear,"none"))
 func skill_level()->int:
-	return Progression.skill_level(talents,gear_attunement(),current_strategy())
+	return Progression.skill_level(talents,gear_attunement(),current_strategy(),legacy_study())
 func skill_level_info()->Dictionary:
-	return Progression.skill_level_info(talents,gear_attunement(),current_strategy())
+	return Progression.skill_level_info(talents,gear_attunement(),current_strategy(),legacy_study())
 func skill_description()->String:
-	return Progression.skill_description(hero_id,talents,gear_attunement(),current_strategy())
+	return Progression.skill_description(hero_id,talents,gear_attunement(),current_strategy(),legacy_study())
 func mend_heal()->int:
-	return Progression.mend_heal(talents,gear_attunement(),current_strategy())
+	return Progression.mend_heal(talents,gear_attunement(),current_strategy(),legacy_study())
 func attunement_offers(gear_id:String="")->Array:
 	var gear:=equipped if gear_id=="" else gear_id
 	if strategy_pending() or ended_reason!="" or not generation_valid or won or not gear in ATTUNABLE_GEAR or gear_choices.has(gear): return []
@@ -244,7 +267,7 @@ func attunement_preview(id:String,gear_id:String="")->Dictionary:
 	var gear:=equipped if gear_id=="" else gear_id
 	if not gear in ATTUNABLE_GEAR or not Attunement.valid_selection(gear_offers.get(gear,[]),id): return {"valid":false}
 	var changes:Dictionary=Attunement.modifiers(id)
-	return {"valid":true,"gear":gear,"id":id,"name":"Original equipment" if id=="none" else Attunement.TEMPLATES[id].name,"description":"No attunement bonuses or penalties." if id=="none" else Attunement.TEMPLATES[id].description,"atk":int(changes.atk),"def":int(changes.def),"levels":int(changes.levels),"skill_level":Progression.skill_level(talents,id,current_strategy()),"skill_level_info":Progression.skill_level_info(talents,id,current_strategy()),"skill_description":Progression.skill_description(hero_id,talents,id,current_strategy()),"mend_heal":Progression.mend_heal(talents,id,current_strategy()),"owned":gear in inventory,"can_choose":not strategy_pending() and generation_valid and not won and gear in inventory and not gear_choices.has(gear),"locked":gear_choices.has(gear),"selected":gear_choices.has(gear) and gear_choices[gear]==id}
+	return {"valid":true,"gear":gear,"id":id,"name":"Original equipment" if id=="none" else Attunement.TEMPLATES[id].name,"description":"No attunement bonuses or penalties." if id=="none" else Attunement.TEMPLATES[id].description,"atk":int(changes.atk),"def":int(changes.def),"levels":int(changes.levels),"skill_level":Progression.skill_level(talents,id,current_strategy(),legacy_study()),"skill_level_info":Progression.skill_level_info(talents,id,current_strategy(),legacy_study()),"skill_description":Progression.skill_description(hero_id,talents,id,current_strategy(),legacy_study()),"mend_heal":Progression.mend_heal(talents,id,current_strategy(),legacy_study()),"owned":gear in inventory,"can_choose":not strategy_pending() and generation_valid and not won and gear in inventory and not gear_choices.has(gear),"locked":gear_choices.has(gear),"selected":gear_choices.has(gear) and gear_choices[gear]==id}
 func attunement_description(gear_id:String="")->String:
 	var gear:=equipped if gear_id=="" else gear_id
 	if not gear in ATTUNABLE_GEAR and gear!="balanced": return ""
@@ -389,7 +412,7 @@ func tooltip_data(point: Vector2i) -> Dictionary:
 	var level_info:=skill_level_info()
 	lines.append("Attunement: %s" % ("Original equipment" if tuning=="none" else str(Attunement.TEMPLATES[tuning].name)))
 	if tuning!="none": lines.append(str(Attunement.TEMPLATES[tuning].description))
-	lines.append("Skill level %d = base %d + training %d + equipment %d + strategy %d" % [level_info.effective,level_info.base,level_info.training,level_info.gear,level_info.strategy])
+	lines.append("Skill level %d = base %d + training %d + equipment %d + strategy %d + legacy %d (raw %d; overflow %d)" % [level_info.effective,level_info.base,level_info.training,level_info.gear,level_info.strategy,level_info.legacy,level_info.raw,level_info.overflow])
 	if current_strategy()!="none":
 		lines.append("Run strategy: %s" % str(Strategy.TEMPLATES[current_strategy()].name))
 		lines.append(str(Strategy.TEMPLATES[current_strategy()].description))
@@ -481,13 +504,13 @@ func _battle_preview_with_talents(kind:String,gear:String,target:Vector2i,chosen
 	if not gear in inventory: gear="invalid_unowned"
 	var flank:=target_floor==floor_index and expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H" and flank_position(target)==pos
 	var enemy:Dictionary=ENEMIES.get(kind,{}).duplicate();enemy.kind=kind
-	return Progression.battle(atk,defense,hp,enemy,hero_id,skill_armed and focus>0,gear,chosen,"watch" if oath_state=="active" else "none",flank,gear_attunement(gear),current_strategy(),last_kill_kind)
+	return Progression.battle(atk,defense,hp,enemy,hero_id,skill_armed and focus>0,gear,chosen,"watch" if oath_state=="active" else "none",flank,gear_attunement(gear),current_strategy(),last_kill_kind,legacy_study())
 func battle_timeline(target: Vector2i) -> Dictionary:
 	var kind:=tile(target)
 	if not ENEMIES.has(kind): return {"valid":false,"reason":"Not an enemy.","events":[]}
 	var flank:=expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H" and flank_position(target)==pos
 	var enemy:Dictionary=ENEMIES[kind].duplicate();enemy.kind=kind
-	return BattleTimeline.simulate(atk,defense,hp,enemy,hero_id,skill_armed and focus>0,equipped,talents,"watch" if oath_state=="active" else "none",flank,gear_attunement(),current_strategy(),last_kill_kind)
+	return BattleTimeline.simulate(atk,defense,hp,enemy,hero_id,skill_armed and focus>0,equipped,talents,"watch" if oath_state=="active" else "none",flank,gear_attunement(),current_strategy(),last_kill_kind,legacy_study())
 func lethal_fight(delta: Vector2i) -> bool:
 	# Explicit Session confirmation is separate from ordinary movement.
 	if strategy_pending() or mode!="risk" or ended_reason!="" or not generation_valid or won or hp<=0 or moves>=1000000 or absi(delta.x)+absi(delta.y)!=1: return false
@@ -689,6 +712,11 @@ func event_offers() -> Array:
 	return [["bargain_blood","Blood bargain: pay 80 HP / gain +6 ATK"],["bargain_gold","Ward bargain: pay 25 gold / gain +5 DEF"],["bargain_leave","Decline this encounter permanently"]]
 func action(id: String) -> bool:
 	if strategy_pending() or ended_reason!="": return false
+	if id=="legacy_focus":
+		if not legacy_focus_available(): return false
+		legacy_reserves-=1;focus+=1;moves+=1
+		message="Emergency reserve used: +1 focus. One supply consumed."
+		return true
 	if id.begins_with("fast_travel_"):
 		if not travel_available(): return false
 		var requested:=id.trim_prefix("fast_travel_")
@@ -976,7 +1004,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":16,"talent_draft":talent_draft.duplicate(true),"last_kill_kind":last_kill_kind,"draft":draft.duplicate(true),"death_record":death_record.duplicate(true),"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":17,"legacy_points":legacy_points.duplicate(true),"legacy_reserves":legacy_reserves,"talent_draft":talent_draft.duplicate(true),"last_kill_kind":last_kill_kind,"draft":draft.duplicate(true),"death_record":death_record.duplicate(true),"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -984,7 +1012,7 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13 and save_version!=14 and save_version!=15 and save_version!=16): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13 and save_version!=14 and save_version!=15 and save_version!=16 and save_version!=17): return false
 	if save_version>=14:
 		if not d.get("death_record") is Dictionary or not d.get("ended_reason") is String: return false
 		if d.get("ended_reason")=="death": return _restore_death(d)
@@ -1004,6 +1032,13 @@ func restore(d: Dictionary) -> bool:
 		if not d.get("last_kill_kind") is String or (d.last_kill_kind!="" and not ENEMIES.has(d.last_kill_kind)): return false
 		saved_talent_draft=d.talent_draft.duplicate(true);saved_talent_draft.version=int(saved_talent_draft.version)
 		saved_last_kill=d.last_kill_kind
+	var saved_points:Dictionary=LegacyPoints.legacy()
+	var saved_reserves:=0
+	if save_version>=17:
+		if not LegacyPoints.valid_record(d.get("legacy_points"),d.get("legacy_reserves"),saved_draft.pool,saved_draft.choice==""): return false
+		saved_points={}
+		for key in ["version","capacity","study","reserve"]: saved_points[key]=int(d.legacy_points[key])
+		saved_reserves=int(d.legacy_reserves)
 	var saved_run_id := ""
 	var saved_mode := "safe"
 	var saved_end := ""
@@ -1227,6 +1262,7 @@ func restore(d: Dictionary) -> bool:
 	if not d.floor_seen[int(d.floor)]: return false
 	if saved_end=="victory" and (not d.won or not saved_expedition or not d.floor_seen[7]): return false
 	if saved_end=="retired" and d.won and (saved_expedition or not d.floor_seen[4] or first_boss_remaining!=0): return false
+	legacy_points=saved_points;legacy_reserves=saved_reserves
 	talent_draft=saved_talent_draft;last_kill_kind=saved_last_kill
 	draft=saved_draft
 	death_record={}
@@ -1289,7 +1325,10 @@ func _restore_death(d: Dictionary) -> bool:
 	var delta:=Vector2i(int(record.x),int(record.y))-probe.pos
 	if not probe.lethal_fight(delta): return false
 	var expected:=d.duplicate(true)
-	expected.version=16
+	expected.version=17
+	if int(d.version)<17:
+		expected.legacy_points=LegacyPoints.legacy()
+		expected.legacy_reserves=0
 	if int(d.version)<16:
 		expected.talent_draft=Progression.talent_draft(0,0)
 		expected.last_kill_kind=""

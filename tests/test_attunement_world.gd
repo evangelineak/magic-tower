@@ -29,7 +29,7 @@ func offer(w,gear:String,id:String):
 	w.gear_offers[gear]=ids
 func _init():
 	var w=World.new(42)
-	check(w.save_data().version==16 and w.attunement_version==1 and w.gear_choices.is_empty(),"new schema starts unselected and original")
+	check(w.save_data().version==17 and w.attunement_version==1 and w.gear_choices.is_empty(),"new schema starts unselected and original")
 	check(w.gear_offers.size()==4 and not w.gear_offers.has("balanced"),"only four nonbaseline gear catalogs")
 	check(w.gear_offers==World.new(42).gear_offers,"catalog is deterministic")
 	for gear in World.ATTUNABLE_GEAR:
@@ -69,7 +69,7 @@ func _init():
 	check(w.action("equip_repeater") and w.skill_level()==12,"only worn focus tuning changes skill level")
 	check(w.skill_level_info().gear==2 and w.skill_level_info().effective==12,"UI level breakdown matches current gear")
 	var tip:Dictionary=w.tooltip_data(w.pos)
-	check(A.TEMPLATES.focus_deep.description in tip.lines and w.skill_description() in tip.lines and "Attunement: Deep focus" in tip.lines and "Skill level 12 = base 10 + training 0 + equipment 2 + strategy 0" in tip.lines,"hero tooltip uses the current worn tuning and skill effect")
+	check(A.TEMPLATES.focus_deep.description in tip.lines and w.skill_description() in tip.lines and "Attunement: Deep focus" in tip.lines and "Skill level 12 = base 10 + training 0 + equipment 2 + strategy 0 + legacy 0 (raw 12; overflow 0)" in tip.lines,"hero tooltip uses the current worn tuning and skill effect")
 	check(w.action("attune_maul_guard_deep"),"second item has independent choice")
 	var repeat_preview:Dictionary=w.battle_preview("W","repeater")
 	var maul_preview:Dictionary=w.battle_preview("W","maul")

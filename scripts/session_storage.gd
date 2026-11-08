@@ -94,6 +94,7 @@ func _normalize(raw:Dictionary)->Dictionary:
  var ledger=raw.get("profile",{})
  if not Profile.validate(ledger).ok:return _failure("INVALID_PROFILE")
  if status=="active" and ledger.receipts.has(snapshot.run_id):return _failure("INVALID_RECEIPT")
+ if int(snapshot.legacy_points.capacity)>ledger.milestones.size():return _failure("INVALID_ALLOCATION")
  result.profile=ledger.duplicate(true)
  if status=="archived":
   var profile=raw.get("profile",{});var receipt=raw.get("receipt",{})
@@ -189,11 +190,18 @@ func settle_death(expected_slot:int,expected_revision:int,run_id:String,delta:Ve
  if raw.get("ok",false) and test_drop_next_ack:test_drop_next_ack=false;return _failure("ACK_LOST")
  return _normalize(raw)
 
-func choose_strategy(expected_slot:int,expected_revision:int,run_id:String,choice:String,request_id:String="")->Dictionary:
+func choose_strategy(expected_slot:int,expected_revision:int,run_id:String,choice:String,request_id:String="",allocation:Dictionary={})->Dictionary:
  if not World.valid_run_id(request_id) or request_id=="" or not Strategy.valid_id(choice):return _failure("INVALID_STRATEGY")
+ var allocated={"study":0,"reserve":0}
+ if not allocation.is_empty():
+  if allocation.size()!=2 or not allocation.has("study") or not allocation.has("reserve"):return _failure("INVALID_ALLOCATION")
+  for key in ["study","reserve"]:
+   var value=allocation[key]
+   if not (value is int or value is float) or not is_finite(float(value)) or value<0 or value>2 or floor(float(value))!=value:return _failure("INVALID_ALLOCATION")
+   allocated[key]=int(value)
  var claim=await _claim(false,true)
  if not claim.get("ok",false):return _failure(str(claim.get("code","WEB_IO")))
  var supplied=auth.duplicate(true);supplied.expectedSlotRevision=expected_slot
- var raw:Dictionary=await _web("strategy",{"auth":supplied,"id":run_id,"expected":expected_revision,"choice":choice,"request_id":request_id}) if use_web else native.choose_strategy(run_id,supplied,expected_revision,choice,request_id)
+ var raw:Dictionary=await _web("strategy",{"auth":supplied,"id":run_id,"expected":expected_revision,"choice":choice,"request_id":request_id,"allocation":allocated}) if use_web else native.choose_strategy(run_id,supplied,expected_revision,choice,request_id,allocated)
  if raw.get("ok",false) and test_drop_next_ack:test_drop_next_ack=false;return _failure("ACK_LOST")
  return _normalize(raw)

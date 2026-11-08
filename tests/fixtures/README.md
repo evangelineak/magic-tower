@@ -211,3 +211,21 @@ stat/position injections. Import the isolated project before running the generat
 - `schema15-active.json`: `64bfbecf7b17ae981ea649e2707aa71e84d47efb8d02be60b259cf4fcd2c6804`
 - `schema15-death-store.json`: `1110309ddb44341c1ae9cb2aef99291dcfa6f9ec83960cf074478c4432dbb542`
 - `schema15-death.json`: `f34270ab47714a86bacef460b9f998bef0ac351a5d83cd31ed21c65b03c6daf2`
+
+## Authentic schema 16 storage fixtures
+
+Generated from isolated `git archive 11369c0` by `generate_schema16_store.gd`,
+with the old real production adapter and legal seed 0 risk route. Active 302
+moves/HP207 and actual W defeat at 303 moves retain real talent candidates and
+last surviving kill. Raw files only project stored World snapshots. No version
+edits, state injection, or user data. Import the isolated project first.
+
+- `schema16-active-store.json`: `717245511cbed497b4b6cfc5bee2b30f6d06e4b757d600cb31e0700ef1c9bf7f`
+- `schema16-active.json`: `ce4d21bb63d4c535420a899b96d0f1d8bb38737dbe561dbc08131e16aab2f5f0`
+- `schema16-death-store.json`: `9e078a3ae78a52150b8c2861ae903bccc295372d98ccb0ce7b8d94f09d97451f`
+- `schema16-death.json`: `f3c66b79f48f364fe0095b8403e470989ca5fce9c191284995e990aff013cfcd`
+
+The same isolated generator additionally creates a genuinely pending seed-51
+run after the real defeat ledger unlocks [3,5]. It tests zero-point migration
+without disabling the old unconfirmed strategy choice.
+- `schema16-pending-store.json`: `74250b9e04445d63b4e63a466dc8ad8667d7ea942ea2efea29b5b89fac96ca54`

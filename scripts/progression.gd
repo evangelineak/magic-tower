@@ -1,5 +1,6 @@
 class_name TowerProgression
 extends RefCounted
+const Points = preload("res://scripts/legacy_points.gd")
 const Strategy = preload("res://scripts/legacy_strategy.gd")
 const Attunement = preload("res://scripts/attunement.gd")
 
@@ -85,32 +86,33 @@ static func talent_options(kills: int, chosen: Array) -> Array:
 	if kills<int(tier.kills): return []
 	return tier.choices.duplicate()
 
-static func skill_level(chosen: Array, attunement: String = "none", strategy: String = "none") -> int:
-	if not Attunement.valid_id(attunement) or not Strategy.valid_id(strategy): return -1
-	return clampi(BASE_SKILL_LEVEL+(4 if "trained_focus" in chosen else 0)+int(Attunement.modifiers(attunement).levels)+int(Strategy.modifiers(strategy,{}).levels),1,SKILL_LEVEL_CAP)
+static func skill_level(chosen: Array, attunement: String = "none", strategy: String = "none", legacy_study: int = 0) -> int:
+	if not Attunement.valid_id(attunement) or not Strategy.valid_id(strategy) or legacy_study<0 or legacy_study>2: return -1
+	return clampi(BASE_SKILL_LEVEL+(4 if "trained_focus" in chosen else 0)+int(Attunement.modifiers(attunement).levels)+int(Strategy.modifiers(strategy,{}).levels)+Points.LEVELS_PER_POINT*legacy_study,1,SKILL_LEVEL_CAP)
 
-static func skill_level_info(chosen: Array, attunement: String = "none", strategy: String = "none") -> Dictionary:
-	if not Attunement.valid_id(attunement) or not Strategy.valid_id(strategy): return {}
-	return {"base":BASE_SKILL_LEVEL,"training":4 if "trained_focus" in chosen else 0,"gear":int(Attunement.modifiers(attunement).levels),"effective":skill_level(chosen,attunement,strategy),"cap":SKILL_LEVEL_CAP,"attainable_max":20 if strategy=="study" else ATTAINABLE_SKILL_LEVEL,"strategy":int(Strategy.modifiers(strategy,{}).levels)}
+static func skill_level_info(chosen: Array, attunement: String = "none", strategy: String = "none", legacy_study: int = 0) -> Dictionary:
+	if not Attunement.valid_id(attunement) or not Strategy.valid_id(strategy) or legacy_study<0 or legacy_study>2: return {}
+	var raw:=BASE_SKILL_LEVEL+(4 if "trained_focus" in chosen else 0)+int(Attunement.modifiers(attunement).levels)+int(Strategy.modifiers(strategy,{}).levels)+Points.LEVELS_PER_POINT*legacy_study
+	return {"base":BASE_SKILL_LEVEL,"training":4 if "trained_focus" in chosen else 0,"gear":int(Attunement.modifiers(attunement).levels),"strategy":int(Strategy.modifiers(strategy,{}).levels),"legacy":Points.LEVELS_PER_POINT*legacy_study,"raw":raw,"overflow":maxi(0,raw-SKILL_LEVEL_CAP),"effective":skill_level(chosen,attunement,strategy,legacy_study),"cap":SKILL_LEVEL_CAP,"attainable_max":mini(20,(20 if strategy=="study" else ATTAINABLE_SKILL_LEVEL)+Points.LEVELS_PER_POINT*legacy_study)}
 
-static func mend_heal(chosen: Array, attunement: String = "none", strategy: String = "none") -> int:
-	var level:=skill_level(chosen,attunement,strategy)
+static func mend_heal(chosen: Array, attunement: String = "none", strategy: String = "none", legacy_study: int = 0) -> int:
+	var level:=skill_level(chosen,attunement,strategy,legacy_study)
 	return 30+5*level if level>=1 else 0
 
-static func brace_percent(chosen: Array, attunement: String = "none", strategy: String = "none") -> int:
-	var level:=skill_level(chosen,attunement,strategy)
+static func brace_percent(chosen: Array, attunement: String = "none", strategy: String = "none", legacy_study: int = 0) -> int:
+	var level:=skill_level(chosen,attunement,strategy,legacy_study)
 	return floori(10.0+2.5*level) if level>=1 else 0
 
-static func skill_description(hero: String, chosen: Array, attunement: String = "none", strategy: String = "none") -> String:
+static func skill_description(hero: String, chosen: Array, attunement: String = "none", strategy: String = "none", legacy_study: int = 0) -> String:
 	match hero:
-		"warden": return "Spend 1 focus: block %d%% of total battle loss (rounded down)." % brace_percent(chosen,attunement,strategy)
-		"ranger": return "Spend 1 focus: ignore %d enemy DEF for the next battle." % skill_level(chosen,attunement,strategy)
-		"scholar": return "Spend 1 focus outside battle: recover %d HP." % mend_heal(chosen,attunement,strategy)
+		"warden": return "Spend 1 focus: block %d%% of total battle loss (rounded down)." % brace_percent(chosen,attunement,strategy,legacy_study)
+		"ranger": return "Spend 1 focus: ignore %d enemy DEF for the next battle." % skill_level(chosen,attunement,strategy,legacy_study)
+		"scholar": return "Spend 1 focus outside battle: recover %d HP." % mend_heal(chosen,attunement,strategy,legacy_study)
 	return "Unknown hero."
 
-static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: String, skill: bool, equipment: String, talents: Array, oath: String = "none", flank: bool = false, attunement: String = "none", strategy: String = "none", last_kill_kind: String = "") -> Dictionary:
+static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: String, skill: bool, equipment: String, talents: Array, oath: String = "none", flank: bool = false, attunement: String = "none", strategy: String = "none", last_kill_kind: String = "", legacy_study: int = 0) -> Dictionary:
 	var result := {"valid":false, "survivable":false, "damage":-1, "hit":0, "rounds":0, "heal_after":0, "skill_consumed":false, "effective_atk":0, "effective_def":0, "enemy_def":0, "normal_damage":0, "first_strike_damage":0, "thorns_damage":0, "blocked_damage":0, "feint_damage":0, "charged_damage":0, "equipment_blocked":0, "oath_blocked":0, "oath_active":oath=="watch", "first_strike_suppressed":false, "first_strike_suppression":"none", "flank_blocked":0, "flank_active":flank, "attack_multiplier":1, "retaliations_per_hit":1, "retaliations":0, "skill_level":0, "attunement":attunement, "reason":"Invalid battle input."}
-	if not HEROES.has(hero) or not GEAR.has(equipment) or not valid_talents(talents) or not oath in ["none","watch"] or not Attunement.valid_id(attunement) or not Strategy.valid_id(strategy): return result
+	if not HEROES.has(hero) or not GEAR.has(equipment) or not valid_talents(talents) or not oath in ["none","watch"] or not Attunement.valid_id(attunement) or not Strategy.valid_id(strategy) or legacy_study<0 or legacy_study>2: return result
 	if attack<=0 or defense<0 or hp<=0: return result
 	for key in ["hp","atk","def"]:
 		if not enemy.has(key) or not (enemy[key] is int or enemy[key] is float): return result
@@ -139,7 +141,7 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	result.focus_after=0;result.gold_after=0;result.gold_tax=0
 	var gear: Dictionary = GEAR[equipment]
 	var tuning: Dictionary = Attunement.modifiers(attunement)
-	result.skill_level=skill_level(talents,attunement,strategy)
+	result.skill_level=skill_level(talents,attunement,strategy,legacy_study)
 	var effective_atk := maxi(0, attack+int(strategy_mod.atk)+int(gear.atk)+int(tuning.atk)+(3 if "keen_edge" in talents else 0)-(10 if oath=="watch" else 0))
 	var effective_def := maxi(0, defense+int(strategy_mod.def)+int(gear.def)+int(tuning.def)+(2 if "iron_skin" in talents else 0))
 	if "sentinel_lore" in talents and (enemy.get("name","")=="Sentinel" or enemy.get("kind","")=="g"):
@@ -194,7 +196,7 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	var loss := raw_loss-flank_blocked-oath_blocked-equipment_blocked
 	# Order: equipment, then floor(remaining loss * Brace rate), then Unbroken.
 	# No minimum block: a one-damage battle still costs one HP without a shield.
-	if skill and hero=="warden": loss-=int(floor(float(loss*brace_percent(talents,attunement,strategy))/100.0))
+	if skill and hero=="warden": loss-=int(floor(float(loss*brace_percent(talents,attunement,strategy,legacy_study))/100.0))
 	if "unbroken" in talents and hp>=400: loss=maxi(0,loss-20)
 	result.valid=true
 	result.hit=hit
