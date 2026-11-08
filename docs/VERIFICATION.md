@@ -364,3 +364,19 @@ PCK JS SHA `2bc4bafce2f6738d111b9d42d5ea9583ff8fec9d5c8eeb2a5ee3807350f459b9` �
 - H挡板、零焦、致死、5装备分页及学者最长文本用明确的布局夹具检查（tactical-flank-fixture、tactical-fatal-fixture、tactical-scholar-fixture），不冒称该夹具是真实旅程。没有额外新跑浏览器89项；上批证据只代表未变化的生产JS，Web引擎实玩仍未验证。
 
 - 冻结后完整tools/test_all.sh正常exit0：56套Godot测试、Node940、首章/远征各200种子、9条完整对抗路线/3882合法存读状态，零SCRIPT ERROR。最终日志/tmp/tower-tactical-final.log，早期夹具失败日志保留/tmp/tower-tactical-first.log。
+
+## 六层单次摆渡与真实位置示意（当前批次）
+
+- 先否决二层导流石阵硬塞方案，再在现有六层渡口位置实现一次耗焦跨岸，不改地图格、门梯或生成预算。schema19的rope出生版本固定，旧≤18及legacy布局off，不追溯赠送；使用状态可正常Undo。
+- 模型1984检查，native专项704检查，生产JS纯协议368检查，Session406检查。合法条件全验再一次提交位置/专注/步数/绳状态，最后一焦清备战；不触发怪物、金币、kill、战后恢复、计息或跨层专注。拒绝重复/返跳/修桥后无意义付焦/死守卫/非空落点/零焦。
+- 独立真实规则路线审计四种构筑：先真实结算赚取里程碑，再正常走到六层，比较摆渡、战斗、同剩余焦的Mend、80金桥和摆渡后回打；文档及JSONL见ROPE-ROUTE-AUDIT.md。渠道学者绳后侧打的回焦确来自后续真实战斗，非绳赠资源。最早提案模拟中的桥路线70HP已识别为途中药水，不当作桥自身奖励。
+- Genuine schema18 active/death/pending/allocated快照与存储容器从固定旧代码独立生成，出处及SHA在tests/fixtures/rope_schema18_PROVENANCE.md。不是把19字段改版本伪造旧档。原身份、档案与已有玩法字段保留，绳为off；旧nonce重试升级兼容已验证。
+- V增加H周围5×5真实格示意，标P玩家/E敌/F挡板、北向及坐标；只读、无移动入口，不改现有两列数值。UI260检查含真实合法路线、取消/确认/F2/Undo/过期确认以及layout1/layout2示意方向。
+- 原创Blender绳锚完整/断绳两态128透明图，实际60px查看，方向由UI按地图计算而非烘焙。两PNG52079bytes，可编辑rope.blend与脚本/manifest齐备，旧美术未改。
+- 本地化99检查；938必需字符缺0，428660bytes，字体SHA256 `ab8abecaab50ac75bcc61ce8c62fff74d3c305b995fcee5ac3cbbf3b9b0afd5d`，最终源manifest无漂移。
+
+- 真实原生GUI从seed1新局纯键盘走完首章291步，再继续远征到309步六层绳端(6,3)：确认后310步到(4,3)，实际完整快照差异仅专注3→2、步数309→310、rope ready→spent、x6→4。356HP、362金币、19击杀及守卫地图不变。U后完整snapshot恢复到309步，重新确认并L后完整snapshot与310步结果相等。截图rope-confirm-zh/en、rope-crossed-en、rope-reloaded-zh、rope-v-local-zh/en。不是注入数值后冒充新局路线。
+- 首轮真实Chrome前89项通过，新增rope出生断言遇对象键顺序假失败：生产正确返回ok/schema19/ready，测试比较器改为递归排序对象键的严格语义比较，数组顺序及全部字段/值保留，生产未改。浏览器最终复测结果另列，不能将该轮当109通过。
+- 最终绳端E直接打开专用说明页，避免无关贷款中间页；普通营地保留原入口，起落点/确认/撤销测试后UI262通过。实际spent落点重启最新源验证，rope-direct-e-spent-zh.png。
+- 最终真实Chrome生产JavaScript callback+IndexedDB109项全部通过，rope-browser-109.png。新增20项覆盖真实19旅程跨岸保存、幂等重试、Undo、出生规则拒改和真实18档迁移；测试服务器曾因目录错误导致fixture404，修正为repo根后重跑，没有修改生产或放宽验证。这不是Godot Web引擎实玩认证。
+- 最终直接绳页和harness修正冻结后，全套tools/test_all.sh exit0：58套Godot、Node1308、首章/远征各200种子、9条完整对抗路线及3882合法存读状态，无SCRIPT ERROR。UI262、localization99。最终日志/tmp/tower-rope-final-262.log；此前UI260版本完整日志保留/tmp/tower-rope-final.log，不与最终结果混淆。

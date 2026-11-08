@@ -14,6 +14,7 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
 <script>
 (async()=>{
  const fixtures=await (await fetch('session_bridge_fixtures.json')).json();
+ const ropeFixtures=await (await fetch('rope_bridge_fixtures.json')).json();
  const owner=crypto.randomUUID();let auth,slot=0,revision=0,serial=0,lastReply=null;
  const id=fixtures.first.run_id;const saveId='cccccccccccccccccccccccccccccccc';
  const log=value=>document.querySelector('#log').textContent=JSON.stringify(value,null,2);
@@ -69,9 +70,45 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
   const iframe=document.createElement('iframe');iframe.style.display='none';iframe.src='session_storage_harness.html?db='+testDB+'&auto=1';document.body.append(iframe);
   return await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('SELFTEST_TIMEOUT')),20000);const listener=e=>{if(e.source===iframe.contentWindow&&e.data?.type==='session-results'){clearTimeout(timer);removeEventListener('message',listener);resolve(e.data.result);iframe.remove()}};addEventListener('message',listener)});
  });
+ // A separate random test DB is populated from an unmodified genuine native
+ // schema18 envelope. This is test setup, not a production import endpoint.
+ if(query.get('rope_legacy')==='1'){
+  const checks=[];const check=(v,label)=>{if(!v)throw Error('FAIL '+label);checks.push(label)};
+  const canonical=value=>Array.isArray(value)?value.map(canonical):(value!==null&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value);
+  const eq=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
+  try{
+   await rpc('read'); // creates the normal production object stores
+   const envelope=await (await fetch('../tests/fixtures/rope_schema18-active-store.json')).json();
+   const data=JSON.parse(envelope.payload);
+   await new Promise((resolve,reject)=>{const opening=indexedDB.open(MagicTowerJourneys.databaseName,2);opening.onerror=()=>reject(opening.error);opening.onsuccess=()=>{
+    const db=opening.result,tx=db.transaction(['profiles','runs','receipts','slots'],'readwrite');
+    tx.objectStore('profiles').put(data.profile);tx.objectStore('slots').put(data.slot);
+    for(const run of Object.values(data.runs))tx.objectStore('runs').put(run);
+    for(const [id,receipt] of Object.entries(data.profile.profile.receipts))tx.objectStore('receipts').put({id,receipt});
+    tx.oncomplete=()=>{db.close();resolve()};tx.onabort=()=>reject(tx.error||Error('LEGACY_SETUP_ABORT'));
+   }});
+   let r=await rpc('read');check(r.ok&&r.run.snapshot.version===18,'genuine18 full run accepted by real IDB read');
+   const oldRun=r.run,oldProfile=r.profile;
+   r=await rpc('claim',{owner:data.slot.writer.owner,lease_ms:60000});check(r.ok,'claim genuine18 writer without rewriting fixture metadata');
+   const legacyAuth=r.auth,last=oldRun.last_op;
+   const retryArgs={auth:{...legacyAuth,expectedSlotRevision:last.expected_slot},id:oldRun.id,expected:last.expected_revision,snapshot:ropeFixtures.old_upgraded,request_id:last.request_id};
+   r=await rpc('save',retryArgs);check(r.ok&&r.duplicate&&r.run.revision===oldRun.revision&&r.run.snapshot.version===18,'old18 lost ACK accepts canonical19 exact snapshot without extra commit');
+   const upgradeArgs={auth:legacyAuth,id:oldRun.id,expected:oldRun.revision,snapshot:ropeFixtures.old_upgraded,request_id:'rope_old18_upgrade_save_001'};
+   r=await rpc('save',upgradeArgs);check(r.ok&&r.run.snapshot.version===19&&r.run.snapshot.rope.version===0&&r.run.snapshot.rope.state==='off','ordinary canonical save migrates old18 to rope off');
+   const migrated=r;
+   check(eq(migrated.profile,oldProfile)&&eq(migrated.run.snapshot.floors,oldRun.snapshot.floors),'migration retains exact ledger and maps');
+   r=await rpc('save',upgradeArgs);check(r.ok&&r.duplicate&&r.run.revision===migrated.run.revision,'migration response retry does not increment again');
+   const forged=structuredClone(migrated.run.snapshot);forged.rope={version:1,state:'ready'};
+   r=await rpc('save',{auth:legacyAuth,id:oldRun.id,expected:migrated.run.revision,snapshot:forged,request_id:'rope_old18_forbidden_gift01'});check(!r.ok&&r.code==='ROPE_BIRTH_IMMUTABLE','old18 cannot graft a new birth rope');
+   r=await rpc('read');check(r.ok&&eq(r.run,migrated.run)&&eq(r.profile,oldProfile),'rejected retrofit leaves real IDB unchanged');
+   parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:MagicTowerJourneys.databaseName}},location.origin);
+  }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,lastReply,checks}},location.origin)}
+  return;
+ }
  if(query.get('auto')==='1'){
   const checks=[];const check=(value,label)=>{if(!value)throw Error('FAIL '+label);checks.push(label)};
-  const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  const canonical=value=>Array.isArray(value)?value.map(canonical):(value!==null&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value);
+  const eq=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
   try{
    let r=await rpc('claim',{owner,lease_ms:60000});check(r.ok,'claim global writer');auth=r.auth;
    const created=await rpc('create',{auth,snapshot:fixtures.first,replace:false,request_id:id});check(created.ok&&eq(created.run.snapshot,fixtures.first),'create full real World payload');
@@ -153,7 +190,7 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    auth.expectedSlotRevision=10;
    r=await rpc('strategy',{auth,id:fixtures.draft_next.run_id,expected:0,choice:'none',request_id:'draft_keep_original_000001',allocation:{study:1,reserve:1}});check(r.ok&&r.run.snapshot.draft.choice==='none'&&r.run.snapshot.moves===0,'original build is explicit locked option');
    const talentCurrent=await rpc('read');
-   check(talentCurrent.ok&&talentCurrent.run.snapshot.version===18&&talentCurrent.run.snapshot.talent_draft.version===1,'new schema16 keeps deterministic talent birth candidates');
+   check(talentCurrent.ok&&talentCurrent.run.snapshot.version===19&&talentCurrent.run.snapshot.talent_draft.version===1,'new schema16 keeps deterministic talent birth candidates');
    const downgraded=structuredClone(talentCurrent.run.snapshot);downgraded.talent_draft={version:0,offers:[['iron_skin','keen_edge','clean_finish'],['last_stand','sentinel_lore','trained_focus'],['giant_slayer','battle_medic','unbroken']]};
    r=await rpc('save',{auth,id:talentCurrent.run.id,expected:talentCurrent.run.revision,snapshot:downgraded,request_id:'talent_illegal_downgrade01'});check(!r.ok&&r.code==='TALENT_DRAFT_IMMUTABLE','ordinary save cannot downgrade or redraw talent candidates');
    r=await rpc('read');check(r.ok&&eq(r.run,talentCurrent.run)&&eq(r.profile,talentCurrent.profile),'rejected talent redraw leaves full run and ledger unchanged');
@@ -172,6 +209,26 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    r=await rpc('save',{auth,id:fixtures.cargo_fresh.run_id,expected:3,snapshot:cargoForged,request_id:'cargo_disable_birth_00001'});check(!r.ok&&r.code==='CARGO_BIRTH_IMMUTABLE','ordinary save cannot disable cargo birth contract');
    r=await rpc('save',{auth,id:fixtures.cargo_fresh.run_id,expected:3,snapshot:fixtures.cargo_approach,request_id:'cargo_undo_dispatch_00001'});check(r.ok&&eq(r.run.snapshot,fixtures.cargo_approach),'ordinary Undo restores complete pre-dispatch state');
    r=await rpc('read');check(r.ok&&eq(r.run.snapshot,fixtures.cargo_approach),'cargo rules and dynamic state survive read');
+   const ropeBorn=await rpc('create',{auth,snapshot:ropeFixtures.fresh,replace:true,request_id:ropeFixtures.fresh.run_id});
+   check(ropeBorn.ok&&eq(ropeBorn.run.snapshot.rope,{version:1,state:'ready'}),'rope real19 profile-authorized new birth');auth.expectedSlotRevision=ropeBorn.slotRevision;
+   r=await rpc('strategy',{auth,id:ropeBorn.run.id,expected:0,choice:'none',request_id:'rope_browser_choose_none01'});check(r.ok,'rope original strategy locked without extra points');
+   r=await rpc('save',{auth,id:ropeBorn.run.id,expected:1,snapshot:ropeFixtures.before,request_id:'rope_actual_floor6_save01'});check(r.ok&&eq(r.run.snapshot,ropeFixtures.before),'rope actual generated first chapter and floor6 approach persisted');
+   const beforeRope=r;
+   const ropeSave={auth:{...auth},id:ropeBorn.run.id,expected:2,snapshot:ropeFixtures.after,request_id:'rope_crossing_commit_0001'};
+   const crossed=await rpc('save',ropeSave);check(crossed.ok&&crossed.run.revision===3&&crossed.run.snapshot.rope.state==='spent'&&crossed.run.snapshot.focus===beforeRope.run.snapshot.focus-1,'rope crossing commits exactly one focus and spent state');
+   r=await rpc('save',ropeSave);check(r.ok&&r.duplicate&&r.run.revision===3&&eq(r.run.snapshot,crossed.run.snapshot),'rope lost response retry does not spend focus twice');
+   const noRope=structuredClone(ropeFixtures.after);noRope.rope={version:0,state:'off'};
+   r=await rpc('save',{auth,id:ropeBorn.run.id,expected:3,snapshot:noRope,request_id:'rope_disable_birth_000001'});check(!r.ok&&r.code==='ROPE_BIRTH_IMMUTABLE','rope ordinary save cannot disable birth version');
+   const malformed=structuredClone(ropeFixtures.after);malformed.rope.version=true;
+   r=await rpc('save',{auth,id:ropeBorn.run.id,expected:3,snapshot:malformed,request_id:'rope_invalid_version_0001'});check(!r.ok&&r.code==='INVALID_ROPE','rope malformed fields rejected in production transaction');
+   r=await rpc('read');check(r.ok&&eq(r.run,crossed.run)&&eq(r.profile,crossed.profile),'rope failed writes preserve exact run and ledger');
+   r=await rpc('save',{auth,id:ropeBorn.run.id,expected:3,snapshot:ropeFixtures.before,request_id:'rope_actual_undo_save_001'});check(r.ok&&r.run.revision===4&&eq(r.run.snapshot,ropeFixtures.before),'rope Undo restores focus and ready state with increasing CAS revision');
+   const undoneRope=r;
+   r=await rpc('save',ropeSave);check(!r.ok&&r.code==='STALE_REVISION','rope old crossing ACK cannot undo newer Undo');
+   r=await rpc('read');check(r.ok&&eq(r.run,undoneRope.run),'rope reload retains exact restored position and state');
+   const legacyFrame=document.createElement('iframe');legacyFrame.style.display='none';legacyFrame.src='session_storage_harness.html?rope_legacy=1&db=magic-tower-journeys-v1-test-rope-old-'+crypto.randomUUID();
+   const legacyResult=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('ROPE_LEGACY_TIMEOUT')),15000);const listener=e=>{if(e.source===legacyFrame.contentWindow&&e.data?.type==='session-results'){clearTimeout(timer);removeEventListener('message',listener);resolve(e.data.result)}};addEventListener('message',listener);document.body.append(legacyFrame)});
+   legacyFrame.remove();check(legacyResult.PASS,'genuine18 isolated IDB migration suite: '+(legacyResult.error||''));checks.push(...legacyResult.checks);
    parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:window.MagicTowerJourneysTestDatabase,scope:'Production JS callback protocol + real IndexedDB, not Godot WebGL/JavaScriptBridge runtime'}},location.origin);
   }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,lastReply,checks,database:window.MagicTowerJourneysTestDatabase}},location.origin)}
  }

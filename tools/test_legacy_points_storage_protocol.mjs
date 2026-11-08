@@ -8,7 +8,7 @@ for(const input of [undefined,{}, {study:0,reserve:0}]){assert.deepEqual(json(a.
 for(const input of [null,[],true,{study:true,reserve:0},{study:0.5,reserve:0},{study:3,reserve:0},{study:-1,reserve:0},{study:1},{study:1,reserve:0,extra:0}]){assert.throws(()=>a.allocationCopy(input));checks++;}
 for(const label of ['active','death']){
  const old=JSON.parse(fs.readFileSync(path.join(root,`tests/fixtures/schema16-${label}.json`)));a.snapshotCopy(old,label==='death');checks++;
- const up=a.upgradeSnapshot(old);assert.equal(up.version,18);assert.equal(up.legacy_reserves,0);assert.deepEqual(json(up.legacy_points),{version:0,capacity:0,study:0,reserve:0});assert.equal(a.validLegacyPoints(up),true);checks+=4;
+ const up=a.upgradeSnapshot(old);assert.equal(up.version,19);assert.equal(up.legacy_reserves,0);assert.deepEqual(json(up.legacy_points),{version:0,capacity:0,study:0,reserve:0});assert.equal(a.validLegacyPoints(up),true);checks+=4;
 }
 const f=JSON.parse(fs.readFileSync(path.join(root,'tools/session_bridge_fixtures.json')));
 // The browser's forged-pool probe must remain internally consistent, so the

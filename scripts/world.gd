@@ -1,5 +1,7 @@
 class_name TowerWorld
 extends RefCounted
+const Rope=preload("res://scripts/rope.gd")
+var rope:Dictionary=Rope.legacy()
 const Exploration=preload("res://scripts/exploration.gd")
 const Cargo=preload("res://scripts/cargo.gd")
 var cargo:Dictionary=Cargo.legacy()
@@ -126,6 +128,7 @@ func _init(run_seed: int = 0, run_layout: int = 2, session_run_id: String = "", 
 	var generated: Dictionary = Generator.generate(seed_value, MAPS, layout_revision)
 	floors=generated.maps
 	cargo=Cargo.birth(seed_value,layout_revision)
+	rope=Rope.birth(layout_revision)
 	Cargo.install(floors,cargo)
 	generation_attempts=generated.attempts
 	generation_fallback=generated.fallback
@@ -430,6 +433,12 @@ func _tile_tooltip_data(point: Vector2i) -> Dictionary:
 	if point.x<0 or point.x>=11 or point.y<0 or point.y>=11: return {"title":"Outside the tower","lines":[]}
 	var token:=tile(point)
 	var lines:Array[String]=[]
+	var crossing:=rope_preview()
+	if crossing.valid and point==crossing.origin:
+		lines.append("Single-use rope: 1 focus to landing (%d, %d). Inspect with E; crossing never fights." % [crossing.landing.x,crossing.landing.y])
+		lines.append(str(crossing.reason))
+	elif crossing.valid and point==crossing.landing:
+		lines.append("Rope landing: one-way only. Crossing grants no kill or victory rewards.")
 	if ENEMIES.has(token):
 		var enemy:Dictionary=ENEMIES[token]
 		lines.append("HP %d / ATK %d / DEF %d / Gold %d" % [enemy.hp,enemy.atk,enemy.def,enemy.gold])
@@ -509,6 +518,7 @@ func _tile_tooltip_data(point: Vector2i) -> Dictionary:
 		elif token=="D" and layout_revision==1:
 			lines.append("Legacy shortcut: this old layout may have another way around.")
 	var title:=str(titles.get(token,"Unknown tile"))
+	if crossing.valid and point==crossing.origin:title="Single-use ferry rope"
 	if token=="h" and cargo.version==1 and floor_index==0 and point==Cargo.source_box():title="Sealed medical supply"
 	return {"title":title,"lines":lines}
 func flank_position(target: Vector2i) -> Vector2i:
@@ -729,6 +739,11 @@ func _read_seal(bit: int):
 	var index := 0 if bit==1 else (1 if bit==2 else 2)
 	message=Riddle.clues(seed_value)[index]
 
+func rope_context()->bool:return Rope.context(self)
+func rope_preview()->Dictionary:return Rope.preview(self)
+func rope_offers()->Array:
+	var offer:=rope_preview()
+	return [["rope_cross",offer.reason]] if offer.available else []
 func exploration_goals()->Array:
 	return Exploration.goals(self)
 func cargo_status()->String:
@@ -770,6 +785,13 @@ func event_offers() -> Array:
 	return [["bargain_blood","Blood bargain: pay 80 HP / gain +6 ATK"],["bargain_gold","Ward bargain: pay 25 gold / gain +5 DEF"],["bargain_leave","Decline this encounter permanently"]]
 func action(id: String) -> bool:
 	if strategy_pending() or ended_reason!="": return false
+	if id=="rope_cross":
+		var crossing:=rope_preview()
+		if not crossing.available:return false
+		pos=crossing.landing;focus-=1;moves+=1;rope.state="spent"
+		if crossing.disarm:skill_armed=false
+		message="Rope crossed once and snapped. Guardian, gold and kill count are unchanged; return by bridge or battle."
+		return true
 	if id in ["cargo_ship","cargo_claim"]:
 		var allowed:=false
 		for offer in cargo_offers():
@@ -1075,7 +1097,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":18,"cargo":cargo.duplicate(true),"legacy_points":legacy_points.duplicate(true),"legacy_reserves":legacy_reserves,"talent_draft":talent_draft.duplicate(true),"last_kill_kind":last_kill_kind,"draft":draft.duplicate(true),"death_record":death_record.duplicate(true),"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":19,"rope":rope.duplicate(true),"cargo":cargo.duplicate(true),"legacy_points":legacy_points.duplicate(true),"legacy_reserves":legacy_reserves,"talent_draft":talent_draft.duplicate(true),"last_kill_kind":last_kill_kind,"draft":draft.duplicate(true),"death_record":death_record.duplicate(true),"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -1083,7 +1105,7 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13 and save_version!=14 and save_version!=15 and save_version!=16 and save_version!=17 and save_version!=18): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13 and save_version!=14 and save_version!=15 and save_version!=16 and save_version!=17 and save_version!=18 and save_version!=19): return false
 	if save_version>=14:
 		if not d.get("death_record") is Dictionary or not d.get("ended_reason") is String: return false
 		if d.get("ended_reason")=="death": return _restore_death(d)
@@ -1275,6 +1297,10 @@ func restore(d: Dictionary) -> bool:
 					machinery[c]+=1
 				if not saved_expedition and c in ["U","Y","=","Z","H","t","W","v","n","e","m"]: return false
 				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","w","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">","U","Y","=","Z","H","t","W","v","n","e","m","c"]: return false
+	var saved_rope:Dictionary=Rope.legacy()
+	if save_version>=19:
+		if not Rope.valid_record(d.get("rope"),saved_layout,saved_expedition,d.floor_seen,saved_revision):return false
+		saved_rope=d.rope.duplicate(true);saved_rope.version=int(saved_rope.version)
 	if not Cargo.valid_maps(d.floors,saved_cargo,saved_expedition):return false
 	if cores_remaining>1 or (cores_remaining>0 and (d.core or d.core_use!="")): return false
 	if old_seal and d.secret:
@@ -1372,6 +1398,7 @@ func restore(d: Dictionary) -> bool:
 	expedition_started=saved_expedition; expedition_bridge=saved_bridge
 	camp_medicine_left=saved_medicine; camp_focus_left=saved_focus_stock
 	won = d.won
+	rope=saved_rope
 	cargo=saved_cargo
 	generation_valid=true
 	message = "Your journey resumes."
@@ -1402,7 +1429,8 @@ func _restore_death(d: Dictionary) -> bool:
 	var delta:=Vector2i(int(record.x),int(record.y))-probe.pos
 	if not probe.lethal_fight(delta): return false
 	var expected:=d.duplicate(true)
-	expected.version=18
+	expected.version=19
+	if int(d.version)<19:expected.rope=Rope.legacy()
 	if int(d.version)<18:expected.cargo=Cargo.legacy()
 	if int(d.version)<17:
 		expected.legacy_points=LegacyPoints.legacy()

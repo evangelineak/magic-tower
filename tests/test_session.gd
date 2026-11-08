@@ -486,7 +486,7 @@ func talent_draft_cases():
  var session=Session.new(store)
  check((await session.new_run(42)).ok,"schema16 JSON new run")
  var born=session.world.save_data().duplicate(true)
- check(born.version==18 and born.talent_draft==World.Progression.talent_draft(42) and born.last_kill_kind=="","birth has fixed talent draft and no fabricated last kill")
+ check(born.version==19 and born.talent_draft==World.Progression.talent_draft(42) and born.last_kill_kind=="","birth has fixed talent draft and no fabricated last kill")
  check((await session.save()).ok and (await session.open_current()).ok and session.world.talent_draft==born.talent_draft,"JSON save/read never rerolls offers")
  # A fully valid revision-zero historical offer set is still not this run's set.
  var graft=born.duplicate(true);graft.talent_draft=World.Progression.talent_draft(0,0)

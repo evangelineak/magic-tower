@@ -69,6 +69,13 @@ function validCargo(s){
  if(c.version===0)return c.state==='off'&&c.destination==='';
  return c.version===1&&s.layout_revision===2&&['waiting','shipped','claimed','opened'].includes(c.state)&&c.destination===(s.seed_value%2===0?'vault':'crown');
 }
+function ropeBirth(layout){return layout===2?{version:1,state:'ready'}:{version:0,state:'off'};}
+function validRope(s){
+ const r=s.rope;if(!keysExactly(r,['version','state']))return false;
+ if(r.version===0)return r.state==='off';
+ if(r.version!==1||s.layout_revision!==2||typeof s.expedition_started!=='boolean'||!['ready','spent'].includes(r.state)||(s.expedition_started===true&&s.expedition_revision!==3))return false;
+ return r.state!=='spent'||(s.expedition_started===true&&s.floor_seen?.length===8&&s.floor_seen[5]===true);
+}
 function snapshotCopy(snapshot, allowEnded=false) {
   const s = structuredClone(snapshot);
   let encoded; try {encoded=JSON.stringify(s);}catch{throw new StorageFault('INVALID_SNAPSHOT');}
@@ -77,7 +84,7 @@ function snapshotCopy(snapshot, allowEnded=false) {
   must(!s.floor_seen.some((seen,i) => seen && s.floor_seen.slice(0,i).includes(false)), 'INVALID_SNAPSHOT');
   must(integer(s.floor) && s.floor < s.floor_seen.length && s.floor_seen[s.floor], 'INVALID_SNAPSHOT');
   must(typeof s.won === 'boolean' && Number.isSafeInteger(s.hp) && s.hp >= 0 && integer(s.moves, 10000000) && integer(s.seed_value, 2147483647), 'INVALID_SNAPSHOT');
-  must([13,14,15,16,17,18].includes(s.version) && validId(s.run_id) && ['safe','risk'].includes(s.mode) && (s.ended_reason==='' || (allowEnded && ['retired','victory','death'].includes(s.ended_reason))), 'INVALID_WORLD');
+  must([13,14,15,16,17,18,19].includes(s.version) && validId(s.run_id) && ['safe','risk'].includes(s.mode) && (s.ended_reason==='' || (allowEnded && ['retired','victory','death'].includes(s.ended_reason))), 'INVALID_WORLD');
   must([1,2].includes(s.layout_revision) && Array.isArray(s.floors) && s.floors.length===s.floor_seen.length, 'INVALID_WORLD');
   must(integer(s.x,9)&&s.x>=1&&integer(s.y,9)&&s.y>=1&&integer(s.atk,1000000)&&s.atk>0&&integer(s.def,1000000), 'INVALID_WORLD');
   must(s.floors.every(grid=>Array.isArray(grid)&&grid.length===11&&grid.every(row=>Array.isArray(row)&&row.length===11&&row.every(t=>typeof t==='string'&&t.length===1))), 'INVALID_WORLD');
@@ -107,10 +114,11 @@ function snapshotCopy(snapshot, allowEnded=false) {
     if(c.state==='claimed')must(c.destination==='vault'?s.floors[2][3][8]!=='V':s.expedition_started&&!s.floors[4].flat().includes('K'),'INVALID_CARGO_MAP');
    }
   }
+  if(s.version>=19)must(validRope(s),'INVALID_ROPE');
   return s;
 }
 function upgradeSnapshot(snapshot){
- const s=structuredClone(snapshot);if(s.version===13){s.version=14;s.death_record={};}if(s.version===14){s.version=15;s.draft={version:0,pool:[],offers:[],choice:'none'};}if(s.version===15){s.version=16;s.talent_draft=talentDraft(s.seed_value,0);s.last_kill_kind='';}if(s.version===16){s.version=17;s.legacy_points={version:0,capacity:0,study:0,reserve:0};s.legacy_reserves=0;}if(s.version===17){s.version=18;s.cargo={version:0,state:'off',destination:''};}return s;
+ const s=structuredClone(snapshot);if(s.version===13){s.version=14;s.death_record={};}if(s.version===14){s.version=15;s.draft={version:0,pool:[],offers:[],choice:'none'};}if(s.version===15){s.version=16;s.talent_draft=talentDraft(s.seed_value,0);s.last_kill_kind='';}if(s.version===16){s.version=17;s.legacy_points={version:0,capacity:0,study:0,reserve:0};s.legacy_reserves=0;}if(s.version===17){s.version=18;s.cargo={version:0,state:'off',destination:''};}if(s.version===18){s.version=19;s.rope={version:0,state:'off'};}return s;
 }
 function summaryOf(snapshot, outcome) {
  const s=snapshotCopy(snapshot,true);
@@ -324,7 +332,7 @@ class JourneyStorage extends ProfileStorage {
    const run=await req(s('runs').get(id)),expected=kind==='create'?-1:args.expected;
    if(run && run.last_op.request_id===args.request_id){
     const op=run.last_op;
-    must(op.kind===kind && (op.hash===hash || (run.snapshot?.version<18&&same(upgradeSnapshot(run.snapshot),snapshot))) && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
+    must(op.kind===kind && (op.hash===hash || (run.snapshot?.version<19&&same(upgradeSnapshot(run.snapshot),snapshot))) && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
     must(slot.activeRunId===id && slot.revision===op.result_slot && run.revision===op.result_revision && run.status==='active','SUPERSEDED_OPERATION');
     return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile,duplicate:true};
    }
@@ -334,7 +342,7 @@ class JourneyStorage extends ProfileStorage {
     must(!run&&!Object.hasOwn(profile.receipts,id),'ID_COLLISION');must(await req(s('runs').count())<MAX_RUNS,'RUNS_FULL');
     // Full canonical fresh-World comparison is performed on the Godot side.
     // JS independently rejects partial stub, legacy identity and visibly progressed input.
-    must(snapshot.version===18&&same(snapshot.cargo,cargoBirth(snapshot.seed_value,snapshot.layout_revision))&&same(snapshot.legacy_points,{version:1,capacity:pointCapacity(snapshot.draft),study:0,reserve:0})&&snapshot.legacy_reserves===0&&same(snapshot.talent_draft,talentDraft(snapshot.seed_value))&&snapshot.last_kill_kind===''&&same(snapshot.draft,strategyDraft(snapshot.seed_value,strategyPool(profile))),'INVALID_BIRTH_DRAFT');
+    must(snapshot.version===19&&same(snapshot.rope,ropeBirth(snapshot.layout_revision))&&same(snapshot.cargo,cargoBirth(snapshot.seed_value,snapshot.layout_revision))&&same(snapshot.legacy_points,{version:1,capacity:pointCapacity(snapshot.draft),study:0,reserve:0})&&snapshot.legacy_reserves===0&&same(snapshot.talent_draft,talentDraft(snapshot.seed_value))&&snapshot.last_kill_kind===''&&same(snapshot.draft,strategyDraft(snapshot.seed_value,strategyPool(profile))),'INVALID_BIRTH_DRAFT');
     must(snapshot.moves===0 && snapshot.floor===0 && snapshot.floors.length===5 && snapshot.x===1 && snapshot.y===1 && !snapshot.won && snapshot.floor_seen.slice(1).every(v=>!v) && snapshot.inventory.length===1,'NOT_FRESH_RUN');
     const prior=slot.activeRunId?await req(s('runs').get(slot.activeRunId)):null;
     checkRunLedger(prior,profile);
@@ -345,7 +353,7 @@ class JourneyStorage extends ProfileStorage {
     return {ok:true,run:created,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
    }
    must(slot.activeRunId===id && validRun(run)&&run.status==='active','NOT_ACTIVE_RUN');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
-   must(snapshot.mode===run.snapshot.mode,'MODE_IMMUTABLE');const prior=upgradeSnapshot(run.snapshot);must(same(snapshot.draft,prior.draft),'DRAFT_IMMUTABLE');must(same(snapshot.talent_draft,prior.talent_draft),'TALENT_DRAFT_IMMUTABLE');must(same(snapshot.legacy_points,prior.legacy_points),'LEGACY_POINTS_IMMUTABLE');must(snapshot.cargo.version===prior.cargo.version&&snapshot.cargo.destination===prior.cargo.destination,'CARGO_BIRTH_IMMUTABLE');if(prior.draft.choice==='')must(same(snapshot,prior),'DRAFT_PENDING');run.snapshot=snapshot;run.revision=nextCounter(run.revision);
+   must(snapshot.mode===run.snapshot.mode,'MODE_IMMUTABLE');const prior=upgradeSnapshot(run.snapshot);must(same(snapshot.draft,prior.draft),'DRAFT_IMMUTABLE');must(same(snapshot.talent_draft,prior.talent_draft),'TALENT_DRAFT_IMMUTABLE');must(same(snapshot.legacy_points,prior.legacy_points),'LEGACY_POINTS_IMMUTABLE');must(snapshot.cargo.version===prior.cargo.version&&snapshot.cargo.destination===prior.cargo.destination,'CARGO_BIRTH_IMMUTABLE');must(snapshot.rope.version===prior.rope.version,'ROPE_BIRTH_IMMUTABLE');if(prior.draft.choice==='')must(same(snapshot,prior),'DRAFT_PENDING');run.snapshot=snapshot;run.revision=nextCounter(run.revision);
    run.last_op={request_id:args.request_id,kind,expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
    slot.writer.leaseUntil=Date.now()+60000;await req(s('runs').put(run));await req(s('slots').put(slot));return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
   });
@@ -399,7 +407,7 @@ class JourneyStorage extends ProfileStorage {
    checkRunLedger(run,envelope.profile);
    const last=run.last_op;
    if(last.request_id===args.request_id){
-    must(last.kind===operation&&(last.hash===hash||(run.snapshot.version<18&&same(upgradeSnapshot(run.snapshot),ended)))&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
+    must(last.kind===operation&&(last.hash===hash||(run.snapshot.version<19&&same(upgradeSnapshot(run.snapshot),ended)))&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
     const receipt=envelope.profile.receipts[args.id];
     must(receipt&&same(receipt.summary,expectedSummary),'REQUEST_CONFLICT');
     must(slot.activeRunId===args.id&&slot.revision===last.result_slot&&run.revision===last.result_revision&&run.status==='archived','SUPERSEDED_OPERATION');

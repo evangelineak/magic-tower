@@ -117,12 +117,12 @@ func run():
   var clocked=Clocked.new(s.path);clocked.now_ms=int(old.slot.writer.leaseUntil)+1;s.native=clocked
   var migrated=await s.read_active()
   if not need(migrated,"real13 migration"):return
-  check(migrated.status==label and migrated.snapshot.version==18 and migrated.run_id==old.slot.activeRunId,"old identity and active/archive status preserved")
+  check(migrated.status==label and migrated.snapshot.version==19 and migrated.run_id==old.slot.activeRunId,"old identity and active/archive status preserved")
   check(migrated.snapshot.death_record.is_empty() and migrated.profile==old.profile.profile,"upgrade adds no death or reward")
   if label=="active":
    var w=World.from_snapshot(migrated.snapshot);check(w.step(Vector2i.LEFT),"old active continues legally")
    var saved=await s.commit_run(migrated.slot,migrated.revision,migrated.run_id,w.save_data(),nonce())
-   check(saved.ok and saved.snapshot.version==18,"next normal commit upgrades old container payload")
+   check(saved.ok and saved.snapshot.version==19,"next normal commit upgrades old container payload")
   else:check(migrated.receipt==old.profile.profile.receipts[migrated.run_id],"old terminal receipt remains exact")
  print("DEATH STORAGE: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)
