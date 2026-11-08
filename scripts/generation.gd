@@ -5,12 +5,13 @@ const Progression = preload("res://scripts/progression.gd")
 # Bounded, reproducible variation of an authored tower, not unconstrained rooms.
 # Every accepted map carries a conservative no-loan/no-skill winning witness.
 const MAX_ATTEMPTS := 16
-const LOOT := ["a", "d", "h", "k", "s", "g", "u", "b"]
+const LOOT := ["a", "d", "h", "k", "s", "g", "u", "b", "w"]
 const ENEMIES := {
 	"s": {"hp":35, "atk":14, "def":3},
 	"g": {"hp":75, "atk":25, "def":10},
 	"u": {"name":"Veil Stalker", "hp":95, "atk":42, "def":14, "first_strike":true},
 	"b": {"name":"Briar Sentinel", "hp":90, "atk":35, "def":12, "thorns":2},
+	"w": {"name":"Brass Juggernaut", "hp":180, "atk":32, "def":20, "heavy_every":3},
 	"K": {"hp":450, "atk":65, "def":40}
 }
 const DIRS := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
@@ -231,7 +232,7 @@ static func validate(maps: Array) -> Dictionary:
 					if not token in LOOT: continue
 					var path := path_to(grid,pos,Vector2i(x,y),stats)
 					if path.is_empty(): continue
-					var score: int=path.size()+(30 if token in ["s","g","u","b"] else 0)
+					var score: int=path.size()+(30 if token in ["s","g","u","b","w"] else 0)
 					if score>=best_score: continue
 					# Reject geometrically legal paths that overspend HP before
 					# reaching their destination; don't mutate the real proof.

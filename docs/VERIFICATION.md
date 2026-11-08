@@ -73,3 +73,12 @@
 - 使用官方4.6.3模板完整包SHA-256校验后，Linux/Windows x86_64 release交叉导出成功，PE/ELF类型确认。`tools/export_desktop.sh`完成两平台打包、从当前引擎导出许可与第三方声明、SHA清单及Linux独立程序headless运行。Windows没有真实运行，不能据此声称Windows兼容验收完成。无签名、无自动正式发布。
 - 音效持久测试33项通过：六资源可加载、正确成功事件一次、被阻止/取消/预览/读档/撤销/跳过动画不播、M不改世界/存档、mute和headless不依赖音频硬件。功能合计1002项（不含逐格生成和状态回放计数）。
 - Linux独立导出原生GUI验证：直接执行 `export/linux/magic-tower.x86_64 -- --seed=0`，新局两步取得钥匙，C角色图/H六怪图/M静音状态正常。隔离存档目录不覆盖原旅程。截图 `magic-tower-v7-export.png`，非编辑器项目运行。
+
+## v0.8：交手顺序与重击
+
+- 1101项功能检查：world477、choices102、adventure49、progression158、events60、reward_gates50、branches49、audio33、main75、tactics48。独立手算重锤怪在50ATK/10DEF下：均衡132、重盾112、决斗150、游侠技能+决斗125、Brace+决斗98，逐一核对World实际损血；致死不扣focus/HP、不移除怪物；切装、预览不刷状态。
+- 对抗9局2811个合法状态存读一致。200种子保守路线全部通关，126874断言、0回退、200几何；终值70–367HP、223–313步。seed0为157HP/73ATK/24DEF/317步。真实规则桥回访路线390步505HP；成长后回访宝库仍通过。
+- 新增十号角色黄铜重装守卫，原创Blender重锤与三节刻度；只增量渲染新PNG，原九张PNG的SHA保持不变。新PNG实际像素检查通过。
+- 原生GUI新局验证七怪图鉴布局和普通战斗四行明细，截图 `magic-tower-v8-guide.png`、`magic-tower-v8-battle.png`。决斗装对重锤怪的精确战斗由规则/控制器测试覆盖，没有声称已在原生GUI玩到这一战。
+- 桌面预览重新导出及Linux独立headless烟测；Windows仍只交叉导出。新增手动Actions导出工作流，YAML解析通过，未自动合并至默认分支，也未宣称手动托管构建已运行。
+- v0.7远端59053b4的push CI通过；PR首轮因官方文件下载504失败，已仅重跑失败任务。这是下载阶段错误，未修改/放宽校验；v0.8优先同一官方API文件端点，SHA校验保持不变。

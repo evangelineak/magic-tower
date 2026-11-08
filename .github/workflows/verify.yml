@@ -16,9 +16,9 @@ jobs:
       - name: Install official Godot 4.6.3 with checksum
         shell: bash
         run: |
-          # Both endpoints are the same official, pinned release asset.
-          if ! curl --fail --location --connect-timeout 30 --max-time 180 --retry 2 -o /tmp/godot.zip https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip; then
-            curl --fail --location --connect-timeout 30 --max-time 180 --retry 2 -H 'Accept: application/octet-stream' -o /tmp/godot.zip https://api.github.com/repos/godotengine/godot-builds/releases/assets/425484901
+          # Prefer the official API asset: direct release downloads often time out.
+          if ! curl --fail --location --connect-timeout 20 --max-time 180 --retry 1 -H 'Accept: application/octet-stream' -o /tmp/godot.zip https://api.github.com/repos/godotengine/godot-builds/releases/assets/425484901; then
+            curl --fail --location --connect-timeout 20 --max-time 180 --retry 1 -o /tmp/godot.zip https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
           fi
           echo 'd0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3  /tmp/godot.zip' | sha256sum --check
           unzip -q /tmp/godot.zip -d /tmp/godot

@@ -17,7 +17,7 @@ var sound_bank: Dictionary = {}
 var muted := false
 var sound_event_count := 0
 var last_sound_event := ""
-const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","V":"colossus","K":"regent","B":"regent"}
+const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"regent"}
 var history: Array = []
 var save_path := "user://journey-v4.json"
 var book := false
@@ -66,7 +66,7 @@ func _ready():
 		var sound_path := "res://assets/audio/%s.wav" % id
 		if ResourceLoader.exists(sound_path): sound_bank[id]=load(sound_path)
 	if ResourceLoader.exists("res://assets/tower.png"): art = load("res://assets/tower.png")
-	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","colossus","regent"]:
+	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent"]:
 		var path := "res://assets/combat/%s.png" % id
 		if ResourceLoader.exists(path): combat_art[id]=load(path)
 	buttons = [Rect2(350,720,120,38),Rect2(482,720,120,38),Rect2(614,720,120,38),Rect2(746,720,143,38),Rect2(938,745,300,35),Rect2(36,710,272,38),Rect2(36,66,272,30)]
@@ -136,10 +136,13 @@ func _draw():
 		label_at(Vector2(938,619),"Predicted loss: %s" % (str(cost)+" HP" if cost>=0 else "IMPOSSIBLE"),16,GOLD)
 		if target=="u": label_at(Vector2(938,637),"AMBUSH: enemy strikes first",12,Color("ef928f"))
 		if target=="b": label_at(Vector2(938,637),"THORNS: 2 HP / your attack",12,Color("ef928f"))
+		if target=="w": label_at(Vector2(938,637),"CHARGE: every third retaliation x2",12,Color("ef928f"))
+		var forecast: Dictionary=world.battle_preview(target)
+		label_at(Vector2(938,660),"Extra opening hit: %d / Shield: %d" % [int(forecast.get("feint_damage",0)),int(forecast.get("equipment_blocked",0))],12,GOLD)
 	else:
 		label_at(Vector2(938,589),token_name(target),18,TEAL)
 		label_at(Vector2(938,614),"E: interact / inspect ledger",15,MUTED)
-	label_at(Vector2(938,652),quest_hint(),13,GOLD)
+	if not World.ENEMIES.has(target): label_at(Vector2(938,652),quest_hint(),13,GOLD)
 	label_at(Vector2(938,674),"Move   WASD / Arrow keys",15)
 	label_at(Vector2(938,699),"Click an adjacent tile to move",14,MUTED)
 	label_at(Vector2(938,734),"U  undo     L  load     H  guide",14,MUTED)
@@ -185,7 +188,7 @@ func draw_token(c: Vector2, t: String):
 			draw_colored_polygon(PackedVector2Array([c+Vector2(0,-14),c+Vector2(10,0),c+Vector2(0,14),c+Vector2(-10,0)]),col)
 		"h":
 			draw_circle(c+Vector2(0,4),11,Color("7ce0bf")); draw_rect(Rect2(c-Vector2(5,13),Vector2(10,14)),Color("b2ead9")); draw_line(c+Vector2(-4,3),c+Vector2(4,3),Color("e5fff5"),2)
-		"s","g","u","b","B","V","K":
+		"s","g","u","b","w","B","V","K":
 			var col: Color = {"s":Color("8fc57f"),"g":Color("b5a2e1"),"u":Color("87b9dc"),"b":Color("9dcc83")}.get(t,Color("ed987d"))
 			draw_circle(c,15 if t in ["s","g","u","b"] else 19,col)
 			draw_circle(c+Vector2(-5,-2),3,Color("132330")); draw_circle(c+Vector2(5,-2),3,Color("132330"))
@@ -219,12 +222,13 @@ func draw_book():
 	for i in kinds.size():
 		var kind: String=kinds[i]
 		var e: Dictionary=World.ENEMIES[kind]
-		var p := Vector2(275+(i%2)*380,195+floori(i/2.0)*92)
+		var p := Vector2(265+(i%2)*390,185+floori(i/2.0)*78)
 		draw_token(p+Vector2(15,10),kind)
 		label_at(p+Vector2(48,0),e.name,18,GOLD)
 		label_at(p+Vector2(48,24),"HP %d / ATK %d / DEF %d" % [e.hp,e.atk,e.def],14,INK)
 		var mechanic_text: String="Normal retaliation after your attacks."
 		if kind=="u": mechanic_text="Strikes first, even if you one-shot it."
+		if kind=="w": mechanic_text="Every 3rd retaliation doubles; feint counts."
 		if kind=="b": mechanic_text="2 thorns / your hit, including final hit."
 		label_at(p+Vector2(48,47),mechanic_text,12,TEAL)
 	var lines := ["Exact forecasts include ambush, thorns, gear, skills and talents.","Thorns ignores DEF. Brace and total-loss reduction still apply.","C: hero / gear / talents. E: local choices, quests and ledger.","J: researcher / I: sample / O: valve / R: relic / X: encounter.","Interest: first entry to floors 4 and 5 only, never steps or waiting.","Grow stronger and revisit. U reverses the entire previous action.","L: 2-key lock / $: +60 gold / A: +5 ATK / P: +140 HP, +1 focus.","H / Esc / click closes. Battles are cosmetic replays; any key skips."]
@@ -266,8 +270,8 @@ func available_actions() -> Array:
 		if not world.bridge_built: rows.append(["drain","Drain the water: open a route / give up the spring"])
 		rows.append(["spring","Use spring: +120 HP / bridge remains open" if world.bridge_built else ("Use spring: +120 HP / survey spent; route stays flooded" if world.quest_state==3 else "Use spring: +120 HP / survey bridge can still open route")])
 	if nearby("R") and not world.chest_claimed:
-		rows.append(["relic_buckler","Choose heavy buckler: +6 DEF / -4 ATK"])
-		rows.append(["relic_duelist","Choose duelist rig: +6 ATK / -3 DEF"])
+		rows.append(["relic_buckler","Buckler: +6 DEF / -4 ATK; blocks first enemy hit"])
+		rows.append(["relic_duelist","Duelist: +6 ATK / -3 DEF / pierce 8; EXTRA opening retaliation"])
 	if nearby("X") and not world.event_done:
 		rows.append_array(world.event_offers())
 	return rows
@@ -373,7 +377,12 @@ func draw_growth():
 		var r := Rect2(225,270+i*87,830,76)
 		panel(r,Color("203343"))
 		label_at(r.position+Vector2(15,27),"%d  %s" % [i+1,rows[i][1]],19,GOLD)
-		label_at(r.position+Vector2(15,56),rows[i][2],15,INK)
+		var description: String=rows[i][2]
+		if description.length()>92:
+			var split_at := description.rfind(" ",92)
+			label_at(r.position+Vector2(15,47),description.left(split_at),14,INK)
+			label_at(r.position+Vector2(15,66),description.substr(split_at+1),14,INK)
+		else: label_at(r.position+Vector2(15,56),description,15,INK)
 		if growth_tab==0:
 			var portrait: String=rows[i][0].trim_prefix("hero_") if rows[i][0].begins_with("hero_") else world.hero_id
 			if combat_art.has(portrait): draw_texture_rect(combat_art[portrait],Rect2(r.position+Vector2(750,3),Vector2(70,70)),false)
@@ -382,7 +391,9 @@ func draw_growth():
 		for id in world.talents: learned.append(Progression.TALENTS[id].name)
 		label_at(Vector2(225,565),"Learned: "+(", ".join(learned) if not learned.is_empty() else "none yet"),15,TEAL)
 		if rows.is_empty(): label_at(Vector2(225,300),"No new choice yet. Defeat foes and return.",18,INK)
-	label_at(Vector2(225,610),"Focus is finite. First visits restore it; repeating floors cannot farm it.",15,MUTED)
+	if growth_tab==1:
+		label_at(Vector2(225,610),"DUELIST COST: one EXTRA opening retaliation, even on a one-shot kill.",15,Color("ef928f"))
+	else: label_at(Vector2(225,610),"Focus is finite. First visits restore it; repeating floors cannot farm it.",15,MUTED)
 	label_at(Vector2(225,646),world.message.left(105),14,TEAL)
 	label_at(Vector2(225,697),"Choose 1-3. Tab changes section. Esc: keep default Warden." if world.moves==0 else "Click a card / press 1-3. Tab changes section. C / Esc closes.",15,MUTED)
 func open_journal():
@@ -499,10 +510,17 @@ func draw_battle():
 	label_at(Vector2(365,420),Progression.HEROES[battle_hero].name,19,TEAL)
 	label_at(Vector2(730,420),battle_name,19,GOLD)
 	label_at(Vector2(320,463),"%d rounds  /  %d damage per hit  /  %d HP lost" % [int(battle_details.get("rounds",0)),int(battle_details.get("hit",0)),battle_loss],19)
-	label_at(Vector2(320,494),"Before mitigation: retaliation %d + ambush %d + thorns %d" % [int(battle_details.get("normal_damage",0)),int(battle_details.get("first_strike_damage",0)),int(battle_details.get("thorns_damage",0))],15,MUTED)
-	label_at(Vector2(320,521),"Blocked %d  /  Recovery +%d HP  /  %s" % [int(battle_details.get("blocked_damage",0)),int(battle_details.get("heal_after",0)),"skill used" if battle_skill else "no active skill"],16,TEAL)
-	label_at(Vector2(320,565),"All rounds are already resolved once. Animation never changes damage.",14,MUTED)
-	label_at(Vector2(320,603),"Press any key / click to skip.",15,GOLD)
+	var detail_lines := battle_breakdown(battle_details)
+	for i in detail_lines.size(): label_at(Vector2(320,489+i*22),detail_lines[i],14,MUTED if i<2 else TEAL)
+	label_at(Vector2(320,582),"Cosmetic replay. Damage resolves once; any key / click skips.",14,GOLD)
+func battle_breakdown(details: Dictionary) -> Array[String]:
+	return [
+		"Raw: normal %d + ambush %d + thorns %d" % [int(details.get("normal_damage",0)),int(details.get("first_strike_damage",0)),int(details.get("thorns_damage",0))],
+		"EXTRA opening hit %d + charge bonus %d / %d retaliations" % [int(details.get("feint_damage",0)),int(details.get("charged_damage",0)),int(details.get("retaliations",0))],
+		"Shield blocks %d; total reduction %d (includes shield)" % [int(details.get("equipment_blocked",0)),int(details.get("blocked_damage",0))],
+		"Final loss %d / recovery +%d / %s" % [int(details.get("damage",0)),int(details.get("heal_after",0)),"skill used" if details.get("skill_consumed",false) else "no active skill"]
+	]
+
 func draw_ellipse_shadow(center: Vector2):
 	draw_set_transform(center+Vector2(0,57),0,Vector2(1,0.25))
 	draw_circle(Vector2.ZERO,49,Color(0,0,0,0.35))

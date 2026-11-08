@@ -7,13 +7,14 @@ const MAPS = [
 ["###########","#@.k..#..a#","#JM#..#...#","#h.#s.D.s.#","#..#..#...#","#..a..#h..#","#.###.###.#","#...s.....#","##d.#..s..#","#$L.#....>#","###########"],
 ["###########","#<....#.Ra#","#.##s.#~~~#","#k.#..D.b.#","#OC#..#...#","#h.d..#h..#","#.###.###.#","#...g.....#","#a..#..s..#","#...#....>#","###########"],
 ["###########","#<.hE.#..a#","#..#g.#..##","#k.#..D.VT#","#..#..#..##","#..a..#h..#","#.###.###.#","#...g.....#","##Id#..g..#","#AL.#....>#","###########"],
-["###########","#<.a..#..a#","#..#g.#...#","#N.#..D.g.#","#.X#..#...#","#h.F..#h..#","#.###.###.#","#...u...k.#","##a.#..g..#","#PL.#....>#","###########"],
+["###########","#<.a..#..a#","#..#g.#...#","#N.#..D.g.#","#.X#..#...#","#h.F..#h..#","#.###.###.#","#...u...k.#","##a.#..w..#","#PL.#....>#","###########"],
 ["###########","#<.a..#..a#","#..#g.#...#","#Q.#..D.K.#","#..#..#...#","#h.a..#h..#","#.###.###.#","#...g...k.#","#d..#..g..#","#...#.....#","###########"]]
 const ENEMIES = {
 "s": {"name":"Mossling", "hp":35, "atk":14, "def":3, "gold":8},
 "g": {"name":"Sentinel", "hp":75, "atk":25, "def":10, "gold":18},
 "u": {"name":"Veil Stalker", "hp":95, "atk":42, "def":14, "gold":12, "first_strike":true},
 "b": {"name":"Briar Sentinel", "hp":90, "atk":35, "def":12, "gold":16, "thorns":2},
+"w": {"name":"Brass Juggernaut", "hp":180, "atk":32, "def":20, "gold":24, "heavy_every":3},
 "V": {"name":"Vault Colossus", "hp":180, "atk":100, "def":65, "gold":30},
 "K": {"name":"Astral Regent", "hp":450, "atk":65, "def":40, "gold":100},
 "B": {"name":"Hollow King", "hp":220, "atk":42, "def":20, "gold":100}}
@@ -385,7 +386,7 @@ func restore(d: Dictionary) -> bool:
 			if not row is Array or row.size()!=11: return false
 			for c in row:
 				if c=="C": cores_remaining+=1
-				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">"]: return false
+				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","w","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">"]: return false
 	if cores_remaining>1 or (cores_remaining>0 and (d.core or d.core_use!="")): return false
 	if d.floor >= MAPS.size() or d.x < 1 or d.x > 9 or d.y < 1 or d.y > 9 or d.hp <= 0 or d.atk <= 0: return false
 	if d.floors[int(d.floor)][int(d.y)][int(d.x)] == "#": return false

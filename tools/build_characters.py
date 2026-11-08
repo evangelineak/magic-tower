@@ -1,8 +1,9 @@
 """Original low-poly combat cast. Blender 4.3: blender -b -P tools/build_characters.py
-Nine transparent sprites and one editable scene; no downloaded assets.
+Ten transparent sprites and one editable scene; no downloaded assets.
 All dimensions/materials are authored here; deterministic and CPU-renderable.
+Optional incremental render: blender -b -P tools/build_characters.py -- --only juggernaut
 """
-import bpy, math, os
+import bpy, math, os, sys, argparse
 from mathutils import Vector
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT=os.path.join(ROOT,'assets','combat'); os.makedirs(OUT,exist_ok=True)
@@ -35,6 +36,7 @@ M={
  'amber':material('Amber glow',(1,.49,.07),.2,2),
  'lilac':material('Spell light',(.54,.28,1),.1,2),
 }
+M['brass']=material('Weathered brass',(.49,.28,.075),.72)
 active=None
 
 def finish(obj,name,mat):
@@ -243,8 +245,38 @@ for x in [-.27,0,.27]:
  thorn=cone('Branch crown',(x,.04,2.57),.12,0,.59,'moss',4)
  thorn.rotation_euler[1]=x*1.3
 
+new('juggernaut')
+# A compact boiler knight: the three illuminated chest cells count its charge.
+for sign in [-1,1]:
+ box('Brass boot',(sign*.36,-.16,.20),(.57,.72,.35),'brass',.08)
+ box('Armored shin',(sign*.36,0,.61),(.43,.50,.63),'gold',.065)
+ rod('Knee piston',(sign*.47,-.27,.45),(sign*.47,-.27,.94),.055,'silver')
+box('Boiler waist',(0,0,1.02),(1.02,.65,.28),'dark',.07)
+box('Heavy brass cuirass',(0,0,1.59),(1.20,.79,1.03),'brass',.15)
+box('Charge panel rim',(0,-.44,1.56),(.66,.14,.78),'gold',.045)
+box('Charge panel inset',(0,-.53,1.56),(.50,.07,.65),'dark',.025)
+for index,z in enumerate([1.34,1.56,1.78],1):
+ box('Charge cell %d'%index,(0,-.577,z),(.35,.035,.12),'amber',.017)
+for sign in [-1,1]:
+ box('Layered shoulder',(sign*.74,0,1.95),(.54,.74,.43),'gold',.075)
+ rod('Upper arm piston',(sign*.77,0,1.74),(sign*.88,-.02,1.32),.12,'silver')
+ box('Brass gauntlet',(sign*.88,-.06,1.24),(.43,.50,.48),'brass',.07)
+# Deep visor and broad vented helm, deliberately distinct from the vault giant.
+box('Boiler helmet',(0,-.005,2.36),(.68,.61,.56),'brass',.09)
+box('Visor recess',(0,-.33,2.38),(.51,.08,.20),'dark',.025)
+box('Charge visor',(0,-.38,2.40),(.38,.025,.065),'amber',.012)
+for x in [-.20,0,.20]:box('Helmet vent',(x,-.33,2.21),(.055,.025,.11),'dark',.008)
+cone('Exhaust collar',(-.39,.27,2.26),.14,.14,.38,'dark')
+cone('Exhaust rim',(-.39,.27,2.48),.17,.17,.08,'gold')
+# Raised great hammer. It stays wholly inside the shared 256px portrait frame.
+rod('Hammer haft',(.91,-.05,.56),(.91,-.05,2.73),.073,'leather')
+for z in [1.05,1.28,2.38]:cone('Haft grip ring',(.91,-.05,z),.095,.095,.065,'gold')
+box('Great hammer head',(.91,-.05,2.70),(.97,.56,.49),'brass',.065)
+for x in [.43,1.39]:box('Hammer striking face',(x,-.05,2.70),(.11,.65,.57),'steel',.028)
+box('Hammer charge stripe',(.91,-.35,2.70),(.37,.035,.10),'amber',.012)
+
 # Shared transparent portrait rig. Each character collection is render-isolated.
-cast=[bpy.data.collections[n] for n in ['warden','ranger','scholar','mossling','sentinel','colossus','regent','stalker','briar']]
+cast=[bpy.data.collections[n] for n in ['warden','ranger','scholar','mossling','sentinel','colossus','regent','stalker','briar','juggernaut']]
 active=bpy.data.collections.new('Portrait rig');bpy.context.scene.collection.children.link(active)
 scene=bpy.context.scene
 scene.world.use_nodes=True
@@ -258,8 +290,15 @@ scene.render.engine='CYCLES';scene.cycles.device='CPU';scene.cycles.samples=96;s
 scene.render.resolution_x=256;scene.render.resolution_y=256;scene.render.resolution_percentage=100
 scene.render.film_transparent=True;scene.render.image_settings.file_format='PNG';scene.render.image_settings.color_mode='RGBA';scene.render.image_settings.color_depth='8'
 scene.view_settings.view_transform='AgX'
+parser=argparse.ArgumentParser(description='Render the original combat cast')
+parser.add_argument('--only', nargs='+', help='Render selected sprites; the editable scene still contains every model')
+args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+requested=set(args.only or [c.name for c in cast])
+unknown=requested-{c.name for c in cast}
+if unknown: raise ValueError('Unknown character: '+', '.join(sorted(unknown)))
 for coll in cast:coll.hide_render=True
 for coll in cast:
+ if coll.name not in requested: continue
  coll.hide_render=False
  scene.render.filepath=os.path.join(OUT,coll.name+'.png')
  bpy.ops.render.render(write_still=True)
@@ -267,4 +306,4 @@ for coll in cast:
 cast[0].hide_render=False
 scene.render.filepath=os.path.join(OUT,'warden.png')
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT,'characters.blend'),compress=True)
-print('COMBAT CAST COMPLETE: nine original transparent 256px sprites')
+print('COMBAT CAST COMPLETE: ten editable characters; rendered '+', '.join(sorted(requested)))

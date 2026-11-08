@@ -33,7 +33,7 @@ func _init():
 	b=fight(18,8,360,"warden",false,"buckler")
 	check(b.effective_atk==14 and b.effective_def==14 and b.damage==0,"buckler trades attack for defense")
 	b=fight(18,8,360,"warden",false,"duelist")
-	check(b.effective_atk==24 and b.effective_def==5 and b.damage==9,"duelist increases retaliation but reduces rounds")
+	check(b.effective_atk==24 and b.effective_def==5 and b.enemy_def==0 and b.damage==18 and b.feint_damage==9,"duelist armor feint has an extra counter cost")
 	check(fight(18,0,360,"warden",false,"duelist").effective_def==0,"negative effective defense is clamped")
 	check(not fight(3,8,360,"warden",false,"buckler").valid,"equipment can make formerly possible battles impossible")
 	check(fight(18,8,360,"warden",false,"balanced",["iron_skin"]).damage==8,"flat defense applied once")
@@ -135,5 +135,80 @@ func _init():
 	check(b.damage==45 and b.blocked_damage==55,"35percent of100 blocked BEFORE flat20 unbroken")
 	b=fight(18,8,400,"warden",true,"balanced",["clean_finish","trained_focus","unbroken"],ordering)
 	check(b.damage==35 and b.blocked_damage==65,"45percent of100 blocked BEFORE flat20 unbroken")
+	# v0.8: equipment changes attack order rather than silently multiplying stats.
+	var easy={"name":"Easy target","hp":10,"atk":25,"def":0}
+	var balanced_easy=fight(30,20,360,"warden",false,"balanced",[],easy)
+	var duelist_easy=fight(30,20,360,"warden",false,"duelist",[],easy)
+	check(balanced_easy.damage==0 and duelist_easy.damage==8 and duelist_easy.rounds==1 and duelist_easy.retaliations==1,"duelist really loses8 HP on an otherwise free one-shot")
+	check(duelist_easy.normal_damage==0 and duelist_easy.feint_damage==8,"one-shot feint not double-counted as normal damage")
+	var balanced_hard=fight(73,24,3000,"warden",false,"balanced",[],giant)
+	var duelist_hard=fight(73,24,3000,"warden",false,"duelist",[],giant)
+	check(balanced_hard.damage==1672 and duelist_hard.damage==711,"duelist also has a real high-armor win, not merely a penalty")
+	check(duelist_hard.enemy_def==57 and duelist_hard.normal_damage==632 and duelist_hard.feint_damage==79,"feint armor break and cost separately exposed")
+	b=fight(60,24,3000,"ranger",true,"duelist",["iron_skin","trained_focus"],giant)
+	check(b.enemy_def==43 and b.hit==23,"trained precision14 and feint8 add without percentage stacking")
+	b=fight(18,8,360,"ranger",true,"duelist",["iron_skin","trained_focus"],easy)
+	check(b.enemy_def==0,"combined armor breaks never create negative armor")
+	var no_break={"name":"Unbreakable","hp":10,"atk":25,"def":100}
+	b=fight(1,8,360,"warden",true,"duelist",[],no_break)
+	check(not b.valid and b.damage==-1 and b.feint_damage==0 and b.retaliations==0 and not b.skill_consumed,"unbreakable preview never executes feint or consumes skill")
+	b=fight(99,8,360,"warden",false,"buckler",[],ambush)
+	check(b.rounds==1 and b.first_strike_damage==0 and b.equipment_blocked==0,"zero-damage first strike does not invent a shield benefit")
+	var shield_ambush={"name":"Shielded ambush","hp":10,"atk":30,"def":0,"first_strike":true,"thorns":7}
+	b=fight(99,8,360,"warden",false,"buckler",[],shield_ambush)
+	check(b.first_strike_damage==16 and b.equipment_blocked==16 and b.thorns_damage==7 and b.damage==7,"buckler intercepts ambush even on one-shot but leaves thorns intact")
+	var shield_normal={"name":"Shielded counter","hp":30,"atk":30,"def":0,"thorns":7}
+	b=fight(18,8,360,"warden",false,"buckler",[],shield_normal)
+	check(b.rounds==3 and b.normal_damage==32 and b.equipment_blocked==16 and b.thorns_damage==21 and b.damage==37,"buckler blocks exactly one ordinary counter, never repeated hits or thorns")
+	var one_shot_thorn={"name":"Single thorn","hp":1,"atk":30,"def":0,"thorns":7}
+	b=fight(99,8,360,"warden",false,"buckler",[],one_shot_thorn)
+	check(b.equipment_blocked==0 and b.damage==7,"no enemy attack means no equipment block to spend on thorns")
+	b=fight(99,8,360,"warden",false,"duelist",[],one_shot_thorn)
+	check(b.feint_damage==25 and b.thorns_damage==7 and b.damage==32,"feint adds one counter but no extra contact or thorn proc")
+	var heavy={"name":"Clockwork Mauler","hp":180,"atk":32,"def":20,"heavy_every":3}
+	check(fight(43,20,360,"warden",false,"balanced",[],heavy).damage==108,"authored example balanced loses108")
+	check(fight(43,20,360,"warden",false,"buckler",[],heavy).damage==66,"authored example buckler loses66")
+	check(fight(43,20,360,"warden",false,"duelist",[],heavy).damage==90,"authored example duelist loses90")
+	for count in [0,1,2,3,4,5,6,9]:
+		var paced={"name":"Paced attacker","hp":count+1,"atk":10,"def":0,"heavy_every":3}
+		b=fight(1,0,1000,"warden",false,"balanced",[],paced)
+		check(b.retaliations==count and b.normal_damage==count*10 and b.charged_damage==floori(float(count)/3.0)*10,"third-counter thresholds at %d"%count)
+		paced.first_strike=true
+		var with_ambush=fight(1,0,1000,"warden",false,"balanced",[],paced)
+		check(with_ambush.charged_damage==b.charged_damage and with_ambush.first_strike_damage==10,"first strike never advances heavy counter at %d"%count)
+	var feint_threshold={"name":"Feint threshold","hp":3,"atk":10,"def":6,"heavy_every":3}
+	b=fight(1,0,1000,"warden",false,"duelist",[],feint_threshold)
+	check(b.rounds==1 and b.retaliations==1 and b.charged_damage==0,"one-shot feint counter alone cannot trigger third-counter strike")
+	# Effective ATK=7, enemy DEF after feint=6, so three damaging hits.
+	feint_threshold.def=14
+	b=fight(1,0,1000,"warden",false,"duelist",[],feint_threshold)
+	check(b.rounds==3 and b.retaliations==3 and b.normal_damage==20 and b.feint_damage==10 and b.charged_damage==10 and b.damage==40,"feint advances a two-counter fight across the third-counter threshold")
+	var shield_threshold={"name":"Shield threshold","hp":4,"atk":10,"def":0,"heavy_every":3}
+	b=fight(5,0,1000,"warden",false,"buckler",[],shield_threshold)
+	check(b.rounds==4 and b.retaliations==3 and b.charged_damage==4 and b.equipment_blocked==4 and b.damage==12,"blocking retaliation1 does not delay charged retaliation3")
+	var shield_order={"name":"Shield order2","hp":4,"atk":106,"def":0,"heavy_every":3,"first_strike":true,"thorns":5}
+	b=fight(5,0,400,"warden",true,"buckler",["clean_finish","trained_focus","unbroken"],shield_order)
+	# 300 normal +100 charge +100 ambush +20 thorns =520. Shield100,
+	# then Brace floor(420*.45)=189, then Unbroken20 =>211.
+	check(b.normal_damage==300 and b.charged_damage==100 and b.first_strike_damage==100 and b.thorns_damage==20,"five damage components exposed before mitigation")
+	check(b.equipment_blocked==100 and b.blocked_damage==309 and b.damage==211,"equipment then percentage then flat shield ordering exact")
+	check(b.damage==b.normal_damage+b.feint_damage+b.charged_damage+b.first_strike_damage+b.thorns_damage-b.blocked_damage,"component accounting exactly equals final loss")
+	b=fight(30,20,8,"warden",false,"duelist",["clean_finish","trained_focus","battle_medic"],easy)
+	check(not b.survivable and b.heal_after==0,"a lethal opening feint cannot be rescued by victory healing")
+	var high_def_heavy={"name":"Harmless Mauler","hp":100,"atk":10,"def":0,"heavy_every":3,"thorns":2}
+	b=fight(18,50,360,"warden",false,"balanced",[],high_def_heavy)
+	check(b.charged_damage==0 and b.normal_damage==0 and b.damage==b.thorns_damage,"heavy doubles post-defense loss, never bypasses high defense")
+	for invalid_period in [0,1,2,4,-3,3.5,true,"3",null,INF,NAN]:
+		var invalid_heavy=heavy.duplicate(true)
+		invalid_heavy.heavy_every=invalid_period
+		check(not fight(43,20,360,"warden",false,"balanced",[],invalid_heavy).valid,"invalid heavy_every value rejected")
+	var json_heavy:Dictionary=JSON.parse_string(JSON.stringify(heavy))
+	check(fight(43,20,360,"warden",false,"balanced",[],json_heavy).damage==108,"JSON float3 retains valid heavy-period semantics")
+	var pure_enemy=shield_order.duplicate(true)
+	var pure_talents=["clean_finish","trained_focus","unbroken"]
+	var first=P.battle(5,0,400,pure_enemy,"warden",true,"buckler",pure_talents)
+	var second=P.battle(5,0,400,pure_enemy,"warden",true,"buckler",pure_talents)
+	check(first==second and pure_enemy==shield_order and pure_talents==["clean_finish","trained_focus","unbroken"],"repeated equipment previews are stateless and cannot refresh resources")
+	check("EXTRA" in P.GEAR.duelist.description and "one-shot" in P.GEAR.duelist.description,"duelist opening cost is prominent in shared item description")
 	print("PROGRESSION: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
 	quit(0 if failures==0 else 1)

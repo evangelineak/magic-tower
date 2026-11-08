@@ -42,9 +42,12 @@ func _init():
 			check(Generator.ENEMIES[enemy_id][field]==World.ENEMIES[enemy_id][field],"proof enemy stats match World: %s.%s"%[enemy_id,field])
 		check(Generator.ENEMIES[enemy_id].get("first_strike",false)==World.ENEMIES[enemy_id].get("first_strike",false),"proof first-strike trait matches World: "+enemy_id)
 		check(Generator.ENEMIES[enemy_id].get("thorns",0)==World.ENEMIES[enemy_id].get("thorns",0),"proof thorns trait matches World: "+enemy_id)
+		check(Generator.ENEMIES[enemy_id].get("heavy_every",0)==World.ENEMIES[enemy_id].get("heavy_every",0),"proof heavy cadence matches World: "+enemy_id)
 	for enemy_id in World.ENEMIES:
 		if enemy_id not in ["B","V"]:
 			check(Generator.ENEMIES.has(enemy_id),"proof includes every non-optional World enemy: "+enemy_id)
+	# Ten player hits -> nine normal retaliations plus three heavy extras.
+	check(Generator.damage("w",{"hp":500,"atk":38,"def":8})==288,"proof includes every-third-retaliation heavy damage")
 	var baseline := Generator.normalize(World.MAPS)
 	var zero := Generator.generate(0,World.MAPS)
 	check(zero.maps==baseline,"seed zero keeps authored baseline")
