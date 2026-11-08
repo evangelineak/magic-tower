@@ -3,6 +3,7 @@ extends Node2D
 const World = preload("res://scripts/world.gd")
 const Localization = preload("res://scripts/localization.gd")
 var language := "zh"
+const Attunement = preload("res://scripts/attunement.gd")
 const Progression = preload("res://scripts/progression.gd")
 const CELL := 64.0
 const ORIGIN := Vector2(24,72)
@@ -27,6 +28,9 @@ var travel_page := 0
 var travel_rows: Array=[]
 var travel_refresh_count := 0
 var travel_pending := ""
+var attuning := false
+var attune_gear := ""
+var attune_pending := ""
 var comparison := false
 var compare_pos := Vector2i(-1,-1)
 var compare_floor := -1
@@ -179,6 +183,7 @@ func _draw():
 	if journal: draw_journal()
 	if comparison: draw_comparison()
 	if travel_menu: draw_travel()
+	if attuning: draw_attunement()
 	if not modal_open(): draw_tooltip()
 func draw_sidebar():
 	panel(Rect2(752,72,504,704),Color("101c2a"))
@@ -201,7 +206,7 @@ func draw_sidebar():
 		panel(buttons[i],Color("253748")); label_at(buttons[i].position+Vector2(12,26),titles[i],15)
 	label_at(Vector2(768,750),"WASD / arrows: manual actions. R / N twice: restart.",13,MUTED)
 func modal_open() -> bool:
-	return book or growth or interaction or journal or comparison or travel_menu or battle_time>0.0 or world.won
+	return attuning or book or growth or interaction or journal or comparison or travel_menu or battle_time>0.0 or world.won
 func wrapped_lines(source: String, width: float, size: int) -> Array[String]:
 	var result: Array[String]=[]
 	var remaining: String=display(source)
@@ -331,6 +336,87 @@ func draw_travel():
 		label_at(Vector2(225,620),"[ / ]: pages    %d / %d" % [travel_page+1,maxi(1,ceili(travel_rows.size()/6.0))],14,MUTED)
 	label_at(Vector2(225,662),"T: close / Esc: back. Viewing and selecting cost nothing.",15,MUTED)
 
+func close_attunement():
+	attuning=false; attune_pending=""; attune_gear=""
+func open_attunement():
+	cancel_walk()
+	if attuning: close_attunement(); return
+	if battle_time>0.0: return
+	close_travel(); comparison=false; journal=false; book=false; growth=false; interaction=false
+	winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	attune_gear=world.equipped if world.equipped!="balanced" else "buckler"; attune_pending=""; attuning=true
+func cycle_attunement(delta: int):
+	var ids: Array=["buckler","duelist","repeater","maul"]
+	attune_gear=ids[posmod(ids.find(attune_gear)+delta,ids.size())]; attune_pending=""
+func attunement_rows() -> Array:
+	if not attuning: return []
+	return world.attunement_offers(attune_gear)
+func attunement_id(action_id: String) -> String:
+	return action_id.trim_prefix("attune_"+attune_gear+"_")
+func select_attunement(index: int):
+	var rows: Array=attunement_rows()
+	if index>=0 and index<rows.size(): attune_pending=rows[index][0]
+func confirm_attunement():
+	if attune_pending=="": return
+	var valid := false
+	for row in attunement_rows():
+		if row[0]==attune_pending: valid=true
+	if not valid: attune_pending=""; return
+	if not world.attunement_preview(attunement_id(attune_pending),attune_gear).get("can_choose",false): return
+	perform_action(attune_pending)
+	attune_pending=""
+func attunement_click(mouse: Vector2):
+	if not Rect2(195,70,890,660).has_point(mouse): close_attunement(); return
+	if Rect2(785,122,120,38).has_point(mouse): cycle_attunement(-1); return
+	if Rect2(925,122,120,38).has_point(mouse): cycle_attunement(1); return
+	if attune_pending!="":
+		if Rect2(225,585,390,48).has_point(mouse): confirm_attunement()
+		elif Rect2(635,585,390,48).has_point(mouse): attune_pending=""
+		return
+	for i in attunement_rows().size():
+		if Rect2(225,265+i*91,830,84).has_point(mouse): select_attunement(i); return
+func attunement_effect(id: String) -> String:
+	var mods: Dictionary=Attunement.modifiers(id)
+	return "ATK %s / DEF %s / skill levels +%d" % [("+" if mods.atk>=0 else "")+str(mods.atk),("+" if mods.def>=0 else "")+str(mods.def),mods.levels]
+func draw_attunement():
+	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
+	panel(Rect2(195,70,890,660),Color("0c1928"))
+	label_at(Vector2(225,112),"EQUIPMENT ATTUNEMENT / THIS RUN",24,GOLD)
+	label_at(Vector2(225,147),Progression.GEAR[attune_gear].name,21,TEAL)
+	panel(Rect2(785,122,120,38),Color("253748")); label_at(Vector2(797,148),"[ PREV",15)
+	panel(Rect2(925,122,120,38),Color("253748")); label_at(Vector2(937,148),"NEXT ]",15)
+	var current: String=world.gear_attunement(attune_gear)
+	var info: Dictionary=Progression.skill_level_info(world.talents,current)
+	label_at(Vector2(225,179),"Skill level %d = base %d + training %d + equipment %d" % [info.effective,info.base,info.training,info.gear],16)
+	label_at(Vector2(225,206),"Only equipped modifiers apply; compare the trade-offs before locking." if attune_gear in world.inventory else "NOT OWNED: preview only. Claim this equipment before confirming.",14,MUTED)
+	draw_wrapped(Vector2(225,232),Progression.skill_description(world.hero_id,world.talents,current),820,15,TEAL,2)
+	var rows: Array=attunement_rows()
+	if attune_pending!="":
+		var id: String=attunement_id(attune_pending)
+		label_at(Vector2(225,300),Attunement.TEMPLATES[id].name if id!="none" else "Keep original equipment",23,GOLD)
+		label_at(Vector2(225,336),attunement_effect(id),18)
+		var candidate: Dictionary=Progression.skill_level_info(world.talents,id)
+		label_at(Vector2(225,373),"Candidate skill level: %d" % candidate.effective,18,TEAL)
+		draw_wrapped(Vector2(225,407),Progression.skill_description(world.hero_id,world.talents,id),810,17,TEAL,3)
+		draw_wrapped(Vector2(225,493),"Confirm locks this equipment for this run, including keeping the original. U undoes the whole choice; offers never reroll.",810,17,GOLD,3)
+		panel(Rect2(225,585,390,48),Color("345c62")); label_at(Vector2(240,616),"ENTER: CONFIRM CHOICE" if attune_gear in world.inventory else "NOT OWNED / READ ONLY",17)
+		panel(Rect2(635,585,390,48),Color("253748")); label_at(Vector2(650,616),"ESC: BACK WITHOUT CHANGES",17)
+	else:
+		for i in rows.size():
+			var id: String=attunement_id(rows[i][0])
+			var r:=Rect2(225,265+i*91,830,84)
+			panel(r,Color("203343"))
+			label_at(r.position+Vector2(15,23),"%d  %s" % [i+1,rows[i][1]],18,GOLD)
+			label_at(r.position+Vector2(360,23),attunement_effect(id),15,INK)
+			var level: int=Progression.skill_level_info(world.talents,id).effective
+			label_at(r.position+Vector2(15,46),"Candidate skill level: %d" % level,14,TEAL)
+			draw_wrapped(r.position+Vector2(15,66),Progression.skill_description(world.hero_id,world.talents,id),800,14,MUTED,1)
+		if rows.is_empty():
+			label_at(Vector2(225,280),Attunement.TEMPLATES[current].name if current!="none" else "Original equipment",20,GOLD)
+			draw_wrapped(Vector2(225,310),"Traveler's kit cannot be attuned." if attune_gear=="balanced" else world.attunement_description(attune_gear),810,19,TEAL,5)
+			label_at(Vector2(225,485),"Only owned equipment can be attuned, once per item per run.",17,MUTED)
+	label_at(Vector2(225,684),"G / Esc closes. Viewing is free. Only equipped modifiers apply.",15,MUTED)
+
 func open_comparison():
 	cancel_walk()
 	if comparison: comparison=false; return
@@ -375,6 +461,7 @@ func draw_comparison():
 		var status: String="Cannot penetrate defense" if not preview.get("valid",false) else ("LETHAL: no after-battle recovery" if row.after_hp<0 else "After battle: %d HP" % row.after_hp)
 		label_at(Vector2(600,y),status,16,Color("ef928f") if row.after_hp<0 else TEAL)
 		label_at(Vector2(235,y+25),"Loss %s / hero strikes %d / retaliations %d" % [str(int(preview.damage)) if preview.get("valid",false) else "--",int(preview.get("rounds",0)),int(preview.get("retaliations",0))],16,MUTED)
+		label_at(Vector2(720,y+25),"Skill %d / %s" % [int(preview.get("skill_level",10)),Attunement.TEMPLATES[preview.attunement].name if preview.get("attunement","none")!="none" else "Original equipment"],13,TEAL)
 	label_at(Vector2(225,615),"No equipment changes here. Compare trade-offs, then choose in C.",16,TEAL)
 	label_at(Vector2(225,655),"V / Esc / click outside closes. Reading spends nothing.",15,MUTED)
 func chapter_button() -> Rect2:
@@ -721,7 +808,7 @@ func perform_action(id: String, confirmed:=false):
 func quest_hint() -> String:
 	return ["J: find the researcher's request","QUEST: seek the sample (I)","SURVEY: J reward or F bridge","SURVEY: delivered to J","SURVEY: flood bridge built"][clampi(world.quest_state,0,4)]
 func skill_description() -> String:
-	return Progression.skill_description(world.hero_id,world.talents)
+	return world.skill_description()
 func growth_actions() -> Array:
 	var rows: Array=[]
 	match growth_tab:
@@ -743,6 +830,7 @@ func visible_growth_actions() -> Array:
 	gear_page=clampi(gear_page,0,maxi(0,ceili(rows.size()/3.0)-1))
 	return rows.slice(gear_page*3,gear_page*3+3)
 func open_growth():
+	close_attunement()
 	cancel_walk()
 	comparison=false
 	growth=not growth; journal=false; interaction=false; winch_pending=""; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
@@ -783,6 +871,7 @@ func draw_growth():
 		label_at(Vector2(225,565),"Learned: "+(", ".join(learned) if not learned.is_empty() else "none yet"),15,TEAL)
 		if rows.is_empty(): label_at(Vector2(225,300),"No new choice yet. Defeat foes and return.",18,INK)
 	if growth_tab==1:
+		panel(Rect2(225,548,285,38),Color("345c62")); label_at(Vector2(240,574),"G: ATTUNE / PREVIEW GEAR",15,GOLD)
 		if growth_actions().size()>3:
 			panel(Rect2(780,548,120,38),Color("253748")); label_at(Vector2(792,574),"PREV",14)
 			panel(Rect2(915,548,120,38),Color("253748")); label_at(Vector2(927,574),"NEXT",14)
@@ -792,6 +881,7 @@ func draw_growth():
 	label_at(Vector2(225,646),display(world.message).left(105),14,TEAL)
 	label_at(Vector2(225,697),"Choose 1-3. Tab changes section. Esc: keep default Warden." if world.moves==0 else "Click a card / press 1-3. Tab changes section. C / Esc closes.",15,MUTED)
 func open_journal():
+	close_attunement()
 	cancel_walk()
 	comparison=false
 	journal=not journal
@@ -809,6 +899,7 @@ func journal_lines() -> Array:
 	entries.append_array(world.audit_journal())
 	entries.append_array(world.audit_lines())
 	entries.append_array(world.winch_journal())
+	entries.append_array(world.attunement_journal())
 	if world.expedition_started:
 		entries.append("Chapter II: supplies are finite; old floors remain available.")
 		entries.append("Camp stock: medicine %d / focus %d. Bridges: %s." % [world.camp_medicine_left,world.camp_focus_left,"open" if world.expedition_bridge else "closed"])
@@ -948,6 +1039,8 @@ func _unhandled_input(event):
 		hover = Vector2i(((get_global_mouse_position()-ORIGIN)/CELL).floor())
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 		if battle_time>0.0: battle_time=0.0; return
+		if attuning:
+			attunement_click(get_global_mouse_position()); return
 		if travel_menu:
 			var mouse: Vector2=get_global_mouse_position()
 			if not Rect2(195,110,890,580).has_point(mouse): close_travel(); return
@@ -977,6 +1070,7 @@ func _unhandled_input(event):
 			elif not Rect2(230,100,820,610).has_point(get_global_mouse_position()): journal=false
 			return
 		if growth:
+			if growth_tab==1 and Rect2(225,548,285,38).has_point(get_global_mouse_position()): open_attunement(); return
 			if growth_tab==1 and growth_actions().size()>3:
 				if Rect2(780,548,120,38).has_point(get_global_mouse_position()): gear_page=maxi(0,gear_page-1); return
 				if Rect2(915,548,120,38).has_point(get_global_mouse_position()): gear_page+=1; return
@@ -1011,6 +1105,17 @@ func _unhandled_input(event):
 		start_walk(hover)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if battle_time>0.0: battle_time=0.0; return
+		if event.keycode==KEY_G: open_attunement(); return
+		if attuning:
+			if event.keycode==KEY_ESCAPE:
+				if attune_pending!="": attune_pending=""
+				else: close_attunement()
+			elif event.keycode==KEY_BRACKETLEFT: cycle_attunement(-1)
+			elif event.keycode==KEY_BRACKETRIGHT: cycle_attunement(1)
+			elif attune_pending!="":
+				if event.keycode==KEY_ENTER: confirm_attunement()
+			elif event.keycode>=KEY_1 and event.keycode<=KEY_4: select_attunement(event.keycode-KEY_1)
+			return
 		if event.keycode==KEY_T: open_travel(); return
 		if travel_menu:
 			if event.keycode==KEY_ESCAPE:
@@ -1069,6 +1174,7 @@ func _unhandled_input(event):
 			KEY_R: request_restart("replay")
 			KEY_N: request_restart("new")
 func request_restart(mode: String):
+	close_attunement()
 	cancel_walk()
 	close_travel()
 	comparison=false
@@ -1112,6 +1218,7 @@ func move(direction: Vector2i, confirmed:=false):
 		if history.size()>100: history.pop_front()
 		save_game(false)
 func undo():
+	close_attunement()
 	cancel_walk()
 	close_travel()
 	if history.is_empty(): world.message="No move to undo in this session."; return
@@ -1125,17 +1232,18 @@ func save_game(announce:=true):
 	f.store_string(JSON.stringify(world.save_data()))
 	if announce: world.message="Journey saved locally."
 func load_game():
+	close_attunement()
 	cancel_walk()
 	close_travel()
 	comparison=false
 	if not FileAccess.file_exists(save_path): world.message="No saved journey yet."; return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
 	if not parsed is Dictionary: world.message="Save is invalid. Current journey is unchanged."; return
-	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6 or parsed.get("version")==7 or parsed.get("version")==8 or parsed.get("version")==9 or parsed.get("version")==10
+	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6 or parsed.get("version")==7 or parsed.get("version")==8 or parsed.get("version")==9 or parsed.get("version")==10 or parsed.get("version")==11
 	if upgrading:
 		var probe=World.new(0)
 		if not probe.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
-		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else (".pre-schema7.json" if parsed.get("version")==6 else (".pre-schema8.json" if parsed.get("version")==7 else (".pre-schema9.json" if parsed.get("version")==8 else (".pre-schema10.json" if parsed.get("version")==9 else ".pre-schema11.json"))))))
+		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else (".pre-schema7.json" if parsed.get("version")==6 else (".pre-schema8.json" if parsed.get("version")==7 else (".pre-schema9.json" if parsed.get("version")==8 else (".pre-schema10.json" if parsed.get("version")==9 else (".pre-schema11.json" if parsed.get("version")==10 else ".pre-schema12.json")))))))
 		if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(backup_path)):
 			world.message="Could not back up the old save. Current journey is unchanged."
 			return

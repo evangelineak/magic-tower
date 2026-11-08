@@ -3,6 +3,14 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"Keep original equipment":"保留原装",
+"Original equipment":"原装",
+"No attunement bonuses or penalties.":"不附加调校收益或代价。",
+"Traveler's kit cannot be attuned.":"旅行装不能调校。",
+"Not owned yet. These offers are fixed for this run.":"尚未获得；这些候选在本局固定不变。",
+"Unattuned. Choose once, or keep the original equipment.":"尚未调校：可选择一次，也可保留原装。",
+"Original equipment retained. This choice is locked.":"已选择保留原装，此选择已锁定。",
+"Equipment choice locked. Only the worn item's attunement applies. Full-state undo can reverse this choice.":"调校选择已锁定。仅当前穿戴装备的调校生效；完整撤销可回退此选择。",
 "Next-battle skill: armed":"下次战斗技能：已备战",
 "Next-battle skill: off":"下次战斗技能：未备战",
 "No valid stair connection.":"此处没有可用的楼层连接。",
@@ -248,6 +256,8 @@ const EXACT = {
 # Preserve conversion types and argument order. The display adapter matches
 # these full English templates; %s values may themselves have catalog names.
 const TEMPLATES = [
+["Attunement: %s", "调校：%s"],
+["Equipment attunement: %s / %s", "装备调校：%s / %s"],
 ["HP %d / base ATK %d / base DEF %d", "生命 %d / 基础攻击 %d / 基础防御 %d"],
 ["Equipment: %s", "装备：%s"],
 ["Focus: %d / %d", "专注：%d / %d"],

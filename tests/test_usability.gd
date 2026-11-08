@@ -108,6 +108,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema10-"+branch+".json"))
   check(w.restore(old) and w.layout_revision==1,"old schema10 retains layout1")
   var migrated=state(w); migrated.erase("layout_revision"); migrated.version=10
+  for field in ["attunement_version","gear_offers","gear_choices"]: migrated.erase(field)
   check(JSON.parse_string(JSON.stringify(migrated))==old,"old map, rewards, resources and coordinates are unchanged")
   var landing=Layout.stair_destination(w.floors,1,0,Vector2i(9,9))
   check(landing.ok and landing.pos==Vector2i(1,1),"old stair corner mapping remains compatible")
@@ -150,7 +151,7 @@ func run_tests():
  var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema10-armory.json"); var backup=scene.save_path.get_basename()+".pre-schema11.json"
  if FileAccess.file_exists(backup):DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(scene.walk_route.is_empty() and scene.world.layout_revision==1 and FileAccess.get_file_as_string(backup)==old_text and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==11,"load cancels auto route and backs up genuine old map before schema11 migration")
+ check(scene.walk_route.is_empty() and scene.world.layout_revision==1 and FileAccess.get_file_as_string(backup)==old_text and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==12,"load cancels auto route and backs up genuine old map before schema11 migration")
  scene.queue_free(); await process_frame
  print("USABILITY: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

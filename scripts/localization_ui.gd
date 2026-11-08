@@ -1,5 +1,20 @@
 extends RefCounted
 const EXACT = {
+"[ PREV":"[ 上一件",
+"NEXT ]":"下一件 ]",
+"NOT OWNED / READ ONLY":"尚未拥有 / 仅供预览",
+"NOT OWNED: preview only. Claim this equipment before confirming.":"尚未拥有：只能预览，取得这件装备后才能确认。",
+"G: ATTUNE / PREVIEW GEAR":"G：调校 / 预览装备",
+"EQUIPMENT ATTUNEMENT / THIS RUN":"装备调校 / 仅限本局",
+"Only equipped modifiers apply; compare the trade-offs before locking.":"只有穿戴中的词条生效；确认前请比较收益与代价。",
+"Confirm locks this equipment for this run, including keeping the original. U undoes the whole choice; offers never reroll.":"确认后，本局这件装备的选择将锁定，保留原装也一样。U可完整撤销；候选不会重抽。",
+"ENTER: CONFIRM CHOICE":"回车：确认选择",
+"ESC: BACK WITHOUT CHANGES":"Esc：返回，不作改变",
+"Only owned equipment can be attuned, once per item per run.":"仅能调校已拥有的装备；每件装备每局只能选择一次。",
+"G / Esc closes. Viewing is free. Only equipped modifiers apply.":"G / Esc关闭；查看不花资源，只有穿戴中的词条生效。",
+"Keep original equipment":"保留原装",
+"Original equipment":"原装",
+
 "SAVE (CLICK)":"点击保存",
 "DEBT":"欠款",
 "C: hero, equipment and skills":"C：英雄、装备与技能",
@@ -342,6 +357,11 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["ATK %s / DEF %s / skill levels +%d", "攻击 %s / 防御 %s / 技能等级 +%d"],
+["Skill level %d = base %d + training %d + equipment %d", "技能等级 %d = 基础 %d + 训练 %d + 装备 %d"],
+["Candidate skill level: %d", "候选技能等级：%d"],
+["Skill %d / %s", "技能 %d级 / %s"],
+
 ["SEED %d","种子 %d"],
 ["Shield %d / oath %d / flank %d / total reduction %d","盾挡%d / 誓约%d / 侧袭%d / 总减伤%d"],
 ["Travel to floor %d: %s?","前往第%d层：%s？"],

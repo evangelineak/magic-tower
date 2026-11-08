@@ -1,6 +1,7 @@
 extends SceneTree
 const Loc=preload("res://scripts/localization.gd")
 const World=preload("res://scripts/world.gd")
+const Attunement=preload("res://scripts/attunement.gd")
 const Progression=preload("res://scripts/progression.gd")
 var checks:=0
 var failures:=0
@@ -44,6 +45,13 @@ func source_strings(source: String) -> Array:
 func _initialize():
 	call_deferred("run_tests")
 func run_tests():
+	for id in Attunement.TEMPLATE_IDS:
+		check(cjk(Loc.text(Attunement.TEMPLATES[id].name)),"attunement name localized: "+id)
+		check(cjk(Loc.text(Attunement.TEMPLATES[id].description)),"attunement tradeoff localized: "+id)
+	for level_id in ["none","focus_light","focus_deep"]:
+		for hero in Progression.HEROES:
+			var message:String=Progression.skill_description(hero,["iron_skin","trained_focus"],level_id)
+			check(cjk(Loc.text(message)) and Loc.text(message,"en")==message,"dynamic attuned skill bilingual: "+hero+"/"+level_id)
 	check(Loc.text("Warden")=="护卫" and Loc.text("Warden","en")=="Warden","Chinese default and untouched English mode")
 	check(Loc.text("warden") == "warden" and Loc.text("")=="","technical IDs and empty text unchanged")
 	var font_text:="%+-/" # Actual display symbols; all CJK characters are collected from catalogs below.

@@ -88,3 +88,25 @@ SHA256:
 - generate_schema10.gd: `5a8bc9a49b890e1b7cdfc7102c17cc34f1865c1cc6302774434dd3ca4b66cab1`
 - schema10-rescue.json: `77210e77f01ae52f1089d9225110573a4bf79ba41ea9cabcbf8495eec4392251`
 - schema10-armory.json: `0a7ec7c1ac8fea8efe6f12cbd54d9ef3001b80c8460f58efeba4e7e9241182cb`
+
+## Schema 11 old and new layout expeditions
+
+`schema11-layout1.json` and `schema11-layout2.json` are produced with the actual
+published World from `34af95002022d388314ecf3d2392e220d42cb15a` in an isolated
+`git archive` export. `generate_schema11.gd` is the exact generator; run it with
+that old export as Godot `--path`, after creating `/tmp/tower-v18-legacy`.
+
+The layout-2 fixture starts a genuine fresh seed-0 game, replays the validated
+mainline through World.step, then explicitly continues into the expedition.
+It has 242 moves / 277 HP and is on floor six at (9,9).
+The layout-1 fixture uses that old World's real migration of the genuine
+schema10-armory fixture, then performs the available rescue_repeater action at J.
+It has 602 moves / 375 HP, on floor one at (1,2), with both maul and repeater.
+Both have an ongoing eight-floor expedition. All state is produced by old World
+APIs, not by editing positions, resources or version numbers. No attunement or
+persistent profile fields are added. Synthetic gameplay only, not user data.
+
+SHA256:
+- generate_schema11.gd: `e813607f4fb6bfe89f54bd47f0bfc0e0ac389cfa7f622bfbde3f2628c7fe0289`
+- schema11-layout1.json: `608cfcbac3adf4befec6ebe94878f40cb2c95a7e19d6edafc13a284313242c01`
+- schema11-layout2.json: `fccaaa72e692ac0de72a0533cb1045ff275cf052441b9c4a30c2c6fceb42d4a6`

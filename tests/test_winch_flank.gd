@@ -60,6 +60,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema9-"+reward+".json"))
   check(w.restore(old) and w.expedition_revision==2 and w.winch_choice=="" and not w.maul_claimed,"old begun revision2 gains no new room or reward")
   var upgraded=state(w); upgraded.erase("winch_choice"); upgraded.erase("maul_claimed"); upgraded.erase("layout_revision"); upgraded.version=9
+  for field in ["attunement_version","gear_offers","gear_choices"]: upgraded.erase(field)
   check(JSON.parse_string(JSON.stringify(upgraded))==old,"migration conserves solved audit/anchors/oath/NPC resources: "+reward)
   reject(w,"winch_rescue"); reject(w,"winch_armory"); restore_check(w)
  w=World.new(0,1)
@@ -162,7 +163,7 @@ func run_tests():
  var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema9-retrain.json"); var backup=scene.save_path.get_basename()+".pre-schema10.json"
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==2 and scene.world.audit_reward=="retrain" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==11,"schema9 backup preserves actual old audit/anchor run without spawning new rooms")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==2 and scene.world.audit_reward=="retrain" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==12,"schema9 backup preserves actual old audit/anchor run without spawning new rooms")
  scene.queue_free(); await process_frame
  print("WINCH FLANK: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

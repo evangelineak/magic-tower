@@ -205,7 +205,7 @@ func run_tests():
 		var original: String=JSON.stringify(legacy,"\t")
 		write_file(scene.save_path,original); scene.load_game()
 		var upgraded=JSON.parse_string(FileAccess.get_file_as_string(scene.save_path))
-		check(FileAccess.file_exists(backup_path) and FileAccess.get_file_as_string(backup_path)==original and upgraded.version==11,"legacy JSON upgraded with byte-preserving matching backup: "+str(version))
+		check(FileAccess.file_exists(backup_path) and FileAccess.get_file_as_string(backup_path)==original and upgraded.version==12,"legacy JSON upgraded with byte-preserving matching backup: "+str(version))
 		check(scene.world.won and scene.world.floors.size()==5 and not scene.world.expedition_started,"UI load preserves legacy first ending until explicit continuation")
 		legacy.gold+=1; write_file(scene.save_path,JSON.stringify(legacy)); scene.load_game()
 		check(FileAccess.get_file_as_string(backup_path)==original,"legacy backup is never overwritten: "+str(version))

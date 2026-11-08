@@ -17,17 +17,21 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "697cacb41459deeffcb0fa40bd0a162755bd4a135e2e9bbcaf167359d661d5c8",
-  "bytes": 380200,
+  "output_sha256": "7f4c9a55eb3b3b6541ff5a47120c2b6947b8dfab35da6a4ffb917a305dd20e29",
+  "bytes": 391400,
   "coverage": {
-    "mapped_codepoints": 986,
-    "glyphs": 1965,
-    "required_codepoints": 827,
+    "mapped_codepoints": 1007,
+    "glyphs": 2005,
+    "required_codepoints": 848,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
   },
   "scanned_sources": [
+    {
+      "path": "scripts/attunement.gd",
+      "sha256": "3191d14dfb7ab61f4262a324c08a3b9c5fc7d3f46e0f4b587a04b4c8a75e54f3"
+    },
     {
       "path": "scripts/audit_puzzle.gd",
       "sha256": "adff6ad910d356f55334fdd325193211610d85cd3385e31056ca30fdeb900f29"
@@ -50,19 +54,19 @@
     },
     {
       "path": "scripts/localization_progression.gd",
-      "sha256": "a3018ae23b5d5a5110bf137e51764086d151ea7992584ab7a949faad1bb4ae1f"
+      "sha256": "95fb2c17e7bbbe38835a9ec92994cf11abc7e0e12d1e34519508e8577cacbb85"
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "79af794813843e86dc7770a2df3af884fc8a470af14504d9f9890c9e966ecdcf"
+      "sha256": "8d54520408226a44f9b2f57aae2d0ba880d801c6553d2cd7beb07aedc3d58e10"
     },
     {
       "path": "scripts/localization_world.gd",
-      "sha256": "96d44582bf39353685ab4b2b2e5e3bc7c4dc2d01fd14c2dfbacb0e85875a2027"
+      "sha256": "c36cd1225109ba95627d17f2ca0caa37e1925a660521288ceb8ba78518cca72c"
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "e54906769160ba3ecd7f2c44551e01ac808370ad9b9a3d315418a4d59deb1d69"
+      "sha256": "dcf1878f206d0a67140c93c77fd651eadbfeb2816245415ea64e3d6762373d6f"
     },
     {
       "path": "scripts/navigation.gd",
@@ -70,7 +74,7 @@
     },
     {
       "path": "scripts/progression.gd",
-      "sha256": "137f02b2d482dd019ca55bb3bd3e272771acb963955c433835c91db02b4b1b02"
+      "sha256": "a96870ec2b985d3488598f69ef1686c350cae0b172100cbfb25f13c84b1989aa"
     },
     {
       "path": "scripts/riddle.gd",
@@ -78,7 +82,7 @@
     },
     {
       "path": "scripts/world.gd",
-      "sha256": "f66b2f65295e356a8664561be3960474a062753e2f9725c349fa7de6b2d303eb"
+      "sha256": "e62a8ce94d1c6438bb9a7f6172f02cf847bef0a1c32bef8bcda3b98452b4834a"
     },
     {
       "path": "project.godot",

@@ -201,6 +201,56 @@ func run_tests():
 	check(scene.world.keys==0 and scene.world.tile(Vector2i(6,3))==".","ordinary door spends exactly one key")
 	scene.move(Vector2i.LEFT); scene.move(Vector2i.RIGHT)
 	check(scene.world.keys==0 and not scene.interaction and scene.world.pos==Vector2i(6,3),"already opened door never reconfirms or charges twice")
+	# Attunement is a read-only modal until a separate explicit confirmation.
+	scene.world=load("res://scripts/world.gd").new(0,2); scene.history.clear(); scene.growth=false
+	scene.save_game(false)
+	var pristine: Dictionary=scene.world.save_data().duplicate(true)
+	var attune_file_before: String=FileAccess.get_file_as_string(scene.save_path)
+	var attune_audio_before: int=scene.sound_event_count
+	scene.start_walk(Vector2i(1,2))
+	event.keycode=KEY_G; scene._unhandled_input(event)
+	check(scene.attuning and scene.walk_route.is_empty() and scene.attune_gear=="buckler","G cancels walking and previews non-traveler gear")
+	check(scene.attunement_rows().size()==4,"unowned equipment exposes three fixed offers and original")
+	scene.select_attunement(0)
+	var pending: String=scene.attune_pending
+	event.keycode=KEY_F2; scene._unhandled_input(event)
+	check(scene.attune_pending==pending,"F2 retains candidate without applying it")
+	event.keycode=KEY_ENTER; scene._unhandled_input(event)
+	event.keycode=KEY_RIGHT; scene._unhandled_input(event)
+	check(scene.world.save_data()==pristine and scene.history.is_empty(),"unowned confirmation and movement are blocked")
+	check(FileAccess.get_file_as_string(scene.save_path)==attune_file_before and scene.sound_event_count==attune_audio_before,"preview never saves or plays action sounds")
+	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
+	check(scene.attuning and scene.attune_pending=="","Escape first backs out of confirmation")
+	scene.cycle_attunement(1)
+	check(scene.attune_gear=="duelist" and scene.attunement_rows().size()==4,"all non-traveler gear can be previewed before acquisition")
+	scene.close_attunement(); scene.world.inventory.append("buckler"); scene.world.equipped="buckler"; scene.world.chest_claimed=true
+	var owned_before: Dictionary=scene.world.save_data().duplicate(true)
+	scene.open_attunement(); scene.select_attunement(0)
+	check(scene.world.save_data()==owned_before,"owned selection still requires separate confirmation")
+	scene.confirm_attunement()
+	check(scene.world.gear_choices.has("buckler") and scene.attunement_rows().is_empty() and scene.history.size()==1,"confirmed selection locks only this gear with one undo snapshot")
+	var locked: Dictionary=scene.world.save_data().duplicate(true)
+	scene.confirm_attunement()
+	check(scene.world.save_data()==locked,"repeat confirmation cannot apply twice")
+	scene.undo()
+	check(not scene.attuning and scene.world.save_data()==owned_before,"undo closes modal and restores actual offers and choices")
+	scene.open_attunement(); scene.select_attunement(3); scene.confirm_attunement()
+	check(scene.world.gear_choices.get("buckler")=="none" and scene.attunement_rows().is_empty(),"keeping original is an explicit locked choice")
+	scene.load_game()
+	check(not scene.attuning,"load closes attunement modal")
+	# Byte-preserving schema 11 migration gets its own backup, not the old 10->11 name.
+	scene.save_path="user://attune-schema11-test.json"
+	var old: Dictionary=pristine.duplicate(true); old.version=11
+	for key in ["attunement_version","gear_offers","gear_choices"]: old.erase(key)
+	var original_bytes: String=JSON.stringify(old)
+	var backup: String=scene.save_path.get_basename()+".pre-schema12.json"
+	if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
+	var old_file=FileAccess.open(scene.save_path,FileAccess.WRITE); old_file.store_string(original_bytes); old_file.close()
+	scene.load_game()
+	check(FileAccess.file_exists(backup) and FileAccess.get_file_as_string(backup)==original_bytes,"schema11 preserved byte-for-byte before upgrade")
+	check(JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==12,"schema11 upgrades to12")
+	DirAccess.remove_absolute(backup); DirAccess.remove_absolute(scene.save_path)
+	scene.save_path="user://integration-test.json"
 	# Only remove the test-specific file generated above, never a player's journey.
 	DirAccess.remove_absolute(scene.save_path)
 	print("UI integration: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])

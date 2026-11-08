@@ -64,7 +64,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema8-"+reward+".json"))
   check(w.restore(old) and w.travel_anchors.is_empty() and not w.audit_read and not w.audit_solved and w.audit_reward=="","old seen floors do not create anchors or audit rewards")
   var upgraded=state(w)
-  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision"]: upgraded.erase(field)
+  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices"]: upgraded.erase(field)
   upgraded.version=8
   check(JSON.parse_string(JSON.stringify(upgraded))==old,"real old oath/NPC/stock state completely preserved: "+reward)
   reject(w,"fast_travel_3:1:3"); restore_check(w)
@@ -160,7 +160,7 @@ func run_tests():
  var backup=scene.save_path.get_basename()+".pre-schema9.json"
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.oath_state=="active" and scene.world.travel_anchors.is_empty() and scene.world.inventory.has("repeater") and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==11,"real v8 backup and migration preserve active oath/reward but invent no travel visits")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.oath_state=="active" and scene.world.travel_anchors.is_empty() and scene.world.inventory.has("repeater") and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==12,"real v8 backup and migration preserve active oath/reward but invent no travel visits")
  scene.language="en"; scene.world.restore(camp)
  check(not str(scene.journal_lines()).contains("Label A:"),"journal hides unread audit statements")
  scene.world.restore(read_state); scene.interaction=true

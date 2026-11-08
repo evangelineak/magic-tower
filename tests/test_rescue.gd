@@ -170,7 +170,7 @@ func run_tests():
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close()
  scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==1 and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==11,"real old expedition load backs up exact bytes and upgrades without new rewards")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==1 and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==12,"real old expedition load backs up exact bytes and upgrades without new rewards")
  scene.queue_free(); await process_frame
  print("RESCUE: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

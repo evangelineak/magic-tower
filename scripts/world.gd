@@ -3,6 +3,8 @@ extends RefCounted
 const Layout = preload("res://scripts/layout.gd")
 const Generator = preload("res://scripts/generation.gd")
 const Progression = preload("res://scripts/progression.gd")
+const Attunement = preload("res://scripts/attunement.gd")
+const ATTUNABLE_GEAR = ["buckler","duelist","repeater","maul"]
 const Expedition = preload("res://scripts/expedition.gd")
 const AuditPuzzle = preload("res://scripts/audit_puzzle.gd")
 const Navigation = preload("res://scripts/navigation.gd")
@@ -37,6 +39,9 @@ var focus_cap := 3
 var skill_armed := false
 var equipped := "balanced"
 var inventory: Array = ["balanced"]
+var attunement_version := Attunement.REVISION
+var gear_offers: Dictionary = {}
+var gear_choices: Dictionary = {}
 var talents: Array = []
 var kills := 0
 var floor_seen: Array = [true,false,false,false,false]
@@ -91,6 +96,7 @@ var message := "Find the keys. Read your enemies. Ascend."
 func _init(run_seed: int = 0, run_layout: int = 2):
 	layout_revision=run_layout if Layout.valid_revision(run_layout) else Layout.CURRENT
 	seed_value=clampi(run_seed,0,2147483647)
+	gear_offers=_new_gear_offers(seed_value)
 	audit_puzzle=AuditPuzzle.generate(seed_value)
 	event_kind=["bargain","smuggler","oath"][seed_value%3]
 	var generated: Dictionary = Generator.generate(seed_value, MAPS, layout_revision)
@@ -99,6 +105,49 @@ func _init(run_seed: int = 0, run_layout: int = 2):
 	generation_fallback=generated.fallback
 	generation_valid=bool(generated.validation.solvable) and Layout.valid_revision(run_layout)
 	if not generation_valid: message="Map validation failed. This run is blocked; choose another seed."
+func _new_gear_offers(run_seed:int)->Dictionary:
+	var result:Dictionary={}
+	for gear in ATTUNABLE_GEAR: result[gear]=Attunement.offers(run_seed,gear)
+	return result
+func gear_attunement(gear_id:String="")->String:
+	var gear:=equipped if gear_id=="" else gear_id
+	if not gear in inventory or not gear in ATTUNABLE_GEAR: return "none"
+	return str(gear_choices.get(gear,"none"))
+func skill_level()->int:
+	return Progression.skill_level(talents,gear_attunement())
+func skill_level_info()->Dictionary:
+	return Progression.skill_level_info(talents,gear_attunement())
+func skill_description()->String:
+	return Progression.skill_description(hero_id,talents,gear_attunement())
+func mend_heal()->int:
+	return Progression.mend_heal(talents,gear_attunement())
+func attunement_offers(gear_id:String="")->Array:
+	var gear:=equipped if gear_id=="" else gear_id
+	if not generation_valid or won or not gear in ATTUNABLE_GEAR or gear_choices.has(gear): return []
+	var result:Array=[]
+	for id in gear_offers[gear]: result.append(["attune_"+gear+"_"+id,Attunement.TEMPLATES[id].name])
+	result.append(["attune_"+gear+"_none","Keep original equipment"])
+	return result
+func attunement_preview(id:String,gear_id:String="")->Dictionary:
+	var gear:=equipped if gear_id=="" else gear_id
+	if not gear in ATTUNABLE_GEAR or not Attunement.valid_selection(gear_offers.get(gear,[]),id): return {"valid":false}
+	var changes:Dictionary=Attunement.modifiers(id)
+	return {"valid":true,"gear":gear,"id":id,"name":"Original equipment" if id=="none" else Attunement.TEMPLATES[id].name,"description":"No attunement bonuses or penalties." if id=="none" else Attunement.TEMPLATES[id].description,"atk":int(changes.atk),"def":int(changes.def),"levels":int(changes.levels),"skill_level":Progression.skill_level(talents,id),"skill_level_info":Progression.skill_level_info(talents,id),"skill_description":Progression.skill_description(hero_id,talents,id),"mend_heal":Progression.mend_heal(talents,id),"owned":gear in inventory,"can_choose":generation_valid and not won and gear in inventory and not gear_choices.has(gear),"locked":gear_choices.has(gear),"selected":gear_choices.has(gear) and gear_choices[gear]==id}
+func attunement_description(gear_id:String="")->String:
+	var gear:=equipped if gear_id=="" else gear_id
+	if not gear in ATTUNABLE_GEAR and gear!="balanced": return ""
+	if not gear in inventory: return "Not owned yet. These offers are fixed for this run."
+	if gear=="balanced": return "Traveler's kit cannot be attuned."
+	if not gear_choices.has(gear): return "Unattuned. Choose once, or keep the original equipment."
+	var id:String=gear_choices[gear]
+	return "Original equipment retained. This choice is locked." if id=="none" else Attunement.TEMPLATES[id].description
+func attunement_journal()->Array:
+	var result:Array=[]
+	for gear in inventory:
+		if not gear_choices.has(gear): continue
+		var id:String=gear_choices[gear]
+		result.append("Equipment attunement: %s / %s" % [Progression.GEAR[gear].name,"Original equipment" if id=="none" else Attunement.TEMPLATES[id].name])
+	return result
 func floor_count() -> int:
 	return floors.size()
 func floor_title() -> String:
@@ -222,8 +271,13 @@ func tooltip_data(point: Vector2i) -> Dictionary:
 		"Equipment: %s" % str(Progression.GEAR[equipped].name),
 		str(Progression.GEAR[equipped].description),
 		"Focus: %d / %d" % [focus,focus_cap],
-		Progression.skill_description(hero_id,talents)
+		skill_description()
 	]
+	var tuning:=gear_attunement()
+	var level_info:=skill_level_info()
+	lines.append("Attunement: %s" % ("Original equipment" if tuning=="none" else str(Attunement.TEMPLATES[tuning].name)))
+	if tuning!="none": lines.append(str(Attunement.TEMPLATES[tuning].description))
+	lines.append("Skill level %d = base %d + training %d + equipment %d" % [level_info.effective,level_info.base,level_info.training,level_info.gear])
 	if hero_id!="scholar": lines.append("Next-battle skill: armed" if skill_armed else "Next-battle skill: off")
 	lines.append("Standing on: %s" % str(underfoot.title))
 	for fact in underfoot.lines: lines.append(str(fact))
@@ -308,7 +362,7 @@ func battle_preview(kind: String, equipment_override: String = "", target: Vecto
 	var flank := false
 	if expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H":
 		flank=flank_position(target)==pos
-	return Progression.battle(atk,defense,hp,ENEMIES.get(kind,{}),hero_id,skill_armed and focus>0,gear,talents,"watch" if oath_state=="active" else "none",flank)
+	return Progression.battle(atk,defense,hp,ENEMIES.get(kind,{}),hero_id,skill_armed and focus>0,gear,talents,"watch" if oath_state=="active" else "none",flank,gear_attunement(gear))
 func damage(kind: String, target: Vector2i = Vector2i(-1,-1)) -> int:
 	var preview := battle_preview(kind,"",target)
 	return int(preview.damage) if preview.valid else -1
@@ -514,6 +568,17 @@ func action(id: String) -> bool:
 		message="Expedition begun: +120 HP once. Old floors and all earlier choices remain."
 		return true
 	if not generation_valid or won: return false
+	if id.begins_with("attune_"):
+		for gear in ATTUNABLE_GEAR:
+			var prefix:String="attune_"+gear+"_"
+			if not id.begins_with(prefix): continue
+			var selected:=id.trim_prefix(prefix)
+			if not gear in inventory or gear_choices.has(gear) or not Attunement.valid_selection(gear_offers[gear],selected): return false
+			gear_choices[gear]=selected
+			moves+=1
+			message="Equipment choice locked. Only the worn item's attunement applies. Full-state undo can reverse this choice."
+			return true
+		return false
 	if id.begins_with("audit_guess_"):
 		if not expedition_started or not nearby("Y") or not audit_read or audit_solved: return false
 		if not id in ["audit_guess_0","audit_guess_1","audit_guess_2"]: return false
@@ -645,7 +710,7 @@ func action(id: String) -> bool:
 			message="Next battle skill %s. Preview includes its effect." % ("armed" if skill_armed else "off")
 		"mend":
 			if hero_id!="scholar" or focus<=0: return false
-			focus-=1; hp+=Progression.mend_heal(talents)
+			focus-=1; hp+=mend_heal()
 			message="Focus spent to mend. Charges return only on new floors."
 		"quest_accept":
 			if not nearby("J") or quest_state!=0: return false
@@ -759,7 +824,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":11,"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":12,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -767,7 +832,7 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12): return false
 	var saved_layout := 1
 	if save_version>=11:
 		var revision=d.get("layout_revision")
@@ -836,6 +901,22 @@ func restore(d: Dictionary) -> bool:
 	if relic_count>1 or d.chest_claimed!=(relic_count==1): return false
 	if ("repeater" in d.inventory)!=(saved_reward=="repeater"): return false
 	if ("maul" in d.inventory)!=saved_maul: return false
+	var saved_gear_offers:Dictionary={}
+	var saved_gear_choices:Dictionary={}
+	if save_version>=12:
+		if not (d.get("attunement_version") is int or d.get("attunement_version") is float) or d.attunement_version!=Attunement.REVISION: return false
+		if not d.get("gear_offers") is Dictionary or d.gear_offers.size()!=ATTUNABLE_GEAR.size(): return false
+		for gear in ATTUNABLE_GEAR:
+			if not Attunement.valid_offers(d.gear_offers.get(gear)): return false
+			# Keep the actual persisted selection/order, not a seed regeneration.
+			saved_gear_offers[gear]=d.gear_offers[gear].duplicate()
+		if not d.get("gear_choices") is Dictionary or d.gear_choices.size()>ATTUNABLE_GEAR.size(): return false
+		for gear in d.gear_choices:
+			if not gear is String or not gear in ATTUNABLE_GEAR or not gear in d.inventory: return false
+			if not Attunement.valid_selection(saved_gear_offers[gear],d.gear_choices[gear]): return false
+			saved_gear_choices[gear]=d.gear_choices[gear]
+	else:
+		saved_gear_offers=_new_gear_offers(int(d.seed_value))
 	if not d.get("talents") is Array or not Progression.valid_talents(d.talents): return false
 	if d.talents.size()>0 and d.kills<3: return false
 	if d.talents.size()>1 and d.kills<7: return false
@@ -959,6 +1040,7 @@ func restore(d: Dictionary) -> bool:
 	if position_token=="e" and saved_winch!="armory": return false
 	if not d.floor_seen[int(d.floor)]: return false
 	layout_revision=saved_layout
+	attunement_version=Attunement.REVISION; gear_offers=saved_gear_offers; gear_choices=saved_gear_choices
 	seed_value=int(d.seed_value); generation_attempts=int(d.generation_attempts); generation_fallback=d.generation_fallback
 	hero_id=d.hero_id; focus=int(d.focus); focus_cap=int(d.focus_cap); skill_armed=d.skill_armed
 	equipped=d.equipped; inventory=d.inventory.duplicate(); talents=d.talents.duplicate(); kills=int(d.kills); floor_seen=d.floor_seen.duplicate()

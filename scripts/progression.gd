@@ -1,8 +1,12 @@
 class_name TowerProgression
 extends RefCounted
+const Attunement = preload("res://scripts/attunement.gd")
 
 # All archetypes start from the same baseline. Tactical abilities and mutually
 # exclusive loadouts change decisions without weakening the generation witness.
+const BASE_SKILL_LEVEL := 10
+const SKILL_LEVEL_CAP := 20
+const ATTAINABLE_SKILL_LEVEL := 16
 const FOCUS_START := 2
 const FOCUS_MAX := 3
 const HEROES := {
@@ -46,22 +50,32 @@ static func talent_options(kills: int, chosen: Array) -> Array:
 	if kills<int(tier.kills): return []
 	return tier.choices.duplicate()
 
-static func mend_heal(chosen: Array) -> int:
-	return 100 if "trained_focus" in chosen else 80
+static func skill_level(chosen: Array, attunement: String = "none") -> int:
+	if not Attunement.valid_id(attunement): return -1
+	return clampi(BASE_SKILL_LEVEL+(4 if "trained_focus" in chosen else 0)+int(Attunement.modifiers(attunement).levels),1,SKILL_LEVEL_CAP)
 
-static func brace_percent(chosen: Array) -> int:
-	return 45 if "trained_focus" in chosen else 35
+static func skill_level_info(chosen: Array, attunement: String = "none") -> Dictionary:
+	if not Attunement.valid_id(attunement): return {}
+	return {"base":BASE_SKILL_LEVEL,"training":4 if "trained_focus" in chosen else 0,"gear":int(Attunement.modifiers(attunement).levels),"effective":skill_level(chosen,attunement),"cap":SKILL_LEVEL_CAP,"attainable_max":ATTAINABLE_SKILL_LEVEL}
 
-static func skill_description(hero: String, chosen: Array) -> String:
+static func mend_heal(chosen: Array, attunement: String = "none") -> int:
+	var level:=skill_level(chosen,attunement)
+	return 30+5*level if level>=1 else 0
+
+static func brace_percent(chosen: Array, attunement: String = "none") -> int:
+	var level:=skill_level(chosen,attunement)
+	return floori(10.0+2.5*level) if level>=1 else 0
+
+static func skill_description(hero: String, chosen: Array, attunement: String = "none") -> String:
 	match hero:
-		"warden": return "Spend 1 focus: block %d%% of total battle loss (rounded down)." % brace_percent(chosen)
-		"ranger": return "Spend 1 focus: ignore %d enemy DEF for the next battle." % (14 if "trained_focus" in chosen else 10)
-		"scholar": return "Spend 1 focus outside battle: recover %d HP." % mend_heal(chosen)
+		"warden": return "Spend 1 focus: block %d%% of total battle loss (rounded down)." % brace_percent(chosen,attunement)
+		"ranger": return "Spend 1 focus: ignore %d enemy DEF for the next battle." % skill_level(chosen,attunement)
+		"scholar": return "Spend 1 focus outside battle: recover %d HP." % mend_heal(chosen,attunement)
 	return "Unknown hero."
 
-static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: String, skill: bool, equipment: String, talents: Array, oath: String = "none", flank: bool = false) -> Dictionary:
-	var result := {"valid":false, "survivable":false, "damage":-1, "hit":0, "rounds":0, "heal_after":0, "skill_consumed":false, "effective_atk":0, "effective_def":0, "enemy_def":0, "normal_damage":0, "first_strike_damage":0, "thorns_damage":0, "blocked_damage":0, "feint_damage":0, "charged_damage":0, "equipment_blocked":0, "oath_blocked":0, "oath_active":oath=="watch", "first_strike_suppressed":false, "first_strike_suppression":"none", "flank_blocked":0, "flank_active":flank, "attack_multiplier":1, "retaliations_per_hit":1, "retaliations":0, "reason":"Invalid battle input."}
-	if not HEROES.has(hero) or not GEAR.has(equipment) or not valid_talents(talents) or not oath in ["none","watch"]: return result
+static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: String, skill: bool, equipment: String, talents: Array, oath: String = "none", flank: bool = false, attunement: String = "none") -> Dictionary:
+	var result := {"valid":false, "survivable":false, "damage":-1, "hit":0, "rounds":0, "heal_after":0, "skill_consumed":false, "effective_atk":0, "effective_def":0, "enemy_def":0, "normal_damage":0, "first_strike_damage":0, "thorns_damage":0, "blocked_damage":0, "feint_damage":0, "charged_damage":0, "equipment_blocked":0, "oath_blocked":0, "oath_active":oath=="watch", "first_strike_suppressed":false, "first_strike_suppression":"none", "flank_blocked":0, "flank_active":flank, "attack_multiplier":1, "retaliations_per_hit":1, "retaliations":0, "skill_level":0, "attunement":attunement, "reason":"Invalid battle input."}
+	if not HEROES.has(hero) or not GEAR.has(equipment) or not valid_talents(talents) or not oath in ["none","watch"] or not Attunement.valid_id(attunement): return result
 	if attack<=0 or defense<0 or hp<=0: return result
 	for key in ["hp","atk","def"]:
 		if not enemy.has(key) or not (enemy[key] is int or enemy[key] is float): return result
@@ -83,12 +97,14 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 		if not is_finite(float(period)) or float(period)!=3.0: return result
 		heavy_every=3
 	var gear: Dictionary = GEAR[equipment]
-	var effective_atk := maxi(0, attack+int(gear.atk)+(3 if "keen_edge" in talents else 0)-(10 if oath=="watch" else 0))
-	var effective_def := maxi(0, defense+int(gear.def)+(2 if "iron_skin" in talents else 0))
+	var tuning: Dictionary = Attunement.modifiers(attunement)
+	result.skill_level=skill_level(talents,attunement)
+	var effective_atk := maxi(0, attack+int(gear.atk)+int(tuning.atk)+(3 if "keen_edge" in talents else 0)-(10 if oath=="watch" else 0))
+	var effective_def := maxi(0, defense+int(gear.def)+int(tuning.def)+(2 if "iron_skin" in talents else 0))
 	if "sentinel_lore" in talents and (enemy.get("name","")=="Sentinel" or enemy.get("kind","")=="g"):
 		effective_def+=4
 	var enemy_def := int(enemy.def)
-	if skill and hero=="ranger": enemy_def=maxi(0,enemy_def-(14 if "trained_focus" in talents else 10))
+	if skill and hero=="ranger": enemy_def=maxi(0,enemy_def-int(result.skill_level))
 	if equipment=="duelist": enemy_def=maxi(0,enemy_def-8)
 	result.effective_atk=effective_atk
 	result.effective_def=effective_def
@@ -135,7 +151,7 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	var loss := raw_loss-flank_blocked-oath_blocked-equipment_blocked
 	# Order: equipment, then floor(remaining loss * Brace rate), then Unbroken.
 	# No minimum block: a one-damage battle still costs one HP without a shield.
-	if skill and hero=="warden": loss-=int(floor(float(loss*brace_percent(talents))/100.0))
+	if skill and hero=="warden": loss-=int(floor(float(loss*brace_percent(talents,attunement))/100.0))
 	if "unbroken" in talents and hp>=400: loss=maxi(0,loss-20)
 	result.valid=true
 	result.hit=hit
