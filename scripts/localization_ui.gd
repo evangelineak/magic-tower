@@ -1,5 +1,15 @@
 extends RefCounted
 const EXACT = {
+"Read-only snapshot. Close this journal, then press L to reload.":"当前为只读进度。请先关闭日志，再按 L 读取最新旅程。",
+"Current build only; changes on the way to this enemy are not included.":"按当前构筑预览，不含走近途中发生的变化。",
+"TAB: TARGETS":"Tab：回访目标",
+"TAB: DETAILS":"Tab：详细日志",
+"PINNED: ":"已钉选：",
+"J: return targets":"J：查看回访目标",
+"No unfinished known targets. Explore to discover more.":"暂无已知的未完成目标，继续探索可发现更多。",
+"1-4 / click: pin or unpin. Read-only; no movement or collection.":"数字 1–4 或点击卡片：钉选或取消。只作提示，不移动、不领奖。",
+"J / Esc: close. Tab: detailed notes.":"J / Esc 关闭；Tab 切换详细日志。",
+
 "Ship the original supply free / delay its 70 HP":"免费发运原补给 / 延后获得 70 生命",
 "Confirm shipment to the fixed destination":"确认发运至固定目的地",
 "Cancel: keep the floor 1 box sealed":"取消：保留一层的封箱补给",
@@ -466,6 +476,7 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["Floor %d","第 %d 层"],
 ["HP %d -> %d / loss %d / recovered +%d","生命 %d → %d / 损失 %d / 恢复 +%d"],
 ["Focus %d -> %d / skill spent %d / actually restored +%d","专注 %d → %d / 技能消耗 %d / 实际恢复 +%d"],
 ["Gold loot %d / debt paid %d / pocket +%d (%d -> %d)","金币战利 %d / 抵债 %d / 入袋 +%d（%d → %d）"],

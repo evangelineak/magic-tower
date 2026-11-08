@@ -1,5 +1,6 @@
 class_name TowerWorld
 extends RefCounted
+const Exploration=preload("res://scripts/exploration.gd")
 const Cargo=preload("res://scripts/cargo.gd")
 var cargo:Dictionary=Cargo.legacy()
 const Layout = preload("res://scripts/layout.gd")
@@ -432,10 +433,13 @@ func _tile_tooltip_data(point: Vector2i) -> Dictionary:
 		var enemy:Dictionary=ENEMIES[token]
 		lines.append("HP %d / ATK %d / DEF %d / Gold %d" % [enemy.hp,enemy.atk,enemy.def,enemy.gold])
 		var forecast:=battle_preview(token,"",point)
-		lines.append("Predicted loss: %d HP" % int(forecast.damage) if forecast.valid else str(forecast.reason))
+		if forecast.valid and not forecast.survivable:
+			lines.append("Damage required to defeat this enemy: %d HP; current HP: %d. This fight cannot be survived." % [int(forecast.damage),hp])
+		else:
+			lines.append("Predicted loss: %d HP" % int(forecast.damage) if forecast.valid else str(forecast.reason))
 		if forecast.valid:
 			lines.append(victory_reward_text(forecast))
-		if forecast.valid and not forecast.survivable: lines.append("Lethal battle is blocked. Grow stronger and return.")
+		if forecast.valid and not forecast.survivable: lines.append("Lethal battle is blocked. Grow stronger and return." if mode=="safe" else "Risk mode: ordinary movement refuses this lethal battle. A separate confirmed attempt can end this run in death.")
 		if enemy.get("first_strike",false): lines.append("First strike: one opening attack, even against a killing hit.")
 		if int(enemy.get("thorns",0))>0:
 			lines.append("Thorns: %d damage per real hit, including the final hit." % int(enemy.thorns))
@@ -477,7 +481,12 @@ func _tile_tooltip_data(point: Vector2i) -> Dictionary:
 			lines.append("Medicine: 70 gold for +140 HP / %d left." % camp_medicine_left)
 			lines.append("Focus: 55 gold for +1 / %d left. Full focus never consumes stock." % camp_focus_left)
 		"Y": lines.append("80 gold opens expedition bridges once. Supply-label deduction is a separate optional task.")
-		"v": lines.append("Choose one route permanently: a rescue shortcut or the siege maul armory. Inspect before choosing.")
+		"v":
+			if winch_choice!="":
+				for fact in winch_journal():lines.append(str(fact))
+			elif rescue_state>=2 or floors[6][2][9]!="W":
+				lines.append("The rescue no longer needs a shortcut. The unused winch can still open the siege maul armory.")
+			else:lines.append("The unused winch can open either the rescue shortcut or the siege maul armory, not both. Inspect the routes before choosing.")
 		"n": lines.append("Open" if winch_choice=="rescue" else "Closed")
 		"e": lines.append("Open" if winch_choice=="armory" else "Closed")
 		"m": lines.append(Progression.GEAR.maul.description)
@@ -715,6 +724,8 @@ func _read_seal(bit: int):
 	var index := 0 if bit==1 else (1 if bit==2 else 2)
 	message=Riddle.clues(seed_value)[index]
 
+func exploration_goals()->Array:
+	return Exploration.goals(self)
 func cargo_status()->String:
 	if cargo.version==0:return ""
 	match cargo.state:

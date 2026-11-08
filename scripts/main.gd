@@ -29,7 +29,7 @@ var sound_bank: Dictionary = {}
 var muted := false
 var sound_event_count := 0
 var last_sound_event := ""
-const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"regent","Z":"archivist","H":"stalker","W":"sentinel"}
+const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"gate_brute","Z":"archivist","H":"ferryman","W":"jailer"}
 var history: Array = []
 
 var travel_menu := false
@@ -48,6 +48,8 @@ var book := false
 var book_page := 0
 var journal := false
 var journal_page := 0
+var journal_details := false
+var pinned_target := ""
 var growth := true
 var growth_tab := 0
 var gear_page := 0
@@ -115,7 +117,7 @@ func _ready():
 		var sound_path := "res://assets/audio/%s.wav" % id
 		if ResourceLoader.exists(sound_path): sound_bank[id]=load(sound_path)
 	if ResourceLoader.exists("res://assets/tower.png"): art = load("res://assets/tower.png")
-	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent","archivist","ilen","mira"]:
+	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent","archivist","gate_brute","ferryman","jailer","ilen","mira"]:
 		var path := "res://assets/combat/%s.png" % id
 		if ResourceLoader.exists(path): combat_art[id]=load(path)
 	for id in ["winch","maul"]:
@@ -171,7 +173,7 @@ func _draw():
 				draw_cargo_icon(p+Vector2(CELL/2,CELL/2),true)
 			else:
 				draw_token(p+Vector2(CELL/2,CELL/2),t)
-				if t=="Q" and world.cargo.version==1 and world.cargo.destination=="crown":
+				if crown_cargo_marker(Vector2i(x,y)):
 					draw_cargo_icon(p+Vector2(47,47),world.cargo.state=="shipped",26)
 			if hover == Vector2i(x,y): draw_rect(Rect2(p,Vector2(CELL,CELL)),Color(0.4,0.85,0.76,0.35),false,2)
 	if world.expedition_revision>=3:
@@ -187,6 +189,7 @@ func _draw():
 				draw_line(center+Vector2(-toward*12,0),center+Vector2(toward*12,0),TEAL,3)
 				draw_line(center+Vector2(toward*12,0),center+Vector2(toward*5,-7),TEAL,3)
 				draw_line(center+Vector2(toward*12,0),center+Vector2(toward*5,7),TEAL,3)
+	draw_target_marker()
 	var hero := ORIGIN+Vector2(world.pos)*CELL+Vector2(CELL/2,CELL/2)
 	draw_circle(hero,19+sin(tick*3)*1.5,Color(0.4,0.85,0.76,0.15))
 	if map_art.has(world.hero_id):
@@ -247,7 +250,7 @@ func draw_sidebar():
 	if ui_notice!="": label_at(Vector2(768,422),"F5: retry pending save / L: reload stored journey",13,MUTED)
 	label_at(Vector2(768,326),folio_progress_text(),16,GOLD)
 	label_at(Vector2(768,354),"NEW TALENT AVAILABLE  [C]" if not world.talent_options().is_empty() else "C: hero, equipment and skills",15,TEAL)
-	draw_wrapped(Vector2(768,388),quest_hint(),460,16,GOLD,2)
+	draw_wrapped(Vector2(768,388),pinned_target_text(),460,16,GOLD,2)
 	draw_wrapped(Vector2(768,441),status_message(),460,15,TEAL,3)
 	label_at(Vector2(768,512),"Walking safely... Any key or click stops." if not walk_route.is_empty() else "Click clear floor to walk. Other objects: inspect only.",14,MUTED)
 	var titles := ["UNDO  U","SAVE (CLICK)","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J","SAFE TRAVEL  T"]
@@ -517,7 +520,8 @@ func draw_comparison():
 		label_at(Vector2(720,y+25),"Skill %d / %s" % [int(preview.get("skill_level",10)),Attunement.TEMPLATES[preview.attunement].name if preview.get("attunement","none")!="none" else "Original equipment"],13,TEAL)
 		if preview.get("valid",false): label_at(Vector2(235,y+42),world.victory_reward_text(preview),12,TEAL)
 	label_at(Vector2(225,615),"No equipment changes here. Compare trade-offs, then choose in C.",16,TEAL)
-	label_at(Vector2(225,655),"V / Esc / click outside closes. Reading spends nothing.",15,MUTED)
+	label_at(Vector2(225,638),"Current build only; changes on the way to this enemy are not included.",13,MUTED)
+	label_at(Vector2(225,663),"V / Esc / click outside closes. Reading spends nothing.",14,MUTED)
 func chapter_button() -> Rect2:
 	return Rect2(395,465,490,55)
 func draw_victory():
@@ -535,6 +539,8 @@ func draw_victory():
 	panel(Rect2(395,575,490,48),Color("253748"))
 	label_at(Vector2(408,606),"2  Finish chapter one and record" if not world.expedition_started else "2  Settle final victory",18,GOLD)
 	label_at(Vector2(395,650),"Nothing is settled until you explicitly confirm.",15,MUTED)
+func crown_cargo_marker(point: Vector2i) -> bool:
+	return world.cargo.version==1 and world.cargo.destination=="crown" and world.floor_index==4 and point==Vector2i(1,3)
 func draw_cargo_icon(center: Vector2, full: bool, size:=60.0):
 	var icon: String="cargo" if full else "cargo_empty"
 	if map_art.has(icon): draw_texture_rect(map_art[icon],Rect2(center-Vector2.ONE*size/2,Vector2.ONE*size),false)
@@ -995,11 +1001,59 @@ func open_journal():
 	comparison=false
 	journal=not journal
 	journal_page=0
+	journal_details=false
 	book=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 func floor_has(index: int, token: String) -> bool:
 	for row in world.floors[index]:
 		if token in row: return true
 	return false
+func return_target_rows() -> Array:
+	return world.exploration_goals() if world!=null else []
+func validate_pinned_target():
+	if pinned_target=="": return
+	for row in return_target_rows():
+		if row.id==pinned_target: return
+	pinned_target=""
+func toggle_target(index: int):
+	var rows:=return_target_rows()
+	if index<0 or index>=rows.size(): return
+	pinned_target="" if pinned_target==rows[index].id else str(rows[index].id)
+	queue_redraw()
+func pinned_target_text() -> String:
+	validate_pinned_target()
+	for row in return_target_rows():
+		if row.id==pinned_target:
+			return target_heading(row)+" / "+display(row.status)
+	return "J: return targets" if not return_target_rows().is_empty() else quest_hint()
+func target_heading(row: Dictionary) -> String:
+	return (display("Floor %d" % (int(row.floor)+1))+" / " if int(row.floor)>=0 else "")+display(row.title)
+func return_target_rect(index: int) -> Rect2:
+	return Rect2(250,194+index*108,780,100)
+func draw_return_targets():
+	var rows:=return_target_rows()
+	if rows.is_empty(): draw_wrapped(Vector2(260,245),"No unfinished known targets. Explore to discover more.",730,18,MUTED,3)
+	for i in rows.size():
+		var row: Dictionary=rows[i]
+		var r:=return_target_rect(i)
+		panel(r,Color("214337") if row.id==pinned_target else Color("172b3c"))
+		label_at(r.position+Vector2(12,24),str(i+1)+"  "+target_heading(row),18,GOLD)
+		var lines: Array=row.lines
+		for j in mini(lines.size(),3):
+			var line: String=display(str(lines[j]))
+			var size:=14
+			while size>11 and font.get_string_size(line,HORIZONTAL_ALIGNMENT_LEFT,-1,size).x>748: size-=1
+			label_at(r.position+Vector2(12,45+j*19),line,size,INK)
+	label_at(Vector2(260,663),"1-4 / click: pin or unpin. Read-only; no movement or collection.",14,TEAL)
+	label_at(Vector2(260,688),"J / Esc: close. Tab: detailed notes.",14,MUTED)
+func draw_target_marker():
+	validate_pinned_target()
+	for row in return_target_rows():
+		if row.id!=pinned_target or int(row.floor)!=world.floor_index: continue
+		var point: Vector2i=row.pos
+		if point.x<0 or point.y<0 or not world.floor_seen[world.floor_index]: continue
+		var p:=ORIGIN+Vector2(point)*CELL
+		draw_rect(Rect2(p+Vector2(3,3),Vector2(58,58)),GOLD,false,3)
+		label_at(p+Vector2(4,17),"J",14,GOLD)
 func journal_lines() -> Array:
 	var entries: Array=[]
 	entries.append("Seed %d / %s / floor %d / %d steps" % [world.seed_value,Progression.HEROES[world.hero_id].name,world.floor_index+1,world.moves])
@@ -1073,7 +1127,12 @@ func draw_journal():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
 	panel(Rect2(230,100,820,610),Color("0c1928"))
 	label_at(Vector2(260,144),"JOURNEY NOTES",26,GOLD)
-	label_at(Vector2(260,174),"Only what you have discovered. Reading spends nothing.",15,MUTED)
+	label_at(Vector2(260,174),"Read-only snapshot. Close this journal, then press L to reload." if session!=null and session.read_only else "Only what you have discovered. Reading spends nothing.",15,MUTED)
+	panel(Rect2(800,121,220,37),Color("253748"))
+	label_at(Vector2(812,147),"TAB: TARGETS" if journal_details else "TAB: DETAILS",14,TEAL)
+	if not journal_details:
+		draw_return_targets()
+		return
 	var lines := journal_lines()
 	var pages := maxi(1,ceili(lines.size()/12.0))
 	journal_page=clampi(journal_page,0,pages-1)
@@ -1281,7 +1340,12 @@ func _unhandled_input(event):
 			else: book=false
 			return
 		if journal:
-			if Rect2(830,651,80,37).has_point(get_global_mouse_position()): journal_page=maxi(0,journal_page-1)
+			if Rect2(800,121,220,37).has_point(get_global_mouse_position()): journal_details=not journal_details
+			elif not journal_details:
+				for i in return_target_rows().size():
+					if return_target_rect(i).has_point(get_global_mouse_position()): toggle_target(i); return
+				if not Rect2(230,100,820,610).has_point(get_global_mouse_position()): journal=false
+			elif Rect2(830,651,80,37).has_point(get_global_mouse_position()): journal_page=maxi(0,journal_page-1)
 			elif Rect2(925,651,90,37).has_point(get_global_mouse_position()): journal_page+=1
 			elif not Rect2(230,100,820,610).has_point(get_global_mouse_position()): journal=false
 			return
@@ -1359,6 +1423,10 @@ func _unhandled_input(event):
 		if event.keycode==KEY_E: interaction=not interaction; winch_pending=""; cargo_pending=false; cargo_inspecting=false; interaction_page=0; journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
 		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
 		if journal:
+			if event.keycode==KEY_TAB: journal_details=not journal_details; return
+			if not journal_details:
+				if event.keycode>=KEY_1 and event.keycode<=KEY_4: toggle_target(event.keycode-KEY_1)
+				return
 			if event.keycode==KEY_BRACKETLEFT: journal_page=maxi(0,journal_page-1)
 			if event.keycode==KEY_BRACKETRIGHT: journal_page+=1
 			return
@@ -1488,6 +1556,8 @@ func can_mutate() -> bool:
 func apply_session_result(result: Dictionary):
 	if result.get("ok",false):
 		world=session.world; history=session.history; ui_notice=""
+		if result.get("status","")=="loaded" or result.get("effect",{}).get("operation","")=="create": pinned_target=""
+		validate_pinned_target()
 		if strategy_pending(): cancel_walk()
 		if result.get("committed",false): dispatch_committed_effect(result.get("effect",{}))
 	else:
