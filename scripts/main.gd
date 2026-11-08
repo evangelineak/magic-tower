@@ -19,7 +19,7 @@ var sound_bank: Dictionary = {}
 var muted := false
 var sound_event_count := 0
 var last_sound_event := ""
-const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"regent","Z":"archivist","H":"stalker"}
+const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"regent","Z":"archivist","H":"stalker","W":"sentinel"}
 var history: Array = []
 var save_path := "user://journey-v4.json"
 var book := false
@@ -28,6 +28,7 @@ var journal := false
 var journal_page := 0
 var growth := true
 var growth_tab := 0
+var gear_page := 0
 var reset_mode := ""
 var battle_details: Dictionary = {}
 var battle_kind := "s"
@@ -71,7 +72,7 @@ func _ready():
 		var sound_path := "res://assets/audio/%s.wav" % id
 		if ResourceLoader.exists(sound_path): sound_bank[id]=load(sound_path)
 	if ResourceLoader.exists("res://assets/tower.png"): art = load("res://assets/tower.png")
-	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent","archivist"]:
+	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent","archivist","ilen","mira"]:
 		var path := "res://assets/combat/%s.png" % id
 		if ResourceLoader.exists(path): combat_art[id]=load(path)
 	buttons = [Rect2(350,720,120,38),Rect2(482,720,120,38),Rect2(614,720,120,38),Rect2(746,720,143,38),Rect2(938,745,300,35),Rect2(36,710,272,38),Rect2(36,66,272,30)]
@@ -141,9 +142,10 @@ func _draw():
 		var cost: int = world.damage(target)
 		label_at(Vector2(938,589),World.ENEMIES[target].name,20)
 		label_at(Vector2(938,619),"Predicted loss: %s" % (str(cost)+" HP" if cost>=0 else "IMPOSSIBLE"),16,GOLD)
-		if target=="u": label_at(Vector2(938,637),"AMBUSH: enemy strikes first",12,Color("ef928f"))
-		if target=="b": label_at(Vector2(938,637),"THORNS: 2 HP / your attack",12,Color("ef928f"))
-		if target=="w": label_at(Vector2(938,637),"CHARGE: every third retaliation x2",12,Color("ef928f"))
+		var traits: Array=enemy_traits(World.ENEMIES[target],true)
+		var translated: Array=[]
+		for trait_line in traits: translated.append(display(trait_line))
+		label_at(Vector2(938,637)," / ".join(translated),11,Color("ef928f"))
 		var forecast: Dictionary=world.battle_preview(target)
 		label_at(Vector2(938,660),"Extra opening hit: %d / Shield: %d" % [int(forecast.get("feint_damage",0)),int(forecast.get("equipment_blocked",0))],12,GOLD)
 	else:
@@ -184,6 +186,10 @@ func draw_victory():
 	else: label_at(Vector2(395,480),"Both chapters are complete. Your journey is saved.",16,TEAL)
 	label_at(Vector2(395,582),"R twice: replay / J: journal / U: undo",15,MUTED)
 func draw_token(c: Vector2, t: String):
+	var npc_art: String={"J":"ilen","t":"mira"}.get(t,"")
+	if combat_art.has(npc_art):
+		draw_texture_rect(combat_art[npc_art],Rect2(c-Vector2(25,25),Vector2(50,50)),false)
+		return
 	if ENEMY_ART.has(t) and combat_art.has(ENEMY_ART[t]):
 		draw_texture_rect(combat_art[ENEMY_ART[t]],Rect2(c-Vector2(24,24),Vector2(48,48)),false)
 		if t in ["u","b"]:
@@ -208,14 +214,14 @@ func draw_token(c: Vector2, t: String):
 			draw_colored_polygon(PackedVector2Array([c+Vector2(0,-14),c+Vector2(10,0),c+Vector2(0,14),c+Vector2(-10,0)]),col)
 		"h":
 			draw_circle(c+Vector2(0,4),11,Color("7ce0bf")); draw_rect(Rect2(c-Vector2(5,13),Vector2(10,14)),Color("b2ead9")); draw_line(c+Vector2(-4,3),c+Vector2(4,3),Color("e5fff5"),2)
-		"s","g","u","b","w","B","V","K","Z","H":
+		"s","g","u","b","w","B","V","K","Z","H","W":
 			var col: Color = {"s":Color("8fc57f"),"g":Color("b5a2e1"),"u":Color("87b9dc"),"b":Color("9dcc83")}.get(t,Color("ed987d"))
 			draw_circle(c,15 if t in ["s","g","u","b"] else 19,col)
 			draw_circle(c+Vector2(-5,-2),3,Color("132330")); draw_circle(c+Vector2(5,-2),3,Color("132330"))
 			if t in ["u","b"]: label_at(c+Vector2(12,-12),"!" if t=="u" else "*",16,GOLD)
 			if t in ["B","V","K","Z"]:
 				for i in range(3): draw_line(c+Vector2(-10+i*10,-14),c+Vector2(-10+i*10,-22),GOLD,4)
-		"M","C","E","F","T","N","Q","J","I","O","R","X","U","Y":
+		"M","C","E","F","T","N","Q","J","I","O","R","X","U","Y","t":
 			var color := GOLD if t in ["M","T","C"] else TEAL
 			draw_rect(Rect2(c-Vector2(16,16),Vector2(32,32)),color.darkened(0.65))
 			draw_rect(Rect2(c-Vector2(16,16),Vector2(32,32)),color,false,2)
@@ -237,6 +243,13 @@ func draw_token(c: Vector2, t: String):
 		"<",">":
 			for i in range(4): draw_line(c+Vector2(-15,12-i*7),c+Vector2(15-i*6,12-i*7),TEAL,3)
 			label_at(c+Vector2(8,-8),"+" if t==">" else "-",16,TEAL)
+func enemy_traits(enemy: Dictionary, compact:=false) -> Array:
+	var traits: Array=[]
+	if enemy.get("first_strike",false): traits.append("First strike" if compact else "Strikes first, even if you one-shot it.")
+	if int(enemy.get("thorns",0))>0: traits.append(("Thorns %d" if compact else "%d thorns per hit, including the final hit.") % int(enemy.thorns))
+	if int(enemy.get("heavy_every",0))>0: traits.append("Charge / 3" if compact else "Every 3rd retaliation doubles; feint counts.")
+	if traits.is_empty() and not compact: traits.append("Normal retaliation after your attacks.")
+	return traits
 func draw_book():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
 	panel(Rect2(235,105,810,610),Color("0c1928"))
@@ -244,24 +257,22 @@ func draw_book():
 	var kinds: Array=[]
 	for kind in World.ENEMIES:
 		if kind!="B": kinds.append(kind)
-	book_page=clampi(book_page,0,maxi(0,ceili(kinds.size()/8.0)-1))
-	var visible_kinds: Array=kinds.slice(book_page*8,book_page*8+8)
-	if kinds.size()>8:
+	book_page=clampi(book_page,0,maxi(0,ceili(kinds.size()/6.0)-1))
+	var visible_kinds: Array=kinds.slice(book_page*6,book_page*6+6)
+	if kinds.size()>6:
 		panel(Rect2(760,115,120,40),Color("253748")); label_at(Vector2(772,141),"PREV",14)
 		panel(Rect2(885,115,140,40),Color("253748")); label_at(Vector2(898,141),"NEXT",14)
 		label_at(Vector2(665,145),"Page %d   [ / ]" % (book_page+1),12,TEAL)
 	for i in visible_kinds.size():
 		var kind: String=visible_kinds[i]
 		var e: Dictionary=World.ENEMIES[kind]
-		var p := Vector2(265+(i%2)*390,185+floori(i/2.0)*78)
+		var p := Vector2(265+(i%2)*390,185+floori(i/2.0)*97)
 		draw_token(p+Vector2(15,10),kind)
 		label_at(p+Vector2(48,0),e.name,18,GOLD)
 		label_at(p+Vector2(48,24),"HP %d / ATK %d / DEF %d" % [e.hp,e.atk,e.def],14,INK)
-		var mechanic_text: String="Normal retaliation after your attacks."
-		if kind in ["u","H"]: mechanic_text="Strikes first, even if you one-shot it."
-		if kind=="w": mechanic_text="Every 3rd retaliation doubles; feint counts."
-		if kind=="b": mechanic_text="2 thorns / your hit, including final hit."
-		label_at(p+Vector2(48,47),mechanic_text,12,TEAL)
+		var traits: Array=enemy_traits(e)
+		for t in traits.size(): label_at(p+Vector2(48,44+t*14),traits[t],12,TEAL)
+
 	var lines := ["Exact forecasts include ambush, thorns, gear, skills and talents.","Thorns ignores DEF. Brace and total-loss reduction still apply.","C: hero / gear / talents. E: local choices, quests and ledger.","J: researcher / I: sample / O: valve / R: relic / X: encounter.","Interest: first entry to floors 4 and 5 only, never steps or waiting.","Grow stronger and revisit. U reverses the entire previous action.","L: 2-key lock / $: +60 gold / A: +5 ATK / P: +140 HP, +1 focus.","H / Esc / click closes. Battles are cosmetic replays; any key skips."]
 	for i in lines.size(): label_at(Vector2(265,505+i*27),lines[i],15,MUTED)
 func token_name(t: String) -> String:
@@ -269,7 +280,7 @@ func token_name(t: String) -> String:
 	if t=="~" and world.water_choice=="drain": return "Drained passage to the relic vault"
 	if t=="X": return world.event_title()
 	if t=="=": return "Expedition bridge: open" if world.expedition_bridge else "Broken bridge: engineering unlocks a shortcut"
-	return {"U":"Expedition camp: finite tactical supplies","Y":"Engineering station: inspect local options","M":"Merchant: calibration needs a powered lift","C":"Core: lift powers calibration; forge/sale forfeits it","E":"The old elevator","F":"Workshop: a lasting choice","T":"A treasure worth returning for","N":"An inscription. Read carefully.","Q":"A door with a secret","<":"Return to a lower floor",">":"Ascend: check your ledger","a":"Ruby: +5 attack","d":"Sapphire: +4 defense","h":"Spring water: +70 HP","k":"Gold key","D":"Gold door: costs 1 key","L":"Double lock: costs 2 keys","$":"Gold cache: +60 gold","A":"Blade relic: +5 attack","P":"Supplies: +140 HP / +1 focus","J":"A traveler with a request","I":"An unusual research sample","O":"Drain the route or keep the spring?","~":"Deep water blocks this route","R":"A choice of equipment","X":"A costly opportunity"}.get(t,"SCOUT BEFORE YOU STRIKE")
+	return {"t":"Mira: the missing apprentice","U":"Expedition camp: finite tactical supplies","Y":"Engineering station: inspect local options","M":"Merchant: calibration needs a powered lift","C":"Core: lift powers calibration; forge/sale forfeits it","E":"The old elevator","F":"Workshop: a lasting choice","T":"A treasure worth returning for","N":"An inscription. Read carefully.","Q":"A door with a secret","<":"Return to a lower floor",">":"Ascend: check your ledger","a":"Ruby: +5 attack","d":"Sapphire: +4 defense","h":"Spring water: +70 HP","k":"Gold key","D":"Gold door: costs 1 key","L":"Double lock: costs 2 keys","$":"Gold cache: +60 gold","A":"Blade relic: +5 attack","P":"Supplies: +140 HP / +1 focus","J":"Ilen: cartographer and mentor","I":"An unusual research sample","O":"Drain the route or keep the spring?","~":"Deep water blocks this route","R":"A choice of equipment","X":"A costly opportunity"}.get(t,"SCOUT BEFORE YOU STRIKE")
 func nearby(t: String) -> bool:
 	for d in [Vector2i.ZERO,Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 		if world.tile(world.pos+d)==t: return true
@@ -282,6 +293,7 @@ func available_actions() -> Array:
 		if pending_reason=="door": return rows
 	if world.debt()>0: rows.append(["repay","Repay using available gold (fees, interest, principal)"])
 	rows.append_array(world.camp_offers())
+	rows.append_array(world.npc_offers())
 	if nearby("M"):
 		if (world.seal_clues & 1)==0: rows.append(["seal_contract","Read the old contract: calibration clue / lift power required"])
 		rows.append(["buy","Buy armor-breaker: 60 gold / +12 ATK (once)"])
@@ -409,13 +421,13 @@ func perform_action(id: String):
 			book=false; journal=false; growth=false; interaction=false; battle_time=0.0
 			checkpoint_pending=Vector2i.ZERO; pending_reason=""
 		if id in ["spring","drain","quest_bridge","camp_bridge"]: play_sound("water")
-		elif id in ["expedition","camp_medicine","camp_focus","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher"]: play_sound("pickup")
+		elif id in ["expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher"]: play_sound("pickup")
 		if id.begins_with("hero_") or id.begins_with("talent_"): growth=false
 		history.append(before)
 		if history.size()>100: history.pop_front()
 		save_game(false)
 	else:
-		world.message={"camp_medicine":"Need 70 gold, remaining medicine stock, and a nearby camp (U).","camp_focus":"Need 55 gold, remaining focus stock, missing focus, and a nearby camp (U).","camp_bridge":"Need 80 gold, an unbuilt bridge, and a nearby engineer (Y).","quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"Solve the powered calibration before choosing a reward."}.get(id,world.message if id.begins_with("secret_") or id.begins_with("seal_") or id.begins_with("camp_") or id=="expedition" else "This choice is unavailable. Check its cost and requirements.")
+		world.message={"camp_medicine":"Need 70 gold, remaining medicine stock, and a nearby camp (U).","camp_focus":"Need 55 gold, remaining focus stock, missing focus, and a nearby camp (U).","camp_bridge":"Need 80 gold, an unbuilt bridge, and a nearby engineer (Y).","quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"Solve the powered calibration before choosing a reward."}.get(id,world.message if id.begins_with("secret_") or id.begins_with("seal_") or id.begins_with("camp_") or id=="expedition" or id.begins_with("rescue_") else "This choice is unavailable. Check its cost and requirements.")
 func quest_hint() -> String:
 	return ["J: find the researcher's request","QUEST: seek the sample (I)","SURVEY: J reward or F bridge","SURVEY: delivered to J","SURVEY: flood bridge built"][clampi(world.quest_state,0,4)]
 func skill_description() -> String:
@@ -435,6 +447,11 @@ func growth_actions() -> Array:
 		2:
 			for id in Progression.talent_options(world.kills,world.talents): rows.append(["talent_"+id,Progression.TALENTS[id].name,Progression.TALENTS[id].description])
 	return rows
+func visible_growth_actions() -> Array:
+	var rows: Array=growth_actions()
+	if growth_tab!=1: return rows
+	gear_page=clampi(gear_page,0,maxi(0,ceili(rows.size()/3.0)-1))
+	return rows.slice(gear_page*3,gear_page*3+3)
 func open_growth():
 	growth=not growth; journal=false; interaction=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if growth: growth_tab=2 if not Progression.talent_options(world.kills,world.talents).is_empty() else 0
@@ -449,7 +466,7 @@ func draw_growth():
 		label_at(r.position+Vector2(15,26),["HERO & SKILL","EQUIPMENT","TALENTS"][i],17)
 	var subtitle: String = ["Choose before your first action. Later: use your hero's skill.","Switch owned gear freely. Check the battle forecast after switching.","One choice at 3 / 7 / 12 kills. Each tier's choices are exclusive."][growth_tab]
 	label_at(Vector2(225,245),subtitle,16,MUTED)
-	var rows := growth_actions()
+	var rows := visible_growth_actions()
 	for i in rows.size():
 		var r := Rect2(225,270+i*87,830,76)
 		panel(r,Color("203343"))
@@ -474,7 +491,11 @@ func draw_growth():
 		label_at(Vector2(225,565),"Learned: "+(", ".join(learned) if not learned.is_empty() else "none yet"),15,TEAL)
 		if rows.is_empty(): label_at(Vector2(225,300),"No new choice yet. Defeat foes and return.",18,INK)
 	if growth_tab==1:
-		label_at(Vector2(225,610),"DUELIST COST: one EXTRA opening retaliation, even on a one-shot kill.",15,Color("ef928f"))
+		if growth_actions().size()>3:
+			panel(Rect2(780,548,120,38),Color("253748")); label_at(Vector2(792,574),"PREV",14)
+			panel(Rect2(915,548,120,38),Color("253748")); label_at(Vector2(927,574),"NEXT",14)
+			label_at(Vector2(530,574),"Page %d   [ / ]" % (gear_page+1),14,TEAL)
+		if world.equipped=="duelist": label_at(Vector2(225,610),"DUELIST COST: one EXTRA opening retaliation, even on a one-shot kill.",15,Color("ef928f"))
 	else: label_at(Vector2(225,610),"Focus is finite. First visits restore it; repeating floors cannot farm it.",15,MUTED)
 	label_at(Vector2(225,646),display(world.message).left(105),14,TEAL)
 	label_at(Vector2(225,697),"Choose 1-3. Tab changes section. Esc: keep default Warden." if world.moves==0 else "Click a card / press 1-3. Tab changes section. C / Esc closes.",15,MUTED)
@@ -492,6 +513,7 @@ func journal_lines() -> Array:
 	if world.expedition_started:
 		entries.append("Chapter II: supplies are finite; old floors remain available.")
 		entries.append("Camp stock: medicine %d / focus %d. Bridges: %s." % [world.camp_medicine_left,world.camp_focus_left,"open" if world.expedition_bridge else "closed"])
+	entries.append_array(world.npc_journal())
 	entries.append("Gold %d / debt %d = principal %d + fee %d + interest %d" % [world.gold,world.debt(),world.principal,world.fees,world.interest])
 	if world.debt()==0:
 		entries.append("No outstanding debt. Walking and waiting never incur interest.")
@@ -572,7 +594,7 @@ func draw_battle():
 	var phase := clampf(1.0-battle_time/2.4,0.0,1.0)
 	var hero_pos := Vector2(450,345)
 	var enemy_pos := Vector2(825,345)
-	var is_ambush := battle_kind=="u"
+	var is_ambush: bool=World.ENEMIES.get(battle_kind,{}).get("first_strike",false)
 	var phase_text := "Readying the strike"
 	if phase>=0.15 and phase<0.30 and is_ambush:
 		phase_text="AMBUSH: enemy strikes first"
@@ -586,7 +608,7 @@ func draw_battle():
 		if battle_hero=="scholar": draw_circle(projectile,8,Color("c5a3ed"))
 		else: draw_line(projectile-Vector2(17,8),projectile+Vector2(17,-8),GOLD,3)
 	elif phase>=0.60 and phase<0.80:
-		phase_text="Thorns reflect damage" if battle_kind=="b" else "Retaliation resolved"
+		phase_text="Thorns reflect damage" if int(World.ENEMIES.get(battle_kind,{}).get("thorns",0))>0 else "Retaliation resolved"
 		if int(battle_details.get("normal_damage",0))>0: enemy_pos.x-=sin((phase-0.60)/0.20*PI)*45
 		draw_circle(enemy_pos,50,Color(0.85,0.75,0.4,0.25),false,3)
 	else:
@@ -598,7 +620,7 @@ func draw_battle():
 	battle_figure(ENEMY_ART.get(battle_kind,""),enemy_pos,false)
 	label_at(Vector2(365,420),Progression.HEROES[battle_hero].name,19,TEAL)
 	label_at(Vector2(730,420),battle_name,19,GOLD)
-	label_at(Vector2(320,463),"%d rounds  /  %d damage per hit  /  %d HP lost" % [int(battle_details.get("rounds",0)),int(battle_details.get("hit",0)),battle_loss],19)
+	label_at(Vector2(320,463),"%d hero strikes  /  %d damage per hit  /  %d HP lost" % [int(battle_details.get("rounds",0)),int(battle_details.get("hit",0)),battle_loss],19)
 	var detail_lines := battle_breakdown(battle_details)
 	for i in detail_lines.size(): label_at(Vector2(320,489+i*22),detail_lines[i],14,MUTED if i<2 else TEAL)
 	label_at(Vector2(320,582),"Cosmetic replay. Damage resolves once; any key / click skips.",14,GOLD)
@@ -637,9 +659,12 @@ func _unhandled_input(event):
 			elif not Rect2(230,100,820,610).has_point(get_global_mouse_position()): journal=false
 			return
 		if growth:
+			if growth_tab==1 and growth_actions().size()>3:
+				if Rect2(780,548,120,38).has_point(get_global_mouse_position()): gear_page=maxi(0,gear_page-1); return
+				if Rect2(915,548,120,38).has_point(get_global_mouse_position()): gear_page+=1; return
 			for i in 3:
 				if Rect2(225+i*270,175,250,40).has_point(get_global_mouse_position()): growth_tab=i; return
-			var choices := growth_actions()
+			var choices := visible_growth_actions()
 			for i in choices.size():
 				if Rect2(225,270+i*87,830,76).has_point(get_global_mouse_position()): perform_action(choices[i][0]); return
 			if not Rect2(195,80,890,650).has_point(get_global_mouse_position()): growth=false
@@ -678,8 +703,10 @@ func _unhandled_input(event):
 			return
 		if growth:
 			if event.keycode==KEY_TAB: growth_tab=(growth_tab+1)%3; return
+			if growth_tab==1 and event.keycode==KEY_BRACKETLEFT: gear_page=maxi(0,gear_page-1); return
+			if growth_tab==1 and event.keycode==KEY_BRACKETRIGHT: gear_page+=1; return
 			var index: int=event.keycode-KEY_1
-			var choices := growth_actions()
+			var choices := visible_growth_actions()
 			if index>=0 and index<choices.size(): perform_action(choices[index][0])
 			return
 		if interaction:
@@ -707,7 +734,7 @@ func _unhandled_input(event):
 func request_restart(mode: String):
 	if reset_armed and reset_mode==mode:
 		world=World.new(world.seed_value if mode=="replay" else randi_range(1,2147483646))
-		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 		save_game(false)
 	else:
 		reset_armed=true; reset_mode=mode
@@ -759,11 +786,11 @@ func load_game():
 	if not FileAccess.file_exists(save_path): world.message="No saved journey yet."; return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
 	if not parsed is Dictionary: world.message="Save is invalid. Current journey is unchanged."; return
-	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5
+	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6
 	if upgrading:
 		var probe=World.new(0)
 		if not probe.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
-		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else ".pre-schema6.json")
+		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else ".pre-schema7.json"))
 		if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(backup_path)):
 			world.message="Could not back up the old save. Current journey is unchanged."
 			return
@@ -775,6 +802,6 @@ func load_game():
 	if not world.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
 	if upgrading: save_game(false)
 	history.clear()
-	journal=false; journal_page=0; interaction=false; growth=false; book=false
+	journal=false; journal_page=0; interaction=false; growth=false; gear_page=0; book=false
 	checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	battle_time=0.0

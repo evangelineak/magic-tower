@@ -57,7 +57,7 @@ func _init():
 			var default_value = false if field=="first_strike" else 0
 			check(Generator.ENEMIES[enemy_id].get(field,default_value)==World.ENEMIES[enemy_id].get(field,default_value),"proof enemy trait matches World: %s.%s"%[enemy_id,field])
 	for enemy_id in World.ENEMIES:
-		if enemy_id not in ["B","V","Z","H"]: check(Generator.ENEMIES.has(enemy_id),"proof includes each non-optional enemy")
+		if enemy_id not in ["B","V","Z","H","W"]: check(Generator.ENEMIES.has(enemy_id),"proof includes each non-optional enemy")
 	check(Generator.damage("w",{"hp":500,"atk":38,"def":8})==288,"proof includes every-third-retaliation heavy damage")
 	var baseline := Generator.normalize(World.MAPS)
 	var zero := Generator.generate(0,World.MAPS)

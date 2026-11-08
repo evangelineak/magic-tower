@@ -3,6 +3,8 @@ extends RefCounted
 # Pure display catalog. English simulation IDs and rule text remain untouched.
 # Dynamic templates retain argument order; %% is a literal percent sign.
 const EXACT = {
+"Repeating crossbow":"连发弩",
+"-3 ATK / -6 DEF. Fire up to three hits before counters begin. First strike and thorns still apply.":"攻击 -3 / 防御 -6。开场最多连射三次后敌人才开始普通反击；先制与每击荆棘仍生效。",
 	"Warden": "护卫",
 	"Brace": "架盾",
 	"Spend 1 focus: block 35% of total battle loss (rounded down).": "消耗1专注：下场战斗减伤35%（减伤量向下取整）。",

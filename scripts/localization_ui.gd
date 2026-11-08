@@ -1,5 +1,10 @@
 extends RefCounted
 const EXACT = {
+"First strike":"先制",
+"Charge / 3":"每三次反击重击",
+"Mira: the missing apprentice":"米拉：失踪的学徒",
+"Ilen: cartographer and mentor":"伊莲：制图师与导师",
+
 "Ferry Warden":"渡口守卫",
 "Camp stock is finite and shared across all three new floors.":"营地库存有限，新增三层共享库存。",
 "Medicine is used immediately. Focus purchases require missing focus.":"药剂购买后立即使用；专注未满时才可购买专注。",
@@ -277,6 +282,9 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+ ["Thorns %d","荆棘 %d"],
+ ["%d thorns per hit, including the final hit.","每次攻击反伤 %d，包括最后一击。"],
+ ["%d hero strikes  /  %d damage per hit  /  %d HP lost","攻击 %d 次 / 每击 %d 伤害 / 损失 %d 生命"],
  ["Camp stock: medicine %d / focus %d. Bridges: %s.","营地库存：药剂 %d / 专注 %d。远征桥：%s。"],
  ["FLOOR %d / %d", "楼层 %d / %d"],
   ["Choose 50 voucher: repay %d / receive %d gold", "选择固定 50 账券：抵债 %d / 入袋 %d 金币"],

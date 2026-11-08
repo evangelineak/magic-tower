@@ -1,5 +1,5 @@
 """Original low-poly combat cast. Blender 4.3: blender -b -P tools/build_characters.py
-Eleven transparent sprites and one editable scene; no downloaded assets.
+Thirteen transparent sprites and one editable scene; no downloaded assets.
 All dimensions/materials are authored here; deterministic and CPU-renderable.
 Optional incremental render: blender -b -P tools/build_characters.py -- --only juggernaut
 """
@@ -37,6 +37,8 @@ M={
  'lilac':material('Spell light',(.54,.28,1),.1,2),
 }
 M['brass']=material('Weathered brass',(.49,.28,.075),.72)
+M['navy']=material('Cartographer midnight blue',(.035,.075,.16))
+M['paper']=material('Warm map parchment',(.78,.65,.40))
 active=None
 
 def finish(obj,name,mat):
@@ -315,8 +317,72 @@ for index,z,radius,tilt in [(1,.47,.86,.12),(2,1.41,1.08,-.12),(3,2.69,.65,.16)]
 # A separated floating base fin conveys hover rather than a grounded humanoid.
 cone('Hover fin',(0,.02,.22),.04,.20,.28,'gold',4)
 
+new('ilen')
+# A non-combat cartographer: a navy travelling robe, opened map and brass
+# measuring ring. No borrowed character designs or weapon silhouette.
+cone('Cartographer robe',(0,.035,1.00),.54,.31,1.58,'navy',10)
+cone('Robe hem',(0,.035,.24),.55,.53,.075,'gold',10)
+cone('Linen collar',(0,.035,1.76),.32,.36,.13,'paper',10)
+box('Map belt',(0,-.01,1.15),(.76,.50,.10),'leather',.025)
+box('Belt clasp',(0,-.28,1.15),(.14,.05,.13),'gold',.018)
+for sign in [-1,1]:
+ orb('Soft robe shoulder',(sign*.43,0,1.63),(.24,.25,.25),'navy',1)
+ rod('Wide sleeve',(sign*.48,0,1.52),(sign*.62,-.13,1.19),.17,'navy')
+ orb('Bare hand',(sign*.63,-.15,1.12),(.14,.14,.18),'skin',2)
+orb('Dark hair crown',(0,.035,2.13),(.35,.31,.37),'dark',2)
+orb('Cartographer face',(0,-.18,2.08),(.26,.17,.30),'skin',2)
+for sign in [-1,1]:
+ orb('Long hair',(sign*.28,.035,1.94),(.13,.21,.42),'dark',1)
+box('Swept fringe',(-.09,-.30,2.30),(.39,.09,.12),'dark',.025)
+eyes(2.12,y=-.353,spacing=.105,color='dark')
+# Low-profile round spectacles, two visible lenses without covering the face.
+for x in [-.115,.115]:
+ bpy.ops.mesh.primitive_torus_add(major_segments=20,minor_segments=5,major_radius=.085,minor_radius=.012,location=(x,-.36,2.13),rotation=(math.pi/2,0,0))
+ finish(bpy.context.object,'Measuring spectacles','gold')
+rod('Spectacle bridge',(-.03,-.37,2.13),(.03,-.37,2.13),.01,'gold',6)
+# Unrolled map in front of the left sleeve; route strokes are authored geometry.
+box('Open parchment',(-.62,-.34,1.39),(.59,.045,.61),'paper',.025)
+for z in [1.09,1.69]:
+ scroll=cone('Map roll',(-.62,-.34,z),.066,.066,.67,'paper',10)
+ scroll.rotation_euler[1]=math.pi/2
+curve('Map route',[(-.82,-.37,1.22),(-.69,-.37,1.34),(-.75,-.37,1.47),(-.50,-.37,1.55)],.013,'navy')
+for x,z in [(-.82,1.22),(-.50,1.55)]:orb('Map destination',(x,-.38,z),(.035,.015,.035),'teal',1)
+# An astrolabe-like survey instrument, flat toward the portrait camera.
+bpy.ops.mesh.primitive_torus_add(major_segments=32,minor_segments=6,major_radius=.25,minor_radius=.035,location=(.69,-.18,1.51),rotation=(math.pi/2,0,0))
+finish(bpy.context.object,'Brass survey ring','gold')
+rod('Survey horizontal',(.46,-.18,1.51),(.92,-.18,1.51),.02,'brass')
+rod('Survey vertical',(.69,-.18,1.28),(.69,-.18,1.74),.02,'brass')
+orb('Survey pivot',(.69,-.22,1.51),(.055,.035,.055),'jade',1)
+
+new('mira')
+# A lightly equipped apprentice traveller, not a child soldier: no weapon.
+boots('leather',.88)
+cone('Travel coat',(0,.02,1.12),.40,.31,.82,'green',8)
+box('Canvas belt',(0,-.01,1.02),(.75,.48,.09),'leather',.02)
+for sign in [-1,1]:
+ orb('Jacket shoulder',(sign*.44,.01,1.62),(.23,.24,.24),'green',1)
+ rod('Jacket sleeve',(sign*.48,0,1.49),(sign*.62,-.02,1.15),.135,'green')
+ orb('Traveller hand',(sign*.62,-.05,1.06),(.14,.14,.18),'skin',2)
+orb('Copper hair',(0,.045,2.11),(.35,.31,.34),'leather',2)
+orb('Apprentice face',(0,-.18,2.04),(.27,.17,.29),'skin',2)
+for x,z in [(-.24,2.29),(-.02,2.34),(.20,2.28)]:orb('Wavy fringe',(x,-.20,z),(.16,.14,.13),'leather',1)
+orb('Short tied hair',(.28,.21,2.08),(.15,.18,.19),'leather',1)
+eyes(2.10,y=-.353,spacing=.105,color='dark')
+# Bright scarf is the NPC's primary silhouette/color identifier.
+cone('Teal scarf collar',(0,.00,1.82),.31,.32,.14,'teal',10)
+scarf=box('Scarf front',(0.13,-.32,1.53),(.21,.07,.49),'teal',.025)
+scarf.rotation_euler[1]=-.12
+curve('Scarf trailing edge',[(.15,.19,1.80),(.45,.36,1.78),(.72,.39,1.60)],.085,'teal')
+# Back-mounted leather map tube and parchment tip, readily visible by the head.
+rod('Map carrying tube',(-.40,.26,.95),(-.54,.26,2.10),.14,'leather',10)
+for a,b in [((-.41,.26,1.00),(-.42,.26,1.07)),((-.53,.26,2.02),(-.54,.26,2.10))]:rod('Tube brass rim',a,b,.155,'gold',10)
+rod('Rolled chart',(-.54,.26,2.08),(-.58,.26,2.39),.095,'paper',10)
+rod('Tube shoulder strap',(-.27,-.27,1.68),(.28,-.27,1.13),.035,'leather',6)
+box('Field notebook',(.63,-.16,1.12),(.31,.12,.40),'paper',.025)
+box('Notebook binding',(.48,-.23,1.12),(.055,.035,.40),'teal',.01)
+
 # Shared transparent portrait rig. Each character collection is render-isolated.
-cast=[bpy.data.collections[n] for n in ['warden','ranger','scholar','mossling','sentinel','colossus','regent','stalker','briar','juggernaut','archivist']]
+cast=[bpy.data.collections[n] for n in ['warden','ranger','scholar','mossling','sentinel','colossus','regent','stalker','briar','juggernaut','archivist','ilen','mira']]
 active=bpy.data.collections.new('Portrait rig');bpy.context.scene.collection.children.link(active)
 scene=bpy.context.scene
 scene.world.use_nodes=True
@@ -346,4 +412,4 @@ for coll in cast:
 cast[0].hide_render=False
 scene.render.filepath=os.path.join(OUT,'warden.png')
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT,'characters.blend'),compress=True)
-print('COMBAT CAST COMPLETE: eleven editable characters; rendered '+', '.join(sorted(requested)))
+print('COMBAT CAST COMPLETE: thirteen editable characters; rendered '+', '.join(sorted(requested)))

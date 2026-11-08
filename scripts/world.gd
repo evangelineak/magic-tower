@@ -19,6 +19,7 @@ const ENEMIES = {
 "w": {"name":"Brass Juggernaut", "hp":180, "atk":32, "def":20, "gold":24, "heavy_every":3},
 "V": {"name":"Vault Colossus", "hp":180, "atk":100, "def":65, "gold":30},
 "K": {"name":"Astral Regent", "hp":450, "atk":65, "def":40, "gold":100},
+"W": {"name":"Archive Gaoler", "hp":260, "atk":68, "def":48, "gold":40, "thorns":6, "heavy_every":3},
 "H": {"name":"Ferry Warden", "hp":180, "atk":62, "def":30, "gold":60, "first_strike":true},
 "Z": {"name":"Ashen Castellan", "hp":720, "atk":65, "def":45, "gold":160},
 "B": {"name":"Hollow King", "hp":220, "atk":42, "def":20, "gold":100}}
@@ -65,6 +66,9 @@ var atk := 18
 var defense := 8
 var keys := 0
 var gold := 0
+var expedition_revision := 0
+var rescue_state := 0
+var rescue_reward := ""
 var expedition_started := false
 var expedition_bridge := false
 var camp_medicine_left := 2
@@ -88,6 +92,22 @@ func floor_title() -> String:
 func chapter_offers() -> Array:
 	if won and not expedition_started and floors.size()==5 and _count_token("K")==0:
 		return [["expedition","Continue expedition: 3 more floors / +120 HP once"]]
+	return []
+func npc_offers() -> Array:
+	if won or expedition_revision==1: return []
+	var offers: Array=[]
+	if nearby("J"):
+		if rescue_state==0: offers.append(["rescue_accept","Ilen: look for apprentice Mira beyond the old tower"])
+		elif rescue_state==2: offers.append(["rescue_repeater","Bring Mira home: receive the repeating crossbow / camp help forgone"])
+	if nearby("U") and rescue_state==2:
+		offers.append(["rescue_supplies","Let Mira help the camp: +40 gold / +1 medicine stock / +1 focus stock"])
+	return offers
+func npc_journal() -> Array:
+	if expedition_revision==1: return []
+	match rescue_state:
+		1: return ["Ilen seeks Mira. Search the seventh floor; a dangerous gaoler guards her."]
+		2: return ["Mira is safe. Before defeating Z, return to Ilen at J for a repeating crossbow, or U for camp supplies. Choose once."]
+		3: return ["Mira returned home to Ilen. The repeating crossbow is yours; camp help is forgone." if rescue_reward=="repeater" else "Mira helps the camp. Extra stock still costs gold; the repeating crossbow is forgone."]
 	return []
 func camp_offers() -> Array:
 	var offers: Array=[]
@@ -149,6 +169,10 @@ func step(direction: Vector2i) -> bool:
 		gain_gold(ENEMIES[t].gold)
 		message = "%s defeated. -%d HP" % [ENEMIES[t].name, cost]
 		if t in ["K","Z"]: won = true
+	elif t == "t":
+		if expedition_revision!=2 or rescue_state>=2: return false
+		rescue_state=2
+		message="Mira rescued. Before defeating Z, return to Ilen at J or take her to U. Choose her future once."
 	elif t == "$":
 		gain_gold(60)
 		message="Sealed treasury: +60 gold. Two keys spent, other cages remain."
@@ -278,6 +302,7 @@ func action(id: String) -> bool:
 		floor_seen.append_array([false,false,false])
 		floors[4][9][9]=">"
 		expedition_started=true
+		expedition_revision=int(generated.get("content_revision",1))
 		won=false
 		hp+=120
 		enter_floor(5)
@@ -328,6 +353,22 @@ func action(id: String) -> bool:
 		moves+=1
 		return true
 	match id:
+		"rescue_accept":
+			if not nearby("J") or rescue_state!=0 or expedition_revision==1: return false
+			rescue_state=1
+			message="Ilen asks you to find Mira on the seventh floor. The survey remains a separate choice."
+		"rescue_repeater","rescue_supplies":
+			if rescue_state!=2 or expedition_revision!=2: return false
+			if id=="rescue_repeater":
+				if not nearby("J"): return false
+				rescue_reward="repeater"; inventory.append("repeater"); equipped="repeater"
+				message="Mira returns home. Repeating crossbow received; camp help is forgone."
+			else:
+				if not nearby("U"): return false
+				rescue_reward="supplies"; camp_medicine_left+=1; camp_focus_left+=1
+				gain_gold(40)
+				message="Mira joins the camp: +40 gold, +1 medicine stock and +1 focus stock. Purchases still cost gold."
+			rescue_state=3
 		"camp_medicine":
 			if not expedition_started or not nearby("U") or camp_medicine_left<=0 or gold<70: return false
 			gold-=70; hp+=140; camp_medicine_left-=1
@@ -471,7 +512,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":6,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":7,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -479,20 +520,35 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7): return false
 	var old_seal: bool = save_version==4
 	var saved_expedition := false
 	var saved_bridge := false
 	var saved_medicine := 2
 	var saved_focus_stock := 2
-	if save_version==6:
+	if save_version>=6:
 		if not d.get("expedition_started") is bool or not d.get("expedition_bridge") is bool: return false
 		saved_expedition=d.expedition_started; saved_bridge=d.expedition_bridge
 		for key in ["camp_medicine_left","camp_focus_left"]:
 			if not (d.get(key) is int or d.get(key) is float): return false
-			if not is_finite(float(d[key])) or d[key]!=floor(d[key]) or d[key]<0 or d[key]>2: return false
+			if not is_finite(float(d[key])) or d[key]!=floor(d[key]) or d[key]<0 or d[key]>(3 if save_version==7 and d.get("rescue_reward")=="supplies" else 2): return false
 		saved_medicine=int(d.camp_medicine_left); saved_focus_stock=int(d.camp_focus_left)
 		if not saved_expedition and (saved_bridge or saved_medicine!=2 or saved_focus_stock!=2): return false
+	var saved_revision := 1 if saved_expedition else 0
+	var saved_rescue := 0
+	var saved_reward := ""
+	if save_version==7:
+		for key in ["expedition_revision","rescue_state"]:
+			if not (d.get(key) is int or d.get(key) is float): return false
+			if not is_finite(float(d[key])) or d[key]!=floor(d[key]): return false
+		saved_revision=int(d.expedition_revision); saved_rescue=int(d.rescue_state)
+		if saved_revision<0 or saved_revision>2 or saved_rescue<0 or saved_rescue>3: return false
+		if not d.get("rescue_reward") in ["","repeater","supplies"]: return false
+		saved_reward=d.rescue_reward
+		if saved_expedition!=(saved_revision>0): return false
+		if saved_revision==1 and saved_rescue!=0: return false
+		if saved_rescue>=2 and saved_revision!=2: return false
+		if (saved_rescue==3)!=(saved_reward!=""): return false
 	var expected_floors := 8 if saved_expedition else 5
 	if not d.get("bridge_built",false) is bool: return false
 	if d.get("bridge_built",false)!=(d.get("quest_state")==4): return false
@@ -507,13 +563,15 @@ func restore(d: Dictionary) -> bool:
 	if d.get("event_kind") != ["bargain","smuggler","oath"][int(d.seed_value)%3]: return false
 	if not d.get("hero_id") is String or not Progression.HEROES.has(d.hero_id): return false
 	if not d.get("equipped") is String or not Progression.GEAR.has(d.equipped): return false
-	if not d.get("inventory") is Array or d.inventory.size()<1 or d.inventory.size()>2: return false
+	if not d.get("inventory") is Array or d.inventory.size()<1 or d.inventory.size()>3: return false
 	var unique_gear: Dictionary={}
 	for gear in d.inventory:
 		if not gear is String or not Progression.GEAR.has(gear) or unique_gear.has(gear): return false
 		unique_gear[gear]=true
 	if not "balanced" in d.inventory or not d.equipped in d.inventory: return false
-	if d.chest_claimed!=(d.inventory.size()==2): return false
+	var relic_count := int("buckler" in d.inventory)+int("duelist" in d.inventory)
+	if relic_count>1 or d.chest_claimed!=(relic_count==1): return false
+	if ("repeater" in d.inventory)!=(saved_reward=="repeater"): return false
 	if not d.get("talents") is Array or not Progression.valid_talents(d.talents): return false
 	if d.talents.size()>0 and d.kills<3: return false
 	if d.talents.size()>1 and d.kills<7: return false
@@ -557,6 +615,8 @@ func restore(d: Dictionary) -> bool:
 	var seals_remaining := 0
 	var first_boss_remaining := 0
 	var last_boss_remaining := 0
+	var apprentices := 0
+	var gaolers := 0
 	for grid in d.floors:
 		if not grid is Array or grid.size()!=11: return false
 		for row in grid:
@@ -566,12 +626,20 @@ func restore(d: Dictionary) -> bool:
 				if c=="Q": seals_remaining+=1
 				if c=="K": first_boss_remaining+=1
 				if c=="Z": last_boss_remaining+=1
-				if not saved_expedition and c in ["U","Y","=","Z","H"]: return false
-				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","w","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">","U","Y","=","Z","H"]: return false
+				if c=="t": apprentices+=1
+				if c=="W": gaolers+=1
+				if not saved_expedition and c in ["U","Y","=","Z","H","t","W"]: return false
+				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","w","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">","U","Y","=","Z","H","t","W"]: return false
 	if cores_remaining>1 or (cores_remaining>0 and (d.core or d.core_use!="")): return false
 	if old_seal and d.secret:
 		if seals_remaining>1: return false
 	elif seals_remaining!=(0 if d.secret else 1): return false
+	if saved_revision==2:
+		if apprentices!=(1 if saved_rescue<2 else 0) or gaolers>1: return false
+		if saved_rescue>=2 and gaolers!=0: return false
+		if d.floors[6][1][8]!="#" or d.floors[6][1][9]!=("t" if saved_rescue<2 else "."): return false
+		if not d.floors[6][2][9] in ["W","."]: return false
+	elif apprentices!=0 or gaolers!=0: return false
 	if saved_expedition:
 		if first_boss_remaining!=0 or last_boss_remaining!=(0 if d.won else 1): return false
 		if not d.floor_seen[5] or d.floors[4][9][9]!=">": return false
@@ -603,6 +671,7 @@ func restore(d: Dictionary) -> bool:
 	hp=int(d.hp); atk=int(d.atk); defense=int(d.def); keys=int(d.keys); gold=int(d.gold); moves=int(d.moves)
 	core=d.core; core_use=d.core_use; weapon=d.weapon; secret=d.secret; clue=d.clue
 	principal=int(d.principal); fees=int(d.fees); interest=int(d.interest); loan_used=d.loan_used; overdue=d.overdue; checkpoints=int(d.checkpoints)
+	expedition_revision=saved_revision; rescue_state=saved_rescue; rescue_reward=saved_reward
 	expedition_started=saved_expedition; expedition_bridge=saved_bridge
 	camp_medicine_left=saved_medicine; camp_focus_left=saved_focus_stock
 	won = d.won

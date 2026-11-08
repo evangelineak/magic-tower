@@ -3,6 +3,22 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"Mira is safe. Before defeating Z, return to Ilen at J for a repeating crossbow, or U for camp supplies. Choose once.":"米拉已安全。击败 Z 前，带回 J 找伊莲可获连发弩，或带往 U 支援营地。两者只能选一。",
+"Mira rescued. Before defeating Z, return to Ilen at J or take her to U. Choose her future once.":"已救出米拉。击败 Z 前，带她回 J 找伊莲或带往 U 营地。去向只能选一次。",
+
+"Archive Gaoler":"档案狱卒",
+"Ilen: look for apprentice Mira beyond the old tower":"伊莲：前往旧塔之外寻找学徒米拉",
+"Bring Mira home: receive the repeating crossbow / camp help forgone":"带米拉回家：获得连发弩 / 放弃营地援助",
+"Let Mira help the camp: +40 gold / +1 medicine stock / +1 focus stock":"让米拉帮助营地：40 金币 / 药剂与专注库存各加 1",
+"Ilen seeks Mira. Search the seventh floor; a dangerous gaoler guards her.":"伊莲正在寻找米拉。前往第七层，她被危险的狱卒看守。",
+"Mira is safe. Return to Ilen at J for a repeating crossbow, or U for camp supplies. Choose once.":"米拉已经安全。带回 J 找伊莲可获连发弩，或带往 U 支援营地。两者只能选一。",
+"Mira returned home to Ilen. The repeating crossbow is yours; camp help is forgone.":"米拉已回到伊莲身边。你获得了连发弩，已放弃营地援助。",
+"Mira helps the camp. Extra stock still costs gold; the repeating crossbow is forgone.":"米拉正在帮助营地。新增库存仍需付金币购买，已放弃连发弩。",
+"Mira rescued. Return to Ilen at J, or take her to U. Her future is your choice.":"已救出米拉。带她回 J 找伊莲，或带往 U 营地，由你决定她的去向。",
+"Ilen asks you to find Mira on the seventh floor. The survey remains a separate choice.":"伊莲请你去第七层寻找米拉。样本任务仍是独立的选择。",
+"Mira returns home. Repeating crossbow received; camp help is forgone.":"米拉已回家。获得连发弩，放弃营地援助。",
+"Mira joins the camp: +40 gold, +1 medicine stock and +1 focus stock. Purchases still cost gold.":"米拉加入营地：获得40金币，药剂和专注库存各加1。购买仍需金币。",
+
 "Ashen Castellan":"灰烬堡主",
 "THE ASH CAMP":"灰烬营地",
 "THE BROKEN ROAD":"断裂之路",

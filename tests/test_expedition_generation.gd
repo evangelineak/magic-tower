@@ -2,6 +2,7 @@ extends SceneTree
 const Expedition=preload("res://scripts/expedition.gd")
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
+const DIRECTIONS={"U":Vector2i.UP,"D":Vector2i.DOWN,"L":Vector2i.LEFT,"R":Vector2i.RIGHT}
 var checks:=0
 var failures:=0
 func check(value:bool,label:String):
@@ -12,16 +13,21 @@ func replay(world,route:String):
 		var direction:Vector2i={"U":Vector2i.UP,"D":Vector2i.DOWN,"L":Vector2i.LEFT,"R":Vector2i.RIGHT}[c]
 		check(world.step(direction),"real World witness step")
 func _init():
+	check_rescue_return()
 	check(Expedition.damage("H",{"hp":1000,"atk":78,"def":28})==136,"first crossing loss")
 	check(Expedition.damage("H",{"hp":1000,"atk":88,"def":32})==120,"second crossing loss")
 	check(Expedition.damage("H",{"hp":1000,"atk":98,"def":36})==78,"third crossing loss")
 	check(3*Expedition.ENEMIES.H.gold==180,"bridge skips 180 potential guard gold")
 	for token in Expedition.ENEMIES:
-		for field in ["hp","atk","def","gold","first_strike"]:
+		check(World.ENEMIES.has(token),"World defines expedition enemy "+token)
+		if not World.ENEMIES.has(token): continue
+		for field in ["hp","atk","def","gold","first_strike","thorns","heavy_every"]:
 			check(Expedition.ENEMIES[token].get(field,false)==World.ENEMIES[token].get(field,false),"chapter enemy contract")
 	var geometries:Dictionary={}; var min_hp:=1000000; var max_hp:=0
 	for seed_value in range(200):
 		var run:=Expedition.generate(seed_value)
+		check(run.content_revision==2 and run.quest_supported,"new expedition content revision")
+		check(Expedition.rescue_topology(run.maps).valid,"rescue single guard topology")
 		check(run.solvable,"seed %d solvable"%seed_value)
 		check(run.maps==Expedition.generate(seed_value).maps,"deterministic")
 		geometries[str(run.maps)]=true
@@ -36,6 +42,7 @@ func _init():
 		check(world.action("expedition"),"explicit continuation")
 		var start_hp:int=world.hp
 		replay(world,run.witness)
+		check(world.floors[6][1][9]=="t" and world.floors[6][2][9]=="W","mainline does not use rescue reward")
 		check(world.won and world.floor_index==7,"chapter two actually won")
 		check(world.hp==start_hp+run.validation.hp-121,"real HP matches witness delta")
 		check(not world.expedition_bridge and not world.loan_used and world.camp_medicine_left==2,"no purchases or loan proof")
@@ -55,5 +62,49 @@ func _init():
 	check(geometries.size()>=24,"chapter geometry diversity")
 	var invalid:Array=Expedition.generate(0).maps.duplicate(true); invalid[2][3][8]="."
 	check(not Expedition.validate(invalid).solvable,"missing boss rejected")
+	for variant in range(3):
+		var maps:Array=[Expedition.build(0,variant),Expedition.build(1,variant),Expedition.build(2,variant)]
+		for bypass in [".","D","="]:
+			var broken:=maps.duplicate(true); broken[1][1][8]=bypass
+			check(not Expedition.rescue_topology(broken).valid,"rescue rejects wall, door and bridge bypass")
+			check(not Expedition.validate(broken).solvable,"proof rejects rescue bypass")
+		var removed:=maps.duplicate(true); removed[1][2][9]="."
+		check(not Expedition.validate(removed).solvable,"missing optional guardian rejected")
+		var missing:=maps.duplicate(true); missing[1][1][9]="."
+		check(not Expedition.validate(missing).solvable,"missing apprentice rejected")
+		var sealed:=maps.duplicate(true); sealed[1][2][8]="#"; sealed[1][3][9]="#"
+		check(not Expedition.validate(sealed).solvable,"sealed rescue rejected")
 	print("Expedition generation: %d checks; 200 seeds; %d geometries; HP %d..%d"%[checks,geometries.size(),min_hp,max_hp])
 	quit(1 if failures else 0)
+
+func req(value:bool):
+	check(value,"actual seven-to-eight-to-seven rescue path")
+func travel(w,p:Vector2i):
+	var path:=Expedition.path_to(w.floors[w.floor_index],w.pos,p,{"hp":w.hp,"atk":w.atk,"def":w.defense})
+	req(not path.is_empty() or w.pos==p)
+	for d in path: req(w.step(d))
+func check_rescue_return():
+	var w=World.new(0)
+	for c in Generator.validate(w.floors).route: req(w.step(DIRECTIONS[c]))
+	req(w.action("expedition"))
+	var route:String=Expedition.generate(0).witness; var index:=0
+	while w.floor_index<6:
+		req(w.step(DIRECTIONS[route[index]])); index+=1
+	travel(w,Vector2i(8,2))
+	print("Early guard: HP ",w.hp," ATK ",w.atk," DEF ",w.defense," cost ",w.damage("W"))
+	req(w.damage("W")>=w.hp and not w.step(Vector2i.RIGHT))
+	travel(w,Vector2i(1,1))
+	req(w.floor_index==5)
+	req(w.step(Vector2i.LEFT)); req(w.step(Vector2i.RIGHT)); req(w.floor_index==6)
+	while index<route.length():
+		var d:Vector2i=DIRECTIONS[route[index]]
+		if w.tile(w.pos+d)=="Z": break
+		req(w.step(d)); index+=1
+	req(w.floor_index==7)
+	travel(w,Vector2i(1,1)); req(w.floor_index==6)
+	travel(w,Vector2i(8,2))
+	print("Return guard: HP ",w.hp," ATK ",w.atk," DEF ",w.defense," cost ",w.damage("W"))
+	req(w.damage("W")<w.hp)
+	req(w.step(Vector2i.RIGHT)); req(w.step(Vector2i.UP))
+	req(w.rescue_state==2)
+	print("Real walk rescue return PASS HP ",w.hp)

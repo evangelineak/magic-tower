@@ -13,6 +13,7 @@ const HEROES := {
 const GEAR := {
 	"balanced": {"name":"Traveler's kit", "atk":0, "def":0, "description":"No bonuses or penalties. The safe baseline."},
 	"buckler": {"name":"Heavy buckler", "atk":-4, "def":6, "description":"+6 DEF / -4 ATK. Block the first enemy attack, not thorns."},
+	"repeater": {"name":"Repeating crossbow", "atk":-3, "def":-6, "description":"-3 ATK / -6 DEF. Fire up to three hits before counters begin. First strike and thorns still apply."},
 	"duelist": {"name":"Duelist's rig", "atk":6, "def":-3, "description":"WARNING: take an EXTRA opening counter, even on a one-shot. Enemy DEF -8; +6 ATK / -3 DEF."}
 }
 const TALENT_TIERS := [
@@ -102,7 +103,7 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	var incoming_hit := maxi(0,int(enemy.atk)-effective_def)
 	# Components are BEFORE total-loss mitigation. First strike attacks once even
 	# if the hero would one-shot. Thorns ignores DEF and includes the killing hit.
-	var normal_retaliations := maxi(0,rounds-1)
+	var normal_retaliations := maxi(0,rounds-(3 if equipment=="repeater" else 1))
 	var feint_counter := 1 if equipment=="duelist" else 0
 	var retaliations := normal_retaliations+feint_counter
 	var normal_damage := normal_retaliations*incoming_hit

@@ -2,7 +2,8 @@ class_name TowerExpedition
 extends RefCounted
 const Generator = preload("res://scripts/generation.gd")
 const Progression = preload("res://scripts/progression.gd")
-const ENEMIES = {"Z":{"name":"Ashen Castellan","hp":720,"atk":65,"def":45,"gold":160},"H":{"name":"Ferry Warden","hp":180,"atk":62,"def":30,"gold":60,"first_strike":true}}
+const ENEMIES = {"Z":{"name":"Ashen Castellan","hp":720,"atk":65,"def":45,"gold":160},"H":{"name":"Ferry Warden","hp":180,"atk":62,"def":30,"gold":60,"first_strike":true},"W":{"name":"Archive Gaoler","hp":260,"atk":68,"def":48,"gold":40,"thorns":6,"heavy_every":3}}
+const CONTENT_REVISION := 2
 const INITIAL = {"hp":121,"atk":73,"def":24}
 const DIRS = [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]
 const IDS = ["low_causeway","split_court","high_gallery"]
@@ -39,6 +40,8 @@ static func build(floor_index:int, variant:int) -> Array:
 	grid[9][1]=["$","A","P"][floor_index]
 	grid[1][7]="h"; grid[2][8]="a"
 	grid[8][8]="w"; grid[9][7]="k"
+	if floor_index==1:
+		grid[1][8]="#"; grid[1][9]="t"; grid[2][9]="W"
 	if floor_index==2: grid[3][8]="Z"
 	return grid
 
@@ -50,7 +53,7 @@ static func generate(seed_value:int) -> Dictionary:
 		var variant:=f if seed_value==0 else rng.randi_range(0,2)
 		maps.append(build(f,variant)); ids.append(IDS[variant])
 	var proof:=validate(maps)
-	return {"maps":maps,"validation":proof,"witness":proof.get("route",""),"solvable":proof.solvable,"attempts":1,"fallback":false,"floor_skeletons":ids}
+	return {"maps":maps,"validation":proof,"witness":proof.get("route",""),"solvable":proof.solvable,"attempts":1,"fallback":false,"floor_skeletons":ids,"content_revision":CONTENT_REVISION,"quest_supported":true}
 
 static func damage(token:String,stats:Dictionary)->int:
 	var enemy:Dictionary=ENEMIES.get(token,Generator.ENEMIES.get(token,{}))
@@ -71,7 +74,7 @@ static func path_to(grid:Array,start:Vector2i,goal:Vector2i,stats:Dictionary)->A
 			var n:Vector2i=p+d
 			if parents.has(n): continue
 			var token:=Generator.tile(grid,n)
-			if token in ["#","=","L","D"]: continue
+			if token in ["#","=","L","D","W","t"]: continue
 			if token in ["<",">","Z"] and n!=goal: continue
 			if token in Generator.ENEMIES or token in ENEMIES:
 				var cost:=damage(token,stats)
@@ -84,7 +87,7 @@ static func execute(grid:Array,start:Vector2i,path:Array,stats:Dictionary)->Dict
 	for d in path:
 		pos+=d
 		var token:=Generator.tile(grid,pos)
-		if token in ["#","=","L","D"]: return {"ok":false}
+		if token in ["#","=","L","D","W","t"]: return {"ok":false}
 		if token in Generator.ENEMIES or token in ENEMIES:
 			var cost:=damage(token,stats)
 			if cost<0 or cost>=stats.hp: return {"ok":false}
@@ -96,12 +99,35 @@ static func execute(grid:Array,start:Vector2i,path:Array,stats:Dictionary)->Dict
 		route+="U" if d==Vector2i.UP else ("D" if d==Vector2i.DOWN else ("L" if d==Vector2i.LEFT else "R"))
 	return {"ok":true,"pos":pos,"route":route}
 
+# Check the optional rescue independently of combat: even paid bridges and
+# opened ordinary doors cannot provide an entrance behind the guardian.
+# This validates fresh revision-2 maps only; save restoration never regenerates
+# or passes old revision-1 maps through this new-content requirement.
+static func rescue_topology(maps:Array)->Dictionary:
+	var guards:=0; var apprentices:=0
+	for grid in maps:
+		for row in grid:
+			for token in row:
+				if token=="W": guards+=1
+				if token=="t": apprentices+=1
+	if guards!=1 or apprentices!=1 or maps[1][1][9]!="t" or maps[1][2][9]!="W":
+		return {"valid":false,"reason":"Missing rescue guardian or apprentice"}
+	var closed:=Generator.reachable(maps[1],["#","W"])
+	if closed.has(Vector2i(9,1)):
+		return {"valid":false,"reason":"The apprentice has an unguarded entrance"}
+	var opened:=Generator.reachable(maps[1],["#"])
+	if not opened.has(Vector2i(9,1)) or not closed.has(Vector2i(8,2)):
+		return {"valid":false,"reason":"The rescue chamber is unreachable"}
+	return {"valid":true}
+
 static func validate(maps:Array)->Dictionary:
 	if maps.size()!=3: return {"solvable":false,"reason":"Expected three expedition floors"}
 	for grid in maps:
 		if not grid is Array or grid.size()!=11: return {"solvable":false,"reason":"Invalid expedition grid"}
 		for row in grid:
 			if not row is Array or row.size()!=11: return {"solvable":false,"reason":"Invalid expedition row"}
+	var rescue:=rescue_topology(maps)
+	if not rescue.valid: return {"solvable":false,"reason":rescue.reason}
 	var work:=maps.duplicate(true); var stats:=INITIAL.duplicate(); var route:=""
 	for f in range(3):
 		var grid:Array=work[f]; var pos:=Vector2i(1,1)

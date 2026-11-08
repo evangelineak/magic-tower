@@ -8,7 +8,7 @@ func check(ok: bool, message: String):
 func fight(attack:=18, defense:=8, hp:=360, hero:="warden", skill:=false, gear:="balanced", talents: Array=[], enemy: Dictionary={"name":"Mossling","hp":35,"atk":14,"def":3}) -> Dictionary:
 	return P.battle(attack,defense,hp,enemy,hero,skill,gear,talents)
 func _init():
-	check(P.HEROES.size()==3 and P.GEAR.size()==3,"three archetypes and exclusive gear loadouts")
+	check(P.HEROES.size()==3 and P.GEAR.size()==4,"three archetypes and exclusive gear loadouts")
 	check(P.FOCUS_START==2 and P.FOCUS_MAX==3,"finite focus defaults")
 	var b=fight()
 	check(b.valid and b.survivable and b.damage==12 and b.hit==15 and b.rounds==3,"baseline equals original deterministic formula")
@@ -210,5 +210,28 @@ func _init():
 	var second=P.battle(5,0,400,pure_enemy,"warden",true,"buckler",pure_talents)
 	check(first==second and pure_enemy==shield_order and pure_talents==["clean_finish","trained_focus","unbroken"],"repeated equipment previews are stateless and cannot refresh resources")
 	check("EXTRA" in P.GEAR.duelist.description and "one-shot" in P.GEAR.duelist.description,"duelist opening cost is prominent in shared item description")
+	var ferry={"hp":180,"atk":62,"def":30,"first_strike":true}
+	b=fight(103,36,500,"warden",false,"repeater",[],ferry)
+	check(b.damage==32 and b.rounds==3 and b.retaliations==0 and b.first_strike_damage==32,"repeater opening three hits still pay enemy first strike")
+	check(b.damage<fight(103,36,500,"warden",false,"buckler",[],ferry).damage,"repeater beats buckler at a real ferry threshold")
+	var castellan={"hp":720,"atk":65,"def":45}
+	b=fight(103,36,1000,"warden",false,"repeater",[],castellan)
+	check(b.damage==385 and b.retaliations==11 and b.damage>fight(103,36,1000,"warden",false,"balanced",[],castellan).damage,"repeater loses to baseline in a long boss battle")
+	var combo={"hp":50,"atk":20,"def":0,"first_strike":true,"thorns":3,"heavy_every":3}
+	b=fight(13,16,500,"warden",false,"repeater",[],combo)
+	check(b.rounds==5 and b.retaliations==2 and b.normal_damage==20 and b.first_strike_damage==10 and b.thorns_damage==15 and b.charged_damage==0 and b.damage==45,"opening volley does not waive thorns or ambush; heavy counts only actual counters")
+	combo.hp=60
+	b=fight(13,16,500,"warden",false,"repeater",[],combo)
+	check(b.retaliations==3 and b.charged_damage==10 and b.damage==68,"sixth shot reaches third counter and heavy threshold")
+	check(fight(13,16,500,"warden",true,"repeater",[],combo).damage==45,"brace floors block after all repeater components")
+	check(fight(13,16,68,"warden",false,"repeater",["iron_skin","trained_focus","battle_medic"],combo).survivable,"gear combines with existing valid talent tiers")
+	b=fight(13,16,68,"warden",false,"repeater",["clean_finish","trained_focus","battle_medic"],combo)
+	check(b.damage==68 and not b.survivable and b.heal_after==0,"repeater lethal loss cannot be rescued by post-battle healing")
+	combo.hp=10
+	b=fight(13,16,500,"ranger",true,"repeater",[],combo)
+	check(b.rounds==1 and b.damage==13 and b.retaliations==0,"one-shot volley pays one thorn trigger and first strike, not three shots")
+	check(not fight(3,16,500,"warden",false,"repeater",[],combo).valid,"repeater attack penalty can prevent breaking armor")
+	var immutable=combo.duplicate(true)
+	check(fight(13,16,500,"warden",false,"repeater",[],combo)==fight(13,16,500,"warden",false,"repeater",[],combo) and combo==immutable,"repeater preview is pure and charges never persist")
 	print("PROGRESSION: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
 	quit(0 if failures==0 else 1)
