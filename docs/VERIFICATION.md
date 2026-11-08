@@ -197,3 +197,14 @@
 - 最终真实97步、第2层(2,7)，485HP/28基础攻击/16基础防御/48金币/1钥匙/2专注/5击杀，重盾澄明专注。重启L后中英文调校和英雄提示完整；最终中文提示清楚列出词条代价、等级、效果，无溢出。已查看截图，scratch/magic-tower-v18-{unowned,unowned-confirm,owned-confirm,undo-offers,locked-en,compare,combat,journal,hero-final-zh}.png。
 - 字体391400字节，848必需字缺0，SHA256 7f4c9a55eb3b3b6541ff5a47120c2b6947b8dfab35da6a4ffb917a305dd20e29，manifest包含新attunement源且全部hash匹配；本地化80项、UI90项通过。原生系统用户配置目录警告仍单独存在，不计作脚本失败。
 - 跨局档案、结算/死亡轮回、真实20级可达成长、付费/材料重抽未实现。本批最高16且战斗完全确定；公开网页保持v0.17，不随本次开发提交更新。Windows实际运行与主观听音仍未完成。
+
+## 跨局存储隔离基础（尚未接入游戏，2026-11-08）
+
+- 最终全套tools/test_all.sh退出0：7094项Godot功能检查，另269项Node跨语言/边界检查；首章200种子178035项，远征200种子97863项，9条对抗通关/2568合法存档回放，导入与30帧启动通过。日志/tmp/tower-v19-preflight.log，包含最终88项原生双进程测试。
+
+- 纯GDScript账本189项；37组由实际纯模块生成的跨语言向量及计数器边界，在Node执行269项通过。覆盖首次3/5/8里程碑、唯一收据、相同摘要重复/不同摘要冲突、严格未知字段和无输入副作用。三个解锁ID只是标识，没有天赋数值效果。
+- 最终JS原型在真实Chrome IndexedDB自测24项通过；两个同源标签手动验证A写入权/B忙、保存CAS旧版本拒绝、租约过期B获得fence2而A保存及创建新局均拒绝、after_profile中断全store回滚、applied后duplicate无新增奖励、不同run同里程碑无新增奖励、关页重载后两张收据/里程碑/archived状态保留。仅测试数据库magic-tower-profile-harness-v2-native-qa18；数据库保留，测试页面和自行启动的localhost服务已关闭。
+- 截图scratch/profile-storage-{selftest-final,busy,stale-writer,abort-rollback,idempotent,persisted}.png。这是不依赖WebGL的存储测试，不能冒称已通过Godot Web游戏接线验证。
+- 原生单容器原型88项通过，包含SHA校验、备份、临时写入/rename前失败、rename后结果不明查收据、坏主档拒绝而不自动回退旧备份、遗留锁拒绝、4096局上限和全局单槽fence。真实OS.create_process两Godot竞争同一版本，单赢家；独立复跑一次败方STORE_LOCKED，另一次STALE_REVISION，最终revision恰为1。日志/tmp/native-store-test.log及总回归日志保留独立目录和双方JSON。
+- Native与JS返回形状目前不同，必须由后续显式适配器统一。两者只验6字段有界模拟快照，尚未验证完整World状态，也未实现JavaScriptBridge、原生恢复UI、心跳、结算界面、风险死亡或天赋抽选。不能将受控abort说成真进程kill或硬件断电测试；Godot flush不承诺跨平台fsync。
+- 当前journey-v4.json、公开网页v0.17、可玩开发版v0.18规则均未改。无原生run_id的旧旅程将可继续原玩法但不能参加跨局领奖；不随机补ID，也不允许把旧快照嫁接到新eligible run。

@@ -129,7 +129,7 @@ Godot 已关闭 `.blend` 自动导入，避免运行项目必须安装 Blender�
 
 ## 测试
 
-全部检查：`bash tools/test_all.sh`。GitHub工作分支配置同套只读验证流水线，Godot下载使用官方发行文件及SHA-256校验；具体CI状态以当前提交为准。
+全部检查：`bash tools/test_all.sh`（Godot 4.6.3、Node.js 18+；Node仅用于跨语言纯协议测试，运行游戏不需要）。GitHub工作分支配置同套只读验证流水线，Godot下载使用官方发行文件及SHA-256校验；具体CI状态以当前提交为准。
 
 ```sh
 godot --headless --path . --editor --import --quit
@@ -210,3 +210,8 @@ godot --headless --path . --quit-after 30
 技能显示真实等级构成：基础10＋训练4＋装备最多2，本批最高16。原装技能效果保持不变；加级后架盾、破甲、治疗显示实际数值。高档词条不保证比低档更强，原装仍然是完整可通关的选择。G 确认后可用完整 U 撤销，锁定原装同样是一项选择。
 
 当前仍没有跨局档案或真实死亡轮回，本批不把装备三选一冒称完整抽卡系统。详细范围与测试进度见 `docs/ATTUNEMENT-PLAN.md`。
+
+
+## 跨局存储基础研究（尚未接入游戏）
+
+新增纯结算账本、独立IndexedDB事务测试页及原生原子容器原型。它们不接现有存档，不给角色发永久奖励，也不增加死亡模式。真实双标签写入竞争/重复结算/关闭重开及故障注入证据见 `docs/LEGACY-PERSISTENCE-PLAN.md` 与 `tools/PROFILE_STORAGE_PROTOTYPE.md`。待完整游戏适配、风险模式与天赋效果通过验证后再启用，网页仍保持独立稳定版本。
