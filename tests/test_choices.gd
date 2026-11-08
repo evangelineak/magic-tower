@@ -8,7 +8,7 @@ func check(ok: bool, message: String):
 func state(w) -> Dictionary:
 	return w.save_data().duplicate(true)
 func merchant():
-	var w=World.new()
+	var w=World.new(0)
 	w.pos=Vector2i(2,1)
 	return w
 func _init():
@@ -47,43 +47,43 @@ func _init():
 	check(w.principal==1 and w.interest==1,"integer interest rounds up")
 	w=merchant(); w.action("borrow"); w.gold=42; w.action("repay"); w.settle_checkpoint(1)
 	check(w.debt()==0,"zero balance no interest")
-	w=World.new()
+	w=World.new(0)
 	check(not w.action("borrow") and not w.action("buy"),"merchant actions need proximity")
 	w=merchant(); w.settle_checkpoint(1)
 	check(not w.action("borrow"),"loans close after first checkpoint")
 	for choice in ["elevator","forge","sell_core"]:
-		w=World.new(); w.core=true; w.floors[1][4][2]="."
+		w=World.new(0); w.core=true; w.floors[1][4][2]="."
 		if choice=="elevator": w.pos=Vector2i(2,5)
-		elif choice=="forge": w.floor_index=3; w.pos=Vector2i(3,5)
+		elif choice=="forge": w.enter_floor(3); w.pos=Vector2i(3,5)
 		else: w.pos=Vector2i(2,1)
 		check(w.action(choice) and not w.core,"core spent once: "+choice)
 		check(not w.action(choice),"repeat core action blocked: "+choice)
 		var snapshot: Dictionary=JSON.parse_string(JSON.stringify(state(w)))
-		var restored=World.new()
+		var restored=World.new(0)
 		check(restored.restore(snapshot) and state(restored)==state(w),"choice survives JSON: "+choice)
 		check(not restored.action(choice),"load cannot reclaim core: "+choice)
-	w=World.new(); w.core=true; w.floors[1][4][2]="."; w.pos=Vector2i(2,5); w.action("elevator")
+	w=World.new(0); w.core=true; w.floors[1][4][2]="."; w.pos=Vector2i(2,5); w.action("elevator")
 	check(w.action("travel") and w.floor_index==2 and w.pos==Vector2i(4,1),"lift up arrives at actual lift")
 	check(w.action("travel") and w.floor_index==0 and w.pos==Vector2i(2,5),"lift return keeps floor state")
 	check(w.checkpoints==0,"lift does not create interest checkpoints")
-	w.floor_index=4; w.pos=Vector2i(1,3)
+	w.enter_floor(4); w.pos=Vector2i(1,3)
 	check(not w.action("secret"),"secret requires clue")
 	w.clue=true
 	var old_hp: int=w.hp
 	check(w.action("secret") and w.hp==old_hp+80,"learned clue and running lift reveal secret")
 	check(not w.action("secret") and w.hp==old_hp+80,"secret rewards once")
-	w=World.new(); w.floor_index=4; w.pos=Vector2i(1,3); w.clue=true
+	w=World.new(0); w.enter_floor(4); w.pos=Vector2i(1,3); w.clue=true
 	check(not w.action("secret"),"clue alone insufficient")
-	w=World.new(); w.floor_index=3; w.pos=Vector2i(1,2)
+	w=World.new(0); w.enter_floor(3); w.pos=Vector2i(1,2)
 	check(w.step(Vector2i.DOWN) and w.clue and w.tile(Vector2i(1,3))=="N","clue found through actual movement remains readable")
-	w=World.new(); w.floor_index=1; w.pos=Vector2i(1,4)
+	w=World.new(0); w.enter_floor(1); w.pos=Vector2i(1,4)
 	check(w.step(Vector2i.RIGHT) and w.core,"core collected via actual movement")
 	check(w.step(Vector2i.LEFT) and w.step(Vector2i.RIGHT) and w.tile(w.pos)==".","core pickup does not respawn")
 	w=merchant(); var before: Dictionary=state(w); w.action("borrow")
 	check(w.restore(before) and not w.loan_used and w.debt()==0 and w.gold==0,"undo restores debt and gold together")
 	w=merchant(); w.action("borrow"); w.gold=60; before=state(w); w.action("buy")
 	check(w.restore(before) and not w.weapon and w.atk==18 and w.gold==60 and w.debt()==42,"purchase undo cannot keep free weapon")
-	w=World.new()
+	w=World.new(0)
 	var original: Dictionary=state(w)
 	for key in ["floor","x","hp","gold","principal","interest","checkpoints"]:
 		for value in [-1, 1.5, "bad", INF]:
@@ -107,11 +107,11 @@ func _init():
 	bad=original.duplicate(true); bad.core=true
 	check(not w.restore(bad) and state(w)==original,"held core cannot also remain on map")
 	var borrower=merchant(); borrower.action("borrow"); borrower.settle_checkpoint(2)
-	var loaded=World.new()
+	var loaded=World.new(0)
 	check(loaded.restore(JSON.parse_string(JSON.stringify(state(borrower)))) and state(loaded)==state(borrower),"overdue debt roundtrip preserves full ledger")
-	borrower.floors[4][2][1]=">"; borrower.floor_index=4; borrower.pos=Vector2i(1,1)
+	borrower.floors[4][2][1]=">"; borrower.enter_floor(4); borrower.pos=Vector2i(1,1)
 	check(not borrower.step(Vector2i.DOWN) and borrower.floor_index==4,"corrupt top stair cannot escape floor bounds")
-	borrower.floors[0][2][1]="<"; borrower.floor_index=0; borrower.pos=Vector2i(1,1)
+	borrower.floors[0][2][1]="<"; borrower.enter_floor(0); borrower.pos=Vector2i(1,1)
 	check(not borrower.step(Vector2i.DOWN) and borrower.floor_index==0,"corrupt bottom stair cannot escape floor bounds")
 	check(not w.step(Vector2i(2,0)) and not w.step(Vector2i.ZERO),"movement cannot teleport or idle-farm")
 	print("CHOICES: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])

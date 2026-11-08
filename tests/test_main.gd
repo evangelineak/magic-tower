@@ -10,7 +10,15 @@ func run_tests():
 	var scene = load("res://main.tscn").instantiate()
 	root.add_child(scene)
 	scene.save_path="user://integration-test.json"
+	scene.world=load("res://scripts/world.gd").new(0)
+	var event := InputEventKey.new()
+	event.pressed=true
 	await process_frame
+	check(scene.growth and scene.growth_tab==0 and scene.growth_actions().size()==3,"startup automatically presents hero choices")
+	event.keycode=KEY_D; scene._unhandled_input(event)
+	check(scene.world.moves==0 and scene.world.pos==Vector2i(1,1),"startup hero modal blocks movement")
+	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
+	check(not scene.growth and scene.world.hero_id=="warden","Escape accepts default Warden without spending move")
 	check(scene.world.pos==Vector2i(1,1),"initial position")
 	scene.move(Vector2i.RIGHT)
 	scene.move(Vector2i.RIGHT)
@@ -21,8 +29,7 @@ func run_tests():
 	scene.world.hp=1
 	scene.load_game()
 	check(scene.world.hp==360 and scene.history.is_empty(),"load restores persisted state and clears undo")
-	var event := InputEventKey.new()
-	event.pressed=true;event.keycode=KEY_H
+	event.keycode=KEY_H
 	scene._unhandled_input(event)
 	check(scene.book,"H opens guide")
 	event.keycode=KEY_D
@@ -36,6 +43,8 @@ func run_tests():
 	check(scene.world.pos==Vector2i(2,1),"one R does not restart")
 	scene._unhandled_input(event)
 	check(scene.world.pos==Vector2i(1,1),"two R restart")
+	check(scene.growth and scene.growth_tab==0,"replay automatically reopens hero selection")
+	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	scene.world.pos=Vector2i(2,1)
 	scene.perform_action("borrow")
 	check(scene.world.debt()==42 and scene.world.gold==40,"UI borrowing updates ledger")
@@ -47,7 +56,7 @@ func run_tests():
 	check(scene.world.weapon and scene.world.gold==0,"UI purchase")
 	scene.undo()
 	check(not scene.world.weapon and scene.world.atk==18 and scene.world.gold==60 and scene.world.debt()==42,"UI purchase undo keeps matching gold and debt")
-	scene.world.floor_index=2; scene.world.pos=Vector2i(8,9); scene.world.gold=22
+	scene.world.enter_floor(2); scene.world.pos=Vector2i(8,9); scene.world.gold=22
 	var steps_before: int=scene.world.moves
 	scene.move(Vector2i.RIGHT)
 	check(scene.interaction and scene.checkpoint_pending==Vector2i.RIGHT and scene.world.floor_index==2 and scene.world.debt()==42,"interest transition asks before changing state")
@@ -72,6 +81,48 @@ func run_tests():
 	check(scene.world.floor_index==3 and not scene.interaction and scene.world.interest==2,"revisit ascent does not charge or prompt twice")
 	scene.load_game()
 	check(scene.world.floor_index==3 and scene.world.debt()==22 and scene.history.is_empty(),"UI autosave preserves ledger and milestones")
+	scene.world=load("res://scripts/world.gd").new(0); scene.history.clear()
+	event.keycode=KEY_C; scene._unhandled_input(event)
+	check(scene.growth and scene.growth_actions().size()==3,"C offers three heroes before first move")
+	event.keycode=KEY_D; scene._unhandled_input(event)
+	check(scene.world.moves==0 and scene.world.pos==Vector2i(1,1),"hero panel blocks exploration input")
+	event.keycode=KEY_2; scene._unhandled_input(event)
+	check(scene.world.hero_id=="ranger" and not scene.growth,"number selects ranger and closes panel")
+	event.keycode=KEY_C; scene._unhandled_input(event)
+	check(scene.growth and scene.growth_actions()[0][0]=="arm","hero panel becomes skill panel after selection")
+	event.keycode=KEY_1; scene._unhandled_input(event)
+	check(scene.world.skill_armed,"number prepares hero skill")
+	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
+	check(not scene.growth,"escape closes skill panel")
+	scene.world.pos=Vector2i(5,3)
+	var before_combat: Dictionary=scene.world.save_data().duplicate(true)
+	var predicted_loss: int=scene.world.damage("s")
+	scene.move(Vector2i.LEFT)
+	check(scene.battle_time>0 and scene.battle_loss==predicted_loss and scene.world.kills==1,"battle presentation matches committed combat")
+	var after_combat: Dictionary=scene.world.save_data().duplicate(true)
+	event.keycode=KEY_D; scene._unhandled_input(event)
+	check(scene.battle_time==0 and scene.world.save_data()==after_combat,"skip animation does not repeat combat or move")
+	scene.undo()
+	check(scene.world.save_data()==before_combat and scene.battle_time==0,"combat undo restores enemy, focus, hero and stats together")
+	scene.world.kills=3
+	event.keycode=KEY_C; scene._unhandled_input(event)
+	check(scene.growth_tab==2 and scene.growth_actions().size()==3,"unlocked talent tier opens three mutually exclusive choices")
+	event.keycode=KEY_1; scene._unhandled_input(event)
+	check(scene.world.talents.size()==1 and not scene.growth,"talent key commits one choice")
+	scene.undo()
+	check(scene.world.talents.is_empty(),"talent selection reversible via whole-state undo")
+	var seed_before: int=scene.world.seed_value
+	event.keycode=KEY_R; scene._unhandled_input(event); scene._unhandled_input(event)
+	check(scene.world.seed_value==seed_before and scene.world.moves==0,"replay retains same seed")
+	check(scene.growth and scene.growth_tab==0,"later replay resets growth tab to hero selection")
+	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
+	event.keycode=KEY_N; scene._unhandled_input(event)
+	check(scene.world.seed_value==seed_before,"one N does not overwrite journey")
+	event.keycode=KEY_D; scene._unhandled_input(event)
+	event.keycode=KEY_N; scene._unhandled_input(event)
+	check(scene.world.moves==1 and scene.world.seed_value==seed_before,"movement cancels armed new-run confirmation")
+	scene._unhandled_input(event)
+	check(scene.growth and scene.growth_tab==0 and scene.world.moves==0 and scene.world.seed_value>0,"confirmed new seed presents hero choices")
 	# Only remove the test-specific file generated above, never a player's journey.
 	DirAccess.remove_absolute(scene.save_path)
 	print("UI integration: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])

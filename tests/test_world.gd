@@ -8,29 +8,34 @@ func check(ok: bool, message: String):
 		push_error("FAIL: "+message)
 		failures += 1
 func _init():
-	var w = World.new()
+	var w = World.new(0)
 	check(not w.step(Vector2i.LEFT),"wall blocks")
 	check(w.pos==Vector2i(1,1),"wall preserves position")
 	check(w.damage("s")==12,"first-strike damage formula")
 	w.atk=3
 	check(w.damage("s")==-1,"zero damage impossible")
-	w=World.new()
+	w=World.new(0)
 	w.pos=Vector2i(5,3)
 	check(not w.step(Vector2i.RIGHT),"keyless door blocks")
 	w.keys=1
 	check(w.step(Vector2i.RIGHT) and w.keys==0,"door consumes one key")
-	w=World.new(); w.hp=12; w.pos=Vector2i(5,3)
+	w=World.new(0); w.hp=12; w.pos=Vector2i(5,3)
 	check(not w.step(Vector2i.LEFT) and w.hp==12,"lethal combat blocked")
-	w=World.new()
+	w=World.new(0)
 	var data: Dictionary = JSON.parse_string(JSON.stringify(w.save_data()))
 	check(w.restore(data),"JSON save roundtrip")
 	data.x=99
 	check(not w.restore(data) and w.pos==Vector2i(1,1),"invalid save rejected atomically")
 	check(not w.restore({"version":1}),"incomplete save rejected")
-	w=World.new()
+	w=World.new(0)
 	var route := ""
 	var before_boss: Dictionary = {}
 	for floor_num in range(World.MAPS.size()):
+		if floor_num==1:
+			for direction in find_path(w,Vector2i(1,4)):
+				check(w.step(direction),"reach water valve")
+				route += direction_name(direction)
+			check(w.action("drain"),"choose drainage instead of spring to reach optional growth")
 		# Collect all safe items/enemies, prioritizing stat upgrades and potions.
 		for pass_num in range(60):
 			var best: Array = []
@@ -59,7 +64,7 @@ func _init():
 	check(w.won,"all five floors can be won")
 	check(w.hp>0,"winning route survives")
 	check(not w.loan_used and w.debt()==0,"baseline wins with no borrowing")
-	var return_world = World.new()
+	var return_world = World.new(0)
 	check(return_world.restore(before_boss),"restore later-growth state")
 	for i in range(2):
 		var path := find_path(return_world,Vector2i(1,1))
@@ -94,7 +99,7 @@ func find_path(w, goal: Vector2i) -> Array:
 			var n: Vector2i=p+d
 			if visited.has(n): continue
 			var t: String=w.tile(n)
-			if t=="#" or (t in ["<",">"] and n!=goal) or (t in ["B","K","V"] and n!=goal): continue
+			if t=="#" or (t=="~" and w.water_choice!="drain") or (t in ["<",">"] and n!=goal) or (t in ["B","K","V"] and n!=goal): continue
 			if t=="D": continue # safe route does not require optional doors
 			if World.ENEMIES.has(t) and (w.damage(t)<0 or w.damage(t)>=w.hp): continue
 			visited[n]=true
