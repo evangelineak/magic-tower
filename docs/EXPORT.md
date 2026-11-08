@@ -15,7 +15,7 @@ Official complete template bundle:
 - SHA-256: `3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8`
 - 1,255,918,323 bytes. Check the full archive hash before extracting templates. Do not bypass checksum errors.
 
-The export script creates `export/linux` and `export/windows`, each containing the executable, playing instructions, SHA-256 checksums, and Godot/third-party notices extracted from the exact build engine. Distribute the whole folder, not just the executable. Game resources are embedded; editor, Blender sources, tests, tools, and design documentation are excluded. The untracked `export/` directory is intentionally not committed.
+The export script creates `export/linux` and `export/windows`, each containing the executable, playing instructions, SHA-256 checksums, the CJK font OFL notice, and Godot/third-party notices extracted from the exact build engine. Distribute the whole folder, not just the executable. Game resources are embedded; editor, Blender sources, tests, tools, and design documentation are excluded. The untracked `export/` directory is intentionally not committed.
 
 The final check launches the Linux executable headlessly. Successful Windows cross-export or a valid PE header does **not** prove Windows runtime compatibility; that needs a real Windows run. Signing, an installer, automatic release publication, and a selected game-source license are not supplied by this script. Never tell players to bypass OS security warnings merely because the build is unsigned.
 

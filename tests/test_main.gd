@@ -10,6 +10,7 @@ func run_tests():
 	var scene = load("res://main.tscn").instantiate()
 	root.add_child(scene)
 	scene.save_path="user://integration-test.json"
+	scene.language="en" # Preserve English-contract UI assertions; default Chinese has its own suite.
 	scene.world=load("res://scripts/world.gd").new(0)
 	var event := InputEventKey.new()
 	event.pressed=true

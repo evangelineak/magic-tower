@@ -1,6 +1,8 @@
 extends Node2D
 
 const World = preload("res://scripts/world.gd")
+const Localization = preload("res://scripts/localization.gd")
+var language := "zh"
 const Progression = preload("res://scripts/progression.gd")
 const CELL := 49.0
 const ORIGIN := Vector2(350,142)
@@ -59,6 +61,8 @@ func toggle_mute():
 	if muted and sound_player: sound_player.stop()
 	queue_redraw()
 func _ready():
+	if ResourceLoader.exists("res://assets/fonts/MagicTowerCJK.otf"):
+		font=load("res://assets/fonts/MagicTowerCJK.otf")
 	sound_player=AudioStreamPlayer.new()
 	sound_player.volume_db=-6.0
 	add_child(sound_player)
@@ -75,8 +79,10 @@ func _process(delta):
 	tick += delta
 	battle_time = maxf(0.0, battle_time-delta)
 	queue_redraw()
+func display(source: String) -> String:
+	return Localization.text(source,language)
 func label_at(p: Vector2, text: String, size:=18, color:=INK):
-	draw_string(font,p,text,HORIZONTAL_ALIGNMENT_LEFT,-1,size,color)
+	draw_string(font,p,display(text),HORIZONTAL_ALIGNMENT_LEFT,-1,size,color)
 func panel(r: Rect2, color: Color):
 	draw_style_box(style(color),r)
 func style(color: Color) -> StyleBoxFlat:
@@ -86,7 +92,7 @@ func style(color: Color) -> StyleBoxFlat:
 	return s
 func _draw():
 	draw_rect(Rect2(0,0,1280,800),Color("080f1b"))
-	label_at(Vector2(36,45),"N O C T U R N E   /   G A M E S",14,MUTED)
+	label_at(Vector2(36,45),"F2: 中文 / English",14,MUTED)
 	label_at(Vector2(350,52),"MAGIC TOWER",32,INK)
 	label_at(Vector2(350,83),"SEED %d  /  THE KEY OF THE SKY" % world.seed_value,14,TEAL)
 	label_at(Vector2(1030,83),"M: SOUND OFF" if muted else "M: SOUND ON (LOW)",13,MUTED)
@@ -146,7 +152,7 @@ func _draw():
 	label_at(Vector2(938,674),"Move   WASD / Arrow keys",15)
 	label_at(Vector2(938,699),"Click an adjacent tile to move",14,MUTED)
 	label_at(Vector2(938,734),"U  undo     L  load     H  guide",14,MUTED)
-	label_at(Vector2(350,711),world.message if world.message.length()<=68 else world.message.left(65)+"...",13,TEAL)
+	label_at(Vector2(350,711),display(world.message) if display(world.message).length()<=68 else display(world.message).left(65)+"...",13,TEAL)
 	var titles := ["UNDO  U","SAVE  S*","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J"]
 	for i in buttons.size():
 		panel(buttons[i],Color("253748"))
@@ -299,7 +305,7 @@ func draw_interaction():
 		var r := Rect2(285,375+i*43,720,37)
 		panel(r,Color("253748"))
 		label_at(r.position+Vector2(12,24),"%d  %s" % [i+1,action_rows[i][1]],16)
-	label_at(Vector2(290,640),world.message.left(100),14,TEAL)
+	label_at(Vector2(290,640),display(world.message).left(100),14,TEAL)
 	if available_actions().size()>6:
 		label_at(Vector2(815,218),"Page %d   [ / ]" % (interaction_page+1),13,GOLD)
 	label_at(Vector2(290,672),"Click a choice or press its number. E / Esc closes without choosing.",14,MUTED)
@@ -308,7 +314,7 @@ func draw_key_confirmation():
 	panel(Rect2(260,120,770,570),Color("0c1928"))
 	var cost := 2 if world.tile(world.pos+checkpoint_pending)=="L" else 1
 	label_at(Vector2(290,158),"SPEND KEYS?",25,GOLD)
-	label_at(Vector2(290,205),"%s: costs %d gold key%s" % ["Double lock" if cost==2 else "Gold door",cost,"s" if cost==2 else ""],22,INK)
+	label_at(Vector2(290,205),"%s: costs %d gold keys" % ["Double lock" if cost==2 else "Gold door",cost],22,INK)
 	label_at(Vector2(290,248),"Held: %d   /   Remaining after opening: %d" % [world.keys,world.keys-cost],20,TEAL)
 	label_at(Vector2(290,292),"Keys are limited. Each reward cage needs TWO keys.",17,GOLD)
 	label_at(Vector2(290,325),"A shortcut now can cost a treasure later. You can cancel or return.",16,MUTED)
@@ -377,11 +383,16 @@ func draw_growth():
 		var r := Rect2(225,270+i*87,830,76)
 		panel(r,Color("203343"))
 		label_at(r.position+Vector2(15,27),"%d  %s" % [i+1,rows[i][1]],19,GOLD)
-		var description: String=rows[i][2]
-		if description.length()>92:
-			var split_at := description.rfind(" ",92)
+		var description: String=display(rows[i][2])
+		var description_width := 725.0 if growth_tab==0 else 790.0
+		if font.get_string_size(description,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x>description_width:
+			var split_at := description.length()-1
+			while split_at>1 and font.get_string_size(description.left(split_at),HORIZONTAL_ALIGNMENT_LEFT,-1,14).x>description_width: split_at-=1
+			if language=="en":
+				var space_at := description.rfind(" ",split_at)
+				if space_at>0: split_at=space_at
 			label_at(r.position+Vector2(15,47),description.left(split_at),14,INK)
-			label_at(r.position+Vector2(15,66),description.substr(split_at+1),14,INK)
+			label_at(r.position+Vector2(15,66),description.substr(split_at).strip_edges(),14,INK)
 		else: label_at(r.position+Vector2(15,56),description,15,INK)
 		if growth_tab==0:
 			var portrait: String=rows[i][0].trim_prefix("hero_") if rows[i][0].begins_with("hero_") else world.hero_id
@@ -394,7 +405,7 @@ func draw_growth():
 	if growth_tab==1:
 		label_at(Vector2(225,610),"DUELIST COST: one EXTRA opening retaliation, even on a one-shot kill.",15,Color("ef928f"))
 	else: label_at(Vector2(225,610),"Focus is finite. First visits restore it; repeating floors cannot farm it.",15,MUTED)
-	label_at(Vector2(225,646),world.message.left(105),14,TEAL)
+	label_at(Vector2(225,646),display(world.message).left(105),14,TEAL)
 	label_at(Vector2(225,697),"Choose 1-3. Tab changes section. Esc: keep default Warden." if world.moves==0 else "Click a card / press 1-3. Tab changes section. C / Esc closes.",15,MUTED)
 func open_journal():
 	journal=not journal
@@ -446,12 +457,15 @@ func journal_lines() -> Array:
 	entries.append("Focus %d/%d: +1 on first entry to a floor; revisits give none." % [world.focus,world.focus_cap])
 	var lines: Array=[]
 	for entry in entries:
-		var remaining: String=entry
-		while remaining.length()>86:
-			var split_at: int=remaining.rfind(" ",86)
-			if split_at<1: split_at=86
+		var remaining: String=display(entry)
+		while font.get_string_size(remaining,HORIZONTAL_ALIGNMENT_LEFT,-1,16).x>740:
+			var split_at := mini(86,remaining.length()-1)
+			while split_at>1 and font.get_string_size(remaining.left(split_at),HORIZONTAL_ALIGNMENT_LEFT,-1,16).x>730: split_at-=1
+			if language=="en":
+				var space_at := remaining.rfind(" ",split_at)
+				if space_at>0: split_at=space_at
 			lines.append(remaining.substr(0,split_at))
-			remaining="  "+remaining.substr(split_at).strip_edges()
+			remaining=remaining.substr(split_at).strip_edges()
 		lines.append(remaining)
 	return lines
 func draw_journal():
@@ -526,6 +540,10 @@ func draw_ellipse_shadow(center: Vector2):
 	draw_circle(Vector2.ZERO,49,Color(0,0,0,0.35))
 	draw_set_transform(Vector2.ZERO)
 func _unhandled_input(event):
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode==KEY_F2:
+		language="en" if language=="zh" else "zh"
+		queue_redraw()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode==KEY_M:
 		toggle_mute()
 		return

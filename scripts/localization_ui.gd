@@ -1,0 +1,378 @@
+extends RefCounted
+const EXACT = {
+  'Inscription: "The silent bell opens when the old lift runs."': '碑文：“旧梯运转之时，沉寂之钟便会开启。”',
+  '"Seek it above."': '“向上寻找。”',
+  "N O C T U R N E   /   G A M E S": "夜曲游戏",
+  "MAGIC TOWER": "魔塔 · 苍穹之钥",
+  "M: SOUND OFF": "M：音效关闭",
+  "M: SOUND ON (LOW)": "M：低音量开启",
+  "SKILL ARMED": "技能已备战",
+  "SKILL READY": "技能可用",
+  "NO FOCUS": "专注不足",
+  "Choose your hero with C": "按 C 选择英雄",
+  "NEW TALENT AVAILABLE  [C]": "有新天赋可选 [C]",
+  "R twice: replay  /  N twice: new seed": "R 按两次：重玩 / N 按两次：新种子",
+  "THE ROOTS": "根基",
+  "THE WARDENS": "守望者",
+  "THE VAULT": "秘藏",
+  "THE FORGE": "锻炉",
+  "THE CROWN": "王冠",
+  "BASE ATTACK": "基础攻击",
+  "BASE DEFENSE": "基础防御",
+  "GOLD KEYS": "金钥匙",
+  " HP": " 生命",
+  "AMBUSH: enemy strikes first": "先制：敌人先攻击",
+  "THORNS: 2 HP / your attack": "荆棘：每次攻击反伤 2",
+  "CHARGE: every third retaliation x2": "蓄力：每第三次反击双倍",
+  "E: interact / inspect ledger": "E：互动 / 查看账本",
+  "Move   WASD / Arrow keys": "移动：WASD / 方向键",
+  "Click an adjacent tile to move": "点击相邻格也可移动",
+  "U  undo     L  load     H  guide": "U 撤销 / L 读档 / H 图鉴",
+  "UNDO  U": "撤销 U",
+  "SAVE  S*": "保存 S*",
+  "LOAD  L": "读档 L",
+  "GUIDE  H": "图鉴 H",
+  "INTERACT / LEDGER  E": "互动 / 账本 E",
+  "HERO / GROWTH  C": "英雄 / 成长 C",
+  "JOURNEY NOTES  J": "旅途日志 J",
+  "* Click SAVE. S moves down.  |  R twice: restart  |  Autosaves after every move": "* 点击保存。S 为向下移动。R 按两次重开。每步自动保存。",
+  "THE SKY IS OPEN": "苍穹已开启",
+  "The final seal has fallen.": "最后的封印已破除。",
+  "Press R twice to begin a new journey.": "按两次 R 开始新的旅程。",
+  "THE TRAVELER'S FIELD GUIDE": "旅人图鉴",
+  "Normal retaliation after your attacks.": "在你的攻击之后正常反击。",
+  "Strikes first, even if you one-shot it.": "先制攻击；被一击击败也会先出手。",
+  "Every 3rd retaliation doubles; feint counts.": "每第三次反击双倍；佯攻计入次数。",
+  "2 thorns / your hit, including final hit.": "每次攻击反伤 2，最后一击也算。",
+  "Exact forecasts include ambush, thorns, gear, skills and talents.": "精确预览包含先制、荆棘、装备、技能及天赋。",
+  "Thorns ignores DEF. Brace and total-loss reduction still apply.": "荆棘无视防御；架盾与总损血减免仍有效。",
+  "C: hero / gear / talents. E: local choices, quests and ledger.": "C：英雄 / 装备 / 天赋。E：互动 / 任务 / 账本。",
+  "J: researcher / I: sample / O: valve / R: relic / X: encounter.": "J：研究员 / I：样本 / O：水阀 / R：遗物 / X：奇遇。",
+  "Interest: first entry to floors 4 and 5 only, never steps or waiting.": "利息只在首次进入第 4、5 层时结算；走路和等待不计息。",
+  "Grow stronger and revisit. U reverses the entire previous action.": "成长后再回访。U 可完整撤销上一步行动。",
+  "L: 2-key lock / $: +60 gold / A: +5 ATK / P: +140 HP, +1 focus.": "L：双锁需 2 钥匙 / $：60 金币 / A：5 攻击 / P：140 生命及 1 专注。",
+  "H / Esc / click closes. Battles are cosmetic replays; any key skips.": "H / Esc / 点击关闭。战斗动画仅回放，任意键可跳过。",
+  "Survey bridge: cross safely above the water": "勘测桥：安全跨越水面",
+  "Drained passage to the relic vault": "水已排干，可通往遗物室",
+  "Merchant: trade & loans": "商人：交易与贷款",
+  "One core. Three choices.": "一枚机关芯，三种用途。",
+  "The old elevator": "古老的升降梯",
+  "Workshop: a lasting choice": "工坊：一次长远的抉择",
+  "A treasure worth returning for": "值得成长后回访的宝物",
+  "An inscription. Read carefully.": "碑文：请仔细阅读。",
+  "A door with a secret": "藏着秘密的门",
+  "Return to a lower floor": "返回较低楼层",
+  "Ascend: check your ledger": "上楼：请留意账本",
+  "Ruby: +5 attack": "红宝石：攻击 +5",
+  "Sapphire: +4 defense": "蓝宝石：防御 +4",
+  "Spring water: +70 HP": "饮用泉水：生命+70。",
+  "Gold key": "金钥匙",
+  "Gold door: costs 1 key": "金门：消耗 1 把钥匙",
+  "Double lock: costs 2 keys": "双锁：消耗 2 把钥匙",
+  "Gold cache: +60 gold": "金币箱：金币 +60",
+  "Blade relic: +5 attack": "锋刃遗物：攻击 +5",
+  "Supplies: +140 HP / +1 focus": "补给箱：生命 +140 / 专注 +1",
+  "A traveler with a request": "有事相求的旅人",
+  "An unusual research sample": "一份特殊的研究样本",
+  "Drain the route or keep the spring?": "排水开路，还是保留泉水？",
+  "Deep water blocks this route": "深水阻挡了道路",
+  "A choice of equipment": "两件装备，择一领取",
+  "A costly opportunity": "有代价的奇遇",
+  "SCOUT BEFORE YOU STRIKE": "出手前先观察",
+  "Spend keys and open this door": "花费钥匙并打开门",
+  "Continue upstairs: settle interest now": "继续上楼：现在结算利息",
+  "Cancel: keep all keys": "取消：保留全部钥匙",
+  "Stay on this floor: no interest charged": "留在本层：不收利息",
+  "Repay using available gold (fees, interest, principal)": "用现有金币还款（手续费、利息、本金）",
+  "Buy armor-breaker: 60 gold / +12 ATK (once)": "购买破甲武器：60 金币 / 攻击 +12（限一次）",
+  "Borrow 40 gold: 2 fee / 10% per new milestone": "借入 40 金币：手续费 2 / 新里程碑计息 10%",
+  "Sell core: +35 gold / lose its other uses": "出售机关芯：金币 +35 / 放弃其他用途",
+  "Use core: repair elevator / excludes forge & sale": "使用机关芯修复升降梯 / 放弃锻造与出售",
+  "Ride repaired elevator: floors 1 <-> 3": "乘坐已修好的升降梯：第 1 层 ↔ 第 3 层",
+  "Use core: permanent +8 DEF / excludes lift & sale": "使用机关芯：永久防御 +8 / 放弃升降梯与出售",
+  "Spend survey (I): bridge on floor 2 / no J reward; no core": "交出样本 I：二层造桥 / 放弃 J 奖励；不耗机关芯",
+  "Inspect the mechanism using the inscription's clue": "根据碑文线索检查机关",
+  "Accept: find survey / choose J rewards or F flood bridge": "接受：寻找样本 / 可选 J 奖励或 F 造桥",
+  "Spend survey: +45 gold / give up focus training AND bridge": "交出样本：金币 +45 / 放弃专注训练与造桥",
+  "Spend survey: focus cap 4 + refill / give up gold AND bridge": "交出样本：专注上限 4 并补满 / 放弃金币与造桥",
+  "Drain the water: open a route / give up the spring": "排干积水：开通道路 / 放弃泉水治疗",
+  "Use spring: +120 HP / bridge remains open": "使用泉水：生命 +120 / 桥仍可通行",
+  "Use spring: +120 HP / survey spent; route stays flooded": "使用泉水：生命 +120 / 样本已交出，道路仍淹没",
+  "Use spring: +120 HP / survey bridge can still open route": "使用泉水：生命 +120 / 之后仍可用样本造桥",
+  "Buckler: +6 DEF / -4 ATK; blocks first enemy hit": "重盾：防御 +6 / 攻击 -4；挡下敌人第一击",
+  "Duelist: +6 ATK / -3 DEF / pierce 8; EXTRA opening retaliation": "决斗装：攻击 +6 / 防御 -3 / 穿防 8；开局额外受一次反击",
+  "CHOICES & THE LEDGER": "抉择与账本",
+  "Borrow once, before floor 4. Receive 40; owe 42. Max total 50.": "第 4 层之前可借一次。到手 40，初欠 42，最多共还 50。",
+  "First entry to floors 4 and 5: ceil(remaining principal x 10%).": "首次进入第 4、5 层：剩余本金 ×10%，向上取整。",
+  "No compound interest. Walking, waiting & backtracking cost nothing.": "不计复利。走路、等待、回头均不产生费用。",
+  "After maturity: debt freezes; future gold repays it. No new loans.": "到期后债务冻结，后续金币自动还款；不能再次借贷。",
+  "Repay early to reduce interest. No real money. Debt ends with this run.": "提前还款可省利息。不涉及真实金钱，债务仅限本局。",
+  "Stand beside a marked object or NPC to interact.": "站在标记物或人物旁边即可互动。",
+  "Click a choice or press its number. E / Esc closes without choosing.": "点击选项或按数字。E / Esc 关闭，不作选择。",
+  "SPEND KEYS?": "花费钥匙吗？",
+  "Double lock": "双锁门",
+  "Gold door": "金门",
+  "Keys are limited. Each reward cage needs TWO keys.": "钥匙有限，每个奖励笼房都需要两把。",
+  "A shortcut now can cost a treasure later. You can cancel or return.": "眼前的捷径可能让你错过宝物。可以取消，之后再来。",
+  "U restores the opened door, your keys and your position together.": "U 会同时恢复门、钥匙和你的位置。",
+  "Nothing is spent until you confirm.": "确认前不会花费任何东西。",
+  "Click a choice / press 1-2. E / Esc cancels.": "点击选项 / 按 1–2。E / Esc 取消。",
+  "Need unspent survey (I), beside F, with water not drained.": "需要未使用的样本 I，靠近 F，且尚未排水。",
+  "Loan unavailable: once per run, before floor 4.": "无法贷款：每局一次，且须在第 4 层之前。",
+  "Need 60 gold; this weapon can only be purchased once.": "需要 60 金币；这件武器只能买一次。",
+  "No gold available or no outstanding debt.": "没有可用金币，或没有未还欠款。",
+  "A held core is required. Its other uses will be lost.": "需要持有机关芯；使用后将放弃它的其他用途。",
+  "No core held. A used or sold core cannot be reclaimed.": "未持有机关芯。已使用或售出的不能取回。",
+  "Repair this elevator with the core first.": "先用机关芯修好这座升降梯。",
+  "The bell is silent. Find the inscription and restore its mechanism.": "钟声沉寂。找到碑文，并恢复它的机关。",
+  "This choice is unavailable. Check its cost and requirements.": "此选项不可用。请检查所需条件和代价。",
+  "J: find the researcher's request": "J：寻找研究员的委托",
+  "QUEST: seek the sample (I)": "任务：寻找样本 I",
+  "SURVEY: J reward or F bridge": "样本：J 换奖励 / F 造桥",
+  "SURVEY: delivered to J": "样本：已交给 J",
+  "SURVEY: flood bridge built": "样本：已用于造桥",
+  " (cancel armed skill)": "（取消技能备战）",
+  " / 1 focus": " / 1 专注",
+  " [EQUIPPED]": " [已装备]",
+  "THE HERO'S PATH": "英雄之路",
+  "HERO & SKILL": "英雄与技能",
+  "Choose before your first action. Later: use your hero's skill.": "首次行动前选择英雄；之后可使用英雄技能。",
+  "Switch owned gear freely. Check the battle forecast after switching.": "可自由切换已有装备。换装后请重新查看战斗预览。",
+  "One choice at 3 / 7 / 12 kills. Each tier's choices are exclusive.": "击败 3 / 7 / 12 个敌人时三选一；同阶天赋互斥。",
+  "Learned: ": "已学：",
+  "none yet": "暂无",
+  "No new choice yet. Defeat foes and return.": "暂时没有新选项。击败敌人后再来。",
+  "DUELIST COST: one EXTRA opening retaliation, even on a one-shot kill.": "决斗装代价：开局额外承受一次反击，即使能一击击败敌人。",
+  "Focus is finite. First visits restore it; repeating floors cannot farm it.": "专注有限。首次到达楼层恢复专注，重复上下楼不能刷取。",
+  "Choose 1-3. Tab changes section. Esc: keep default Warden.": "按 1–3 选择，Tab 切页，Esc 保留默认护卫。",
+  "Click a card / press 1-3. Tab changes section. C / Esc closes.": "点击卡片 / 按 1–3。Tab 切页；C / Esc 关闭。",
+  "No outstanding debt. Walking and waiting never incur interest.": "没有欠款。走路和等待永远不产生利息。",
+  "Debt is frozen. Future gold repays it until the balance is clear.": "债务已冻结，之后获得的金币会自动还清欠款。",
+  "Core held: lift, forge (+8 DEF), or sale (+35 gold). Choose once.": "持有机关芯：修梯、锻造（防御 +8）或出售（35 金币），选一次。",
+  "Core used for lift. Forge and sale are forgone.": "机关芯已修梯。锻造和出售已放弃。",
+  "Core forged: +8 DEF. Lift and sale are forgone.": "机关芯已锻造：防御 +8。修梯和出售已放弃。",
+  "Core sold: +35 gold. Lift and forge are forgone.": "机关芯已出售：35 金币。修梯和锻造已放弃。",
+  "No mechanism core in your pack.": "背包中没有机关芯。",
+  "Floor 2: spring still available.": "第 2 层：泉水仍可使用。",
+  "Floor 2: the water decision is still open.": "第 2 层：尚未决定积水的用途。",
+  "Floor 2 drained: relic route opened; spring healing forgone.": "第 2 层已排水：遗物道路打开，泉水治疗已放弃。",
+  "Floor 2 spring used: +120 HP; bridge open.": "第 2 层泉水已使用：生命 +120；桥已通行。",
+  "Floor 2 spring used: survey spent at J; relic route stays flooded.": "第 2 层泉水已使用：样本已交 J，遗物道路仍淹没。",
+  "Floor 2 spring used: +120 HP; a survey bridge can still open the route.": "第 2 层泉水已使用：生命 +120；仍可用样本造桥。",
+  "Survey bridge built: floor 2 water is walkable; core unchanged.": "勘测桥已建好：第 2 层水面可走，机关芯未消耗。",
+  "No research task accepted.": "尚未接受研究任务。",
+  "Find the survey (I): J rewards or F flood bridge, choose once.": "寻找样本 I：J 换奖励或 F 造桥，只能选一次。",
+  "Survey held: J = gold / focus; F = bridge preserving spring (no core).": "持有样本：J 换金币 / 专注；F 造桥保留泉水，不耗机关芯。",
+  "Survey spent at J: alternative reward and flood bridge forgone.": "样本已交给 J：另一奖励与造桥已放弃。",
+  "Survey spent at F: bridge built; both researcher rewards forgone.": "样本已交给 F：桥已建好，研究员两项奖励均放弃。",
+  "Floor 3: a powerful guardian still watches the star vault.": "第 3 层：强大的守卫仍看守着星之秘藏。",
+  "Floor 3: the guardian is defeated; its treasure is unclaimed.": "第 3 层：守卫已击败，宝物尚未领取。",
+  "Floor 3: the star vault treasure has been claimed.": "第 3 层：星之秘藏宝物已领取。",
+  "decision still open": "尚未决定",
+  "60 gold": "60 金币",
+  "+5 ATK": "攻击 +5",
+  "+140 HP and +1 focus": "生命 +140、专注 +1",
+  "double lock needs 2 keys": "双锁需要 2 把钥匙",
+  "unclaimed, lock already opened": "锁已打开，尚未领取",
+  "The silent bell opens when the old lift runs.": "旧梯运转之时，沉寂之钟便会开启。",
+  "Seek it above.": "向上寻找。",
+  "The bell's secret has been found.": "钟的秘密已被发现。",
+  "Talents: ": "天赋：",
+  "none chosen": "尚未选择",
+  "Equipped: ": "装备：",
+  "JOURNEY NOTES": "旅途日志",
+  "Only what you have discovered. Reading spends nothing.": "只记录你已发现的事。阅读不花费资源。",
+  "BATTLE REPLAY": "战斗回放",
+  "Readying the strike": "准备攻击",
+  "Precision shot": "精准射击",
+  "Hero attacks": "英雄出击",
+  "Thorns reflect damage": "荆棘反伤",
+  "Retaliation resolved": "反击已结算",
+  "Victory: the forecast holds": "胜利：与预览一致",
+  "Cosmetic replay. Damage resolves once; any key / click skips.": "仅为回放。伤害只结算一次；任意键 / 点击跳过。",
+  "skill used": "已用技能",
+  "no active skill": "未用主动技能",
+  "replay this seed": "重玩当前种子",
+  "start a new seed": "开始新种子",
+  "A new milestone settles interest. Repay first, continue, or cancel.": "新里程碑将结算利息。可先还款、继续或取消。",
+  "No move to undo in this session.": "本次游戏中没有可撤销的行动。",
+  "One step back. A different possibility.": "退回一步，试试另一种可能。",
+  "Could not save. Check storage permissions.": "无法保存。请检查存储权限。",
+  "Journey saved locally.": "旅程已保存到本地。",
+  "No saved journey yet.": "还没有旅程存档。",
+  "Save is invalid. Current journey is unchanged.": "存档无效，当前旅程未改变。",
+  "VITALITY": "生命",
+  "GOLD": "金币",
+  "EQUIPMENT": "装备",
+  "TALENTS": "天赋",
+  "HELD": "持有",
+  "NONE": "无",
+  "held": "持有",
+  "none": "无",
+  "sold": "已出售",
+  "forge": "已锻造",
+  "elevator": "已修梯",
+  "SOLD": "已出售",
+  "FORGE": "已锻造",
+  "ELEVATOR": "已修梯",
+  "IMPOSSIBLE": "无法破防",
+  "resolved": "已处理",
+  "PREV": "上一页",
+  "NEXT": "下一页",
+  "W ARDEN": "守卫"
+}
+const TEMPLATES = [
+  ["%s: costs %d gold keys", "%s：消耗 %d 把金钥匙"],
+  [
+    "SEED %d  /  THE KEY OF THE SKY",
+    "种子 %d  /  苍穹之钥"
+  ],
+  [
+    "FLOOR 0%d / 05",
+    "第 %d 层 / 共 5 层"
+  ],
+  [
+    "FOCUS %d / %d  |  %s",
+    "专注 %d / %d  |  %s"
+  ],
+  [
+    "Kills %d  /  Talents %d",
+    "击败 %d  /  天赋 %d"
+  ],
+  [
+    "FLOOR 0%d",
+    "第 %d 层"
+  ],
+  [
+    "DEBT %d  /  CORE: %s",
+    "欠款 %d / 机关芯：%s"
+  ],
+  [
+    "Predicted loss: %s",
+    "预计损血：%s"
+  ],
+  [
+    "Extra opening hit: %d / Shield: %d",
+    "开局额外伤害 %d / 盾挡 %d"
+  ],
+  [
+    "%d HP left  /  %d moves  /  %d gold",
+    "剩余 %d 生命 / %d 步 / %d 金币"
+  ],
+  [
+    "HP %d / ATK %d / DEF %d",
+    "生命 %d / 攻击 %d / 防御 %d"
+  ],
+  [
+    "Gold %d   |   Debt %d   |   Core: %s",
+    "金币 %d | 欠款 %d | 机关芯：%s"
+  ],
+  [
+    "Principal %d  +  fees %d  +  interest %d",
+    "本金 %d + 手续费 %d + 利息 %d"
+  ],
+  [
+    "ASCENDING NOW: +%d interest. Choose below.",
+    "现在上楼将增加 %d 利息。请在下方选择。"
+  ],
+  [
+    "%d  %s",
+    "%d  %s"
+  ],
+  [
+    "Page %d   [ / ]",
+    "第 %d 页 [ / ]"
+  ],
+  [
+    "Held: %d   /   Remaining after opening: %d",
+    "现有 %d 把 / 开门后剩余 %d 把"
+  ],
+  [
+    "%s  /  Focus %d  /  Kills %d  /  Seed %d",
+    "%s / 专注 %d / 击败 %d / 种子 %d"
+  ],
+  [
+    "Seed %d / %s / floor %d / %d steps",
+    "种子 %d / %s / 第 %d 层 / %d 步"
+  ],
+  [
+    "Gold %d / debt %d = principal %d + fee %d + interest %d",
+    "金币 %d / 欠款 %d = 本金 %d + 手续费 %d + 利息 %d"
+  ],
+  [
+    "Next interest: first entry to floor %d, +%d at current principal.",
+    "下次计息：首次到第 %d 层；按当前本金增加 %d。"
+  ],
+  [
+    "Floor 4: %s / %s",
+    "第 4 层：%s / %s"
+  ],
+  [
+    "Floor %d cache: %s / %s.",
+    "第 %d 层宝箱：%s / %s。"
+  ],
+  [
+    "Focus %d/%d: +1 on first entry to a floor; revisits give none.",
+    "专注 %d/%d：首次到达楼层 +1；回访不恢复。"
+  ],
+  [
+    "J / Esc: close    [ / ]: pages    %d / %d",
+    "J / Esc 关闭；[ / ] 翻页；第 %d / %d 页"
+  ],
+  [
+    "%d rounds  /  %d damage per hit  /  %d HP lost",
+    "%d 回合 / 每击 %d 伤害 / 损失 %d 生命"
+  ],
+  [
+    "Raw: normal %d + ambush %d + thorns %d",
+    "原始伤害：普通 %d + 先制 %d + 荆棘 %d"
+  ],
+  [
+    "EXTRA opening hit %d + charge bonus %d / %d retaliations",
+    "额外开局反击 %d + 蓄力加伤 %d / 共 %d 次反击"
+  ],
+  [
+    "Shield blocks %d; total reduction %d (includes shield)",
+    "盾挡 %d；总减伤 %d（已包含盾挡）"
+  ],
+  [
+    "Final loss %d / recovery +%d / %s",
+    "最终损血 %d / 恢复 +%d / %s"
+  ],
+  [
+    "Press %s again: %s. Autosave will be replaced.",
+    "再按 %s：%s。将覆盖自动存档。"
+  ],
+  [
+    "Opening this door costs %d keys. Confirm or keep them for later.",
+    "开门需要 %d 把钥匙。确认，或留待以后。"
+  ],
+  [
+    "%d HP",
+    "%d 生命"
+  ],
+  [
+    "%s [EQUIPPED]",
+    "%s [已装备]"
+  ],
+  [
+    "%s / 1 focus",
+    "%s / 1 专注"
+  ],
+  [
+    "%s (cancel armed skill)",
+    "%s（取消技能备战）"
+  ],
+  [
+    "Learned: %s",
+    "已学：%s"
+  ],
+  [
+    "Talents: %s",
+    "天赋：%s"
+  ],
+  [
+    "Equipped: %s. %s",
+    "装备：%s。%s"
+  ]
+]

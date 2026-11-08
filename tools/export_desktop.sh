@@ -11,7 +11,8 @@ mkdir -p export/linux export/windows
 for target in linux windows; do
   "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- "export/$target/GODOT-LICENSES.txt"
   cp docs/PLAYING.txt "export/$target/PLAYING.txt"
-  (cd "export/$target" && sha256sum magic-tower* GODOT-LICENSES.txt PLAYING.txt > SHA256SUMS)
+  cp assets/fonts/LICENSE-OFL.txt "export/$target/FONT-LICENSE.txt"
+  (cd "export/$target" && sha256sum magic-tower* GODOT-LICENSES.txt FONT-LICENSE.txt PLAYING.txt > SHA256SUMS)
 done
 # This is a Linux runtime check, not a claim of Windows execution.
 timeout 60 export/linux/magic-tower.x86_64 --headless --quit-after 30 -- --seed=0

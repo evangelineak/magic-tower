@@ -1,0 +1,68 @@
+{
+  "output": "MagicTowerCJK.otf",
+  "mode": "ui-subset",
+  "source_file": "NotoSansCJK-Regular.ttc",
+  "source_sha256": "b76b0433203017ca80401b2ee0dd69350349871c4b19d504c34dbdd80541690a",
+  "face_index": 2,
+  "copyright_source_file": "copyright",
+  "copyright_source_sha256": "849f4ea9c214fa4ac3593b770c699f387534b11ce671264c1b10d85bdcb5997b",
+  "original_names": {
+    "0": "© 2014-2021 Adobe (http://www.adobe.com/).",
+    "1": "Noto Sans CJK SC",
+    "3": "2.004;GOOG;NotoSansCJKsc-Regular;ADOBE",
+    "5": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603",
+    "6": "NotoSansCJKsc-Regular",
+    "8": "Adobe",
+    "9": "Ryoko NISHIZUKA 西塚涼子 (kana, bopomofo & ideographs); Paul D. Hunt (Latin, Greek & Cyrillic); Sandoll Communications 산돌커뮤니케이션, Soo-young JANG 장수영 & Joo-yeon KANG 강주연 (hangul elements, letters & syllables)",
+    "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
+    "14": "http://scripts.sil.org/OFL"
+  },
+  "output_sha256": "bf70dfd80d518f5e2ac5f85c33acf6850ef32b1639815d57eb062a3096f5b59c",
+  "bytes": 319324,
+  "coverage": {
+    "mapped_codepoints": 846,
+    "glyphs": 1709,
+    "required_codepoints": 687,
+    "missing": [],
+    "family": "MagicTowerCJK",
+    "postscript": "MagicTowerCJK-Regular"
+  },
+  "scanned_sources": [
+    {
+      "path": "scripts/generation.gd",
+      "sha256": "49937be79c8047ffb4f150936f8864d5d5c255efa9cbda73931f127c09cf1d0d"
+    },
+    {
+      "path": "scripts/localization.gd",
+      "sha256": "ac9d2c141f8d18763e0edd632a07144f2c40f70fe98c33267aa04ed3c0212553"
+    },
+    {
+      "path": "scripts/localization_progression.gd",
+      "sha256": "42da210e5fbf7f48d955bc8c309550f19c91c9c7d9563c0aeecea919edf0caa9"
+    },
+    {
+      "path": "scripts/localization_ui.gd",
+      "sha256": "b70129f56a030897d3fffa53b26831f90af190c714c07831c85c9205c52b2d90"
+    },
+    {
+      "path": "scripts/localization_world.gd",
+      "sha256": "482d63c89df63d7007bd2d26841f3b03a3a0ef2ad2753be28549a213c4ecd108"
+    },
+    {
+      "path": "scripts/main.gd",
+      "sha256": "99e1c71675de5aaf493cbe4943a80250695b8e947d36ae5659290d20d06958b5"
+    },
+    {
+      "path": "scripts/progression.gd",
+      "sha256": "c42d33aa2f8db1509abb7ac2ee889025d0a385a6bbff55599125f14be616887f"
+    },
+    {
+      "path": "scripts/world.gd",
+      "sha256": "2528900be4020e18d22eb7f592c2ad7e035edb44e210dbebafa13dc6908daa02"
+    },
+    {
+      "path": "project.godot",
+      "sha256": "3cbed630c5d4089d318473dabdcab74d3e8bed5e5689649fb2b8e80dfb09a1f3"
+    }
+  ]
+}

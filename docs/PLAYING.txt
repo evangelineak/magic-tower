@@ -9,6 +9,7 @@ C: hero, equipment, talents    H: enemy guide    J: journey journal
 U: undo    L: load    SAVE button: save
 R twice: restart same seed    N twice: new seed    M: mute/unmute
 Battle display can be skipped with any key/click without changing the result.
+F2: Chinese / English (defaults to Chinese). Language does not change your save.
 All loans use fictional game gold, not real money.
 
 Look at battle previews. Not every route is affordable. The third-floor vault
@@ -25,3 +26,5 @@ Work-in-progress branch: feature/choices-and-debt
 The game code/art has no open-source license selected yet. Public source does
 not itself grant general redistribution or modification rights. The Godot
 runtime and its components carry their own notices in GODOT-LICENSES.txt.
+The bundled MagicTowerCJK font is a Noto Sans CJK derivative under SIL OFL 1.1;
+its independent copyright/license notice is included in FONT-LICENSE.txt.
