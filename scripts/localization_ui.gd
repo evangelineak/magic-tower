@@ -1,5 +1,21 @@
 extends RefCounted
 const EXACT = {
+"PREPARE THIS RUN / STRATEGY + LEGACY POINTS":"本局准备 / 轮回策略与传承配点",
+"One confirmation locks both choices. You may leave points unused. No modifier means original strategy and zero points.":"一次确认锁定策略与配点，可以不花完。原装策略加零投入即为原始规则。",
+"0  Original strategy / points still optional":"0  原装策略 / 仍可自选配点",
+"Each point: +2 skill levels, capped at 20.":"每点提升 2 级技能；全部来源合计上限 20。",
+"Each point: one +1 focus supply this run. Use in C when not full.":"每点获得一份本局专注补给。未满时在 C 页使用，恢复 1 专注。",
+"New run: reassign, never farm deaths.":"新局可重配；重复死亡不加点。",
+"Locked for this run. Undo and reload cannot reassign. Zero points are allowed.":"本局固定，撤销和读档不能重配；允许零投入。",
+"ENTER: LOCK WHOLE PLAN / Esc: clear preview":"回车：确认整套方案 / Esc：清空预选",
+"Restore 1 focus only when not full. Otherwise no supply is spent.":"仅专注未满时恢复 1 专注；已满不消耗补给。",
+"First records of floors 3 / 5 / 8 each grant one point of per-run capacity. Retirement and defeat grant the same first-record reward; repeats grant nothing.":"首次记录第 3 / 5 / 8 层，各增加 1 点每局配点容量。退役和死亡按同一首达规则计奖，重复记录不加点。",
+"Reassign only in a new run. Unused points are allowed; repeated records grant nothing.":"只能在新局重配，允许保留空点；重复记录不加点。",
+"A: -":"A：−",
+"Q: +":"Q：＋",
+"S: -":"S：−",
+"W: +":"W：＋",
+
 "C: inspect three fixed choices. You can keep exploring and choose later.":"按 C 查看三项固定候选；可以继续探索，稍后再选。",
 "No known living target. Descriptions remain available.":"目前没有已知存活目标，仍可查看天赋说明。",
 "Same current build; remote previews grant no flank barrier.":"均按当前构筑计算；跨层预览不享受侧袭挡板。",
@@ -433,6 +449,14 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+	["Warden: %d%% block / Ranger: ignore %d DEF / Scholar: heal %d HP", "护卫：减伤 %d%% / 游侠：无视 %d 防御 / 学者：治疗 %d 生命"],
+["Capacity %d / unassigned %d", "容量 %d / 未分配 %d"],
+["Study: %d / 2", "研习：%d / 2"],
+["Emergency focus: %d / 2", "应急专注：%d / 2"],
+["Emergency focus: %d supplies left", "应急专注：剩余 %d 份补给"],
+["Legacy points gained: %d / capacity for each new run: %d", "本次获得 %d 点 / 今后每局容量 %d 点"],
+["Skill %d = base %d + training %d + gear %d + strategy %d + legacy %d (overflow %d)", "技能 %d 级 = 基础 %d＋训练 %d＋装备 %d＋策略 %d＋研习 %d（溢出 %d）"],
+
 ["TALENT FOLIO READY / %d kills / C", "天赋册待选 / 已击杀 %d / 按 C"],
 ["Next folio: %d / %d kills", "下一册进度：击杀 %d / %d"],
 ["All talent folios chosen / %d kills", "全部天赋册已选 / 击杀 %d"],

@@ -51,7 +51,7 @@ class FakeStore:
   if record.get("status", "active")!="active":return failure("archived")
   if record.is_empty() or expected_slot!=record.slot or expected_revision!=record.revision or run_id!=record.run_id:return failure("conflict")
   var current=World.from_snapshot(record.snapshot)
-  if current==null or snapshot.get("draft")!=current.draft or snapshot.get("talent_draft")!=current.talent_draft:return failure("draft_changed")
+  if current==null or snapshot.get("draft")!=current.draft or snapshot.get("talent_draft")!=current.talent_draft or snapshot.get("legacy_points")!=current.legacy_points:return failure("draft_changed")
   if current.strategy_pending() and snapshot!=current.save_data():return failure("draft_pending")
   record.snapshot=snapshot.duplicate(true);record.revision+=1;op=request;signature=sig;writes+=1
   if lost_ack:lost_ack=false;return failure("ack_lost",true)
@@ -94,15 +94,16 @@ class FakeStore:
   op=request;signature=sig;writes+=1
   if lost_ack:lost_ack=false;return failure("ack_lost",true)
   return response()
- func choose_strategy(expected_slot,expected_revision,run_id,choice,request):
+ func choose_strategy(expected_slot,expected_revision,run_id,choice,request,allocation={}):
   if delay: await Engine.get_main_loop().process_frame
-  var sig=JSON.stringify([expected_slot,expected_revision,run_id,choice,"strategy"])
+  var allocated={"study":allocation.get("study",0),"reserve":allocation.get("reserve",0)}
+  var sig=JSON.stringify([expected_slot,expected_revision,run_id,choice,"strategy",allocated])
   if conflict:return failure("conflict")
   if op==request:return response() if signature==sig else failure("conflict")
   if fail_before:fail_before=false;return failure("io_error",true)
   if record.is_empty() or expected_slot!=record.slot or expected_revision!=record.revision or run_id!=record.run_id or record.get("status","active")!="active":return failure("conflict")
   var candidate=World.from_snapshot(record.snapshot)
-  if candidate==null or not candidate.choose_strategy(choice):return failure("invalid")
+  if candidate==null or not candidate.choose_strategy(choice,allocation):return failure("invalid")
   record.snapshot=candidate.save_data();record.revision+=1
   op=request;signature=sig;writes+=1
   if lost_ack:lost_ack=false;return failure("ack_lost",true)
@@ -221,6 +222,7 @@ func run():
  await death_cases()
  await strategy_cases()
  await talent_draft_cases()
+ await legacy_points_cases()
  print("SESSION: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
  quit(0 if failures==0 else 1)
 
@@ -482,7 +484,7 @@ func talent_draft_cases():
  var session=Session.new(store)
  check((await session.new_run(42)).ok,"schema16 JSON new run")
  var born=session.world.save_data().duplicate(true)
- check(born.version==16 and born.talent_draft==World.Progression.talent_draft(42) and born.last_kill_kind=="","birth has fixed talent draft and no fabricated last kill")
+ check(born.version==17 and born.talent_draft==World.Progression.talent_draft(42) and born.last_kill_kind=="","birth has fixed talent draft and no fabricated last kill")
  check((await session.save()).ok and (await session.open_current()).ok and session.world.talent_draft==born.talent_draft,"JSON save/read never rerolls offers")
  # A fully valid revision-zero historical offer set is still not this run's set.
  var graft=born.duplicate(true);graft.talent_draft=World.Progression.talent_draft(0,0)
@@ -537,3 +539,55 @@ func talent_draft_cases():
  before=session.world.save_data().duplicate(true)
  check((await session.confirm_lethal(delta,before)).ok and session.world.last_kill_kind=="g" and session.world.kills==1,"death preserves last surviving kill and awards no new kill")
  check((await session.open_current()).ok and session.world.last_kill_kind=="g","JSON death replay preserves last-kill context")
+
+func legacy_points_cases():
+ var store=FakeStore.new();store.json_transport=true
+ store.profile=Profile.settle(Profile.fresh(),"points_past_0123456789",{"seed":1,"max_floor":8,"moves":100,"outcome":"victory"}).profile
+ var session=Session.new(store)
+ check((await session.new_run(3)).ok,"points birth uses authorized ledger")
+ var born=session.world.save_data().duplicate(true)
+ check(born.legacy_points=={"version":1,"capacity":3,"study":0,"reserve":0} and born.legacy_reserves==0,"unselected birth has capacity but no free applied attributes or supplies")
+ for invalid in [{"study":3,"reserve":0},{"study":2,"reserve":2},{"study":true,"reserve":0},{"study":1.5,"reserve":0},{"study":1},{"study":0,"reserve":0,"capacity":99}]:
+  check(not (await session.choose_strategy("none",invalid)).ok and session.world.save_data()==born,"invalid or over-budget allocation rejected before persistence")
+ store.lost_ack=true
+ var allocation={"study":2,"reserve":1}
+ check(not (await session.choose_strategy("none",allocation)).ok and session.world.save_data()==born,"combined allocation ACK lost stays unpublished")
+ allocation.study=0;allocation.reserve=2
+ var writes=store.writes
+ check((await session.retry_pending()).ok and store.writes==writes and session.world.legacy_points.study==2 and session.world.legacy_points.reserve==1 and session.world.legacy_reserves==1,"pending freezes original allocation despite caller mutation and retry")
+ var locked=session.world.save_data().duplicate(true)
+ check(locked.moves==0 and locked.hp==born.hp and locked.focus==born.focus and session.history.is_empty(),"locking changes neither moves nor current focus/HP and adds no undo")
+ check(session.world.skill_level()==14,"two study points grant real four effective levels")
+ check((await session.action("legacy_focus")).ok and session.world.focus==3 and session.world.legacy_reserves==0,"reserve is explicit one-time focus consumption")
+ check((await session.undo()).ok and session.world.save_data()==locked,"undo supply consumption returns dynamic reserves, not configuration")
+ check((await session.action("hero_scholar")).ok and (await session.action("mend")).ok and session.world.hp==born.hp+100,"study affects real scholar skill through committed actions")
+ var before_supply=session.world.save_data().duplicate(true)
+ check((await session.action("legacy_focus")).ok and session.world.focus==before_supply.focus+1 and session.world.legacy_reserves==0,"spent focus can be restored once without changing capacity")
+ check(not (await session.action("legacy_focus")).ok,"spent supply cannot be reused")
+ check((await session.undo()).ok and session.world.save_data()==before_supply,"supply undo exact restoration")
+ # A same-run structurally valid alternative allocation cannot enter via Undo.
+ var graft=before_supply.duplicate(true);graft.legacy_points.study=1;graft.legacy_points.reserve=2;graft.legacy_reserves=2
+ check(World.from_snapshot(graft)!=null,"alternative point configuration is structurally valid fixture")
+ session.history.append(graft);writes=store.writes
+ check(not (await session.undo()).ok and store.writes==writes,"undo cannot reallocate locked points")
+ session.history.pop_back()
+ check(not (await session.choose_strategy("none",{"study":1,"reserve":2})).ok,"direct second allocation refused")
+ # Explicit zero choice remains legal even with earned capacity.
+ check((await session.new_run(3,2,true)).ok and (await session.choose_strategy("none")).ok and session.world.legacy_points.study==0 and session.world.legacy_reserves==0,"old callers keep zero allocation, no automatic bonus")
+ # Previously released v16 run with unlocked strategy gets no points on upgrade.
+ var old=session.world.save_data().duplicate(true);old.version=16;old.erase("legacy_points");old.erase("legacy_reserves")
+ store.record.snapshot=old
+ check((await session.open_current()).ok and session.world.legacy_points=={"version":0,"capacity":0,"study":0,"reserve":0} and session.world.legacy_reserves==0,"old unlocked strategy does not receive retroactive points")
+ check((await session.save()).ok and session.world.legacy_points.version==0,"old pointless journey remains saveable")
+
+ var old_pending=World.new(3,2,"old_pending_0123456789","safe",false,Strategy.pool_from_profile(store.profile)).save_data()
+ old_pending.version=16;old_pending.erase("legacy_points");old_pending.erase("legacy_reserves")
+ store.record={"snapshot":old_pending,"run_id":old_pending.run_id,"slot":store.record.slot+1,"revision":0,"eligible":true}
+ store.op="old_pending_fixture"
+ check((await session.open_current()).ok and session.world.strategy_pending() and session.world.legacy_points.capacity==0,"old pending strategy migration has no retroactive points")
+ check(not (await session.choose_strategy("none",{"study":1,"reserve":0})).ok,"old pending run cannot spend later profile capacity")
+ check((await session.choose_strategy("none")).ok and session.world.legacy_points.version==0,"old pending strategy can finish original zero allocation without upgrading capacity")
+ check((await session.new_run(3,2,true)).ok and (await session.choose_strategy("none",{"study":0,"reserve":2})).ok,"reserve cap fixture")
+ check((await session.action("legacy_focus")).ok and session.world.focus==3 and session.world.legacy_reserves==1,"one reserve reaches focus cap")
+ var full=session.world.save_data().duplicate(true)
+ check(not (await session.action("legacy_focus")).ok and session.world.save_data()==full,"full focus refuses consumption without wasting remaining supply")

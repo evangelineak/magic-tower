@@ -224,3 +224,20 @@ Authentic schema 15 active and defeated containers from isolated commit
 kill history. The adapter continues to normalize and fully restore World before
 publishing a response; it does not synthesize candidates from UI inputs. The
 JS side remains a payload/transaction validator, not a second combat engine.
+
+## Schema 17 per-run legacy allocation
+
+The existing strategy transaction now accepts a final optional `allocation`
+argument, normalized from `{}` to `{study:0,reserve:0}`. Birth capacity is fixed
+from the actual saved strategy pool (0/1/2/3), not recalculated at confirmation.
+Each category is limited to two points and their sum cannot exceed capacity.
+Choosing `none` can still allocate points. Strategy and allocation publish in
+one run revision, leaving the global profile and active slot revision unchanged.
+Same-nonce retries compare both choice and allocation; changing either conflicts.
+
+Ordinary save/Undo cannot change `legacy_points`. Remaining `legacy_reserves`
+is gameplay state and can be consumed or restored by a real Undo. Atomic lethal
+settlement preserves remaining supplies and replays combat with the saved study
+allocation. Authentic schema 16 active/death/pending fixtures migrate to version
+0, zero capacity and no reserve grant. The old pending strategy remains choosable
+with zero allocation; a genuinely new run uses the earned profile's birth pool.

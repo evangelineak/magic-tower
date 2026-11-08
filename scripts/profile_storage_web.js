@@ -50,6 +50,19 @@ function talentDraft(seed,version=1){
  return {version,offers:version===0?structuredClone(TALENT_TIERS):[...TALENT_POOLS.map((pool,tier)=>[...pool].sort((a,b)=>talentRank(seed,tier,a)-talentRank(seed,tier,b)||(a<b?-1:a>b?1:0)).slice(0,3)),[...TALENT_TIERS[2]]]};
 }
 function validTalentDraft(seed,draft){return keysExactly(draft,['version','offers'])&&[0,1].includes(draft.version)&&same(draft,talentDraft(seed,draft.version));}
+function pointCapacity(draft){return draft.pool.length?draft.pool.length-3:0;}
+function allocationCopy(value={}){
+ if(keysExactly(value,[]))return {study:0,reserve:0};
+ must(keysExactly(value,['study','reserve'])&&integer(value.study,2)&&integer(value.reserve,2),'INVALID_ALLOCATION');
+ return {study:value.study,reserve:value.reserve};
+}
+function validLegacyPoints(s){
+ const p=s.legacy_points;
+ if(!keysExactly(p,['version','capacity','study','reserve'])||![0,1].includes(p.version)||!integer(p.capacity,3)||!integer(p.study,2)||!integer(p.reserve,2)||p.study+p.reserve>p.capacity||!integer(s.legacy_reserves,p.reserve))return false;
+ if(p.version===0)return p.capacity===0&&p.study===0&&p.reserve===0&&s.legacy_reserves===0;
+ if(p.capacity!==pointCapacity(s.draft))return false;
+ return s.draft.choice!==''||(p.study===0&&p.reserve===0&&s.legacy_reserves===0);
+}
 function snapshotCopy(snapshot, allowEnded=false) {
   const s = structuredClone(snapshot);
   let encoded; try {encoded=JSON.stringify(s);}catch{throw new StorageFault('INVALID_SNAPSHOT');}
@@ -58,7 +71,7 @@ function snapshotCopy(snapshot, allowEnded=false) {
   must(!s.floor_seen.some((seen,i) => seen && s.floor_seen.slice(0,i).includes(false)), 'INVALID_SNAPSHOT');
   must(integer(s.floor) && s.floor < s.floor_seen.length && s.floor_seen[s.floor], 'INVALID_SNAPSHOT');
   must(typeof s.won === 'boolean' && Number.isSafeInteger(s.hp) && s.hp >= 0 && integer(s.moves, 10000000) && integer(s.seed_value, 2147483647), 'INVALID_SNAPSHOT');
-  must([13,14,15,16].includes(s.version) && validId(s.run_id) && ['safe','risk'].includes(s.mode) && (s.ended_reason==='' || (allowEnded && ['retired','victory','death'].includes(s.ended_reason))), 'INVALID_WORLD');
+  must([13,14,15,16,17].includes(s.version) && validId(s.run_id) && ['safe','risk'].includes(s.mode) && (s.ended_reason==='' || (allowEnded && ['retired','victory','death'].includes(s.ended_reason))), 'INVALID_WORLD');
   must([1,2].includes(s.layout_revision) && Array.isArray(s.floors) && s.floors.length===s.floor_seen.length, 'INVALID_WORLD');
   must(integer(s.x,9)&&s.x>=1&&integer(s.y,9)&&s.y>=1&&integer(s.atk,1000000)&&s.atk>0&&integer(s.def,1000000), 'INVALID_WORLD');
   must(s.floors.every(grid=>Array.isArray(grid)&&grid.length===11&&grid.every(row=>Array.isArray(row)&&row.length===11&&row.every(t=>typeof t==='string'&&t.length===1))), 'INVALID_WORLD');
@@ -77,10 +90,11 @@ function snapshotCopy(snapshot, allowEnded=false) {
    if(s.draft.choice==='')must(s.moves===0&&s.ended_reason===''&&s.hp>0,'DRAFT_PENDING');
   }
   if(s.version>=16){must(validTalentDraft(s.seed_value,s.talent_draft),'INVALID_TALENT_DRAFT');must(Array.isArray(s.talents)&&s.talents.every(id=>s.talent_draft.offers.some(tier=>tier.includes(id))),'INVALID_TALENT_CHOICE');must(['','s','g','u','b','w','V','K','W','H','Z','B'].includes(s.last_kill_kind)&&integer(s.kills,10000000)&&(s.kills>0||s.last_kill_kind===''),'INVALID_LAST_KILL');}
+  if(s.version>=17)must(validLegacyPoints(s),'INVALID_LEGACY_POINTS');
   return s;
 }
 function upgradeSnapshot(snapshot){
- const s=structuredClone(snapshot);if(s.version===13){s.version=14;s.death_record={};}if(s.version===14){s.version=15;s.draft={version:0,pool:[],offers:[],choice:'none'};}if(s.version===15){s.version=16;s.talent_draft=talentDraft(s.seed_value,0);s.last_kill_kind='';}return s;
+ const s=structuredClone(snapshot);if(s.version===13){s.version=14;s.death_record={};}if(s.version===14){s.version=15;s.draft={version:0,pool:[],offers:[],choice:'none'};}if(s.version===15){s.version=16;s.talent_draft=talentDraft(s.seed_value,0);s.last_kill_kind='';}if(s.version===16){s.version=17;s.legacy_points={version:0,capacity:0,study:0,reserve:0};s.legacy_reserves=0;}return s;
 }
 function summaryOf(snapshot, outcome) {
  const s=snapshotCopy(snapshot,true);
@@ -294,7 +308,7 @@ class JourneyStorage extends ProfileStorage {
    const run=await req(s('runs').get(id)),expected=kind==='create'?-1:args.expected;
    if(run && run.last_op.request_id===args.request_id){
     const op=run.last_op;
-    must(op.kind===kind && (op.hash===hash || (run.snapshot?.version<16&&same(upgradeSnapshot(run.snapshot),snapshot))) && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
+    must(op.kind===kind && (op.hash===hash || (run.snapshot?.version<17&&same(upgradeSnapshot(run.snapshot),snapshot))) && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
     must(slot.activeRunId===id && slot.revision===op.result_slot && run.revision===op.result_revision && run.status==='active','SUPERSEDED_OPERATION');
     return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile,duplicate:true};
    }
@@ -304,7 +318,7 @@ class JourneyStorage extends ProfileStorage {
     must(!run&&!Object.hasOwn(profile.receipts,id),'ID_COLLISION');must(await req(s('runs').count())<MAX_RUNS,'RUNS_FULL');
     // Full canonical fresh-World comparison is performed on the Godot side.
     // JS independently rejects partial stub, legacy identity and visibly progressed input.
-    must(snapshot.version===16&&same(snapshot.talent_draft,talentDraft(snapshot.seed_value))&&snapshot.last_kill_kind===''&&same(snapshot.draft,strategyDraft(snapshot.seed_value,strategyPool(profile))),'INVALID_BIRTH_DRAFT');
+    must(snapshot.version===17&&same(snapshot.legacy_points,{version:1,capacity:pointCapacity(snapshot.draft),study:0,reserve:0})&&snapshot.legacy_reserves===0&&same(snapshot.talent_draft,talentDraft(snapshot.seed_value))&&snapshot.last_kill_kind===''&&same(snapshot.draft,strategyDraft(snapshot.seed_value,strategyPool(profile))),'INVALID_BIRTH_DRAFT');
     must(snapshot.moves===0 && snapshot.floor===0 && snapshot.floors.length===5 && snapshot.x===1 && snapshot.y===1 && !snapshot.won && snapshot.floor_seen.slice(1).every(v=>!v) && snapshot.inventory.length===1,'NOT_FRESH_RUN');
     const prior=slot.activeRunId?await req(s('runs').get(slot.activeRunId)):null;
     checkRunLedger(prior,profile);
@@ -315,18 +329,19 @@ class JourneyStorage extends ProfileStorage {
     return {ok:true,run:created,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
    }
    must(slot.activeRunId===id && validRun(run)&&run.status==='active','NOT_ACTIVE_RUN');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
-   must(snapshot.mode===run.snapshot.mode,'MODE_IMMUTABLE');const prior=upgradeSnapshot(run.snapshot);must(same(snapshot.draft,prior.draft),'DRAFT_IMMUTABLE');must(same(snapshot.talent_draft,prior.talent_draft),'TALENT_DRAFT_IMMUTABLE');if(prior.draft.choice==='')must(same(snapshot,prior),'DRAFT_PENDING');run.snapshot=snapshot;run.revision=nextCounter(run.revision);
+   must(snapshot.mode===run.snapshot.mode,'MODE_IMMUTABLE');const prior=upgradeSnapshot(run.snapshot);must(same(snapshot.draft,prior.draft),'DRAFT_IMMUTABLE');must(same(snapshot.talent_draft,prior.talent_draft),'TALENT_DRAFT_IMMUTABLE');must(same(snapshot.legacy_points,prior.legacy_points),'LEGACY_POINTS_IMMUTABLE');if(prior.draft.choice==='')must(same(snapshot,prior),'DRAFT_PENDING');run.snapshot=snapshot;run.revision=nextCounter(run.revision);
    run.last_op={request_id:args.request_id,kind,expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
    slot.writer.leaseUntil=Date.now()+60000;await req(s('runs').put(run));await req(s('slots').put(slot));return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
   });
  }
  async chooseStrategy(args){
   must(validId(args.request_id)&&typeof args.choice==='string'&&(args.choice==='none'||STRATEGY_IDS.includes(args.choice)),'INVALID_STRATEGY');
+  const allocation=allocationCopy(args.allocation);
   // Prepare a digest before opening the write transaction; compare the complete
   // prepared base again inside the transaction, in addition to slot/run CAS.
   const prepared=await this.active();const base=prepared.run?.snapshot;
   must(base&&prepared.run.id===args.id,'SUPERSEDED_OPERATION');
-  const chosen=upgradeSnapshot(base);chosen.draft.choice=args.choice;
+  const chosen=upgradeSnapshot(base);chosen.draft.choice=args.choice;chosen.legacy_points.study=allocation.study;chosen.legacy_points.reserve=allocation.reserve;chosen.legacy_reserves=allocation.reserve;
   const hash=await digestSnapshot(chosen);
   return this.transaction(['slots','runs','profiles','receipts'],'readwrite',async s=>{
    const slot=await loadSlot(s),profile=(await loadProfile(s)).profile;
@@ -334,7 +349,7 @@ class JourneyStorage extends ProfileStorage {
    const run=await req(s('runs').get(args.id));must(validRun(run),'CORRUPT_RUN');checkRunLedger(run,profile);
    const last=run.last_op;
    if(last.request_id===args.request_id){
-    must(last.kind==='strategy'&&last.expected_slot===args.auth.expectedSlotRevision&&last.expected_revision===args.expected&&run.snapshot.draft.choice===args.choice,'REQUEST_CONFLICT');
+    must(last.kind==='strategy'&&last.expected_slot===args.auth.expectedSlotRevision&&last.expected_revision===args.expected&&run.snapshot.draft.choice===args.choice&&upgradeSnapshot(run.snapshot).legacy_points.study===allocation.study&&upgradeSnapshot(run.snapshot).legacy_points.reserve===allocation.reserve,'REQUEST_CONFLICT');
     must(slot.activeRunId===args.id&&slot.revision===last.result_slot&&run.revision===last.result_revision&&run.status==='active','SUPERSEDED_OPERATION');
     return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile,duplicate:true};
    }
@@ -342,7 +357,7 @@ class JourneyStorage extends ProfileStorage {
    must(same(run.snapshot,base),'STALE_BASE');
    const prior=upgradeSnapshot(run.snapshot);
    must(prior.moves===0&&prior.ended_reason===''&&prior.draft.version===1&&prior.draft.choice===''&&(args.choice==='none'||prior.draft.offers.includes(args.choice)),'INVALID_STRATEGY');
-   must(validDraft(chosen.seed_value,chosen.draft),'INVALID_DRAFT');
+   must(validDraft(chosen.seed_value,chosen.draft),'INVALID_DRAFT');must(validLegacyPoints(chosen),'INVALID_ALLOCATION');
    run.snapshot=chosen;run.revision=nextCounter(run.revision);slot.writer.leaseUntil=Date.now()+60000;
    run.last_op={request_id:args.request_id,kind:'strategy',expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
    await req(s('runs').put(run));
@@ -368,7 +383,7 @@ class JourneyStorage extends ProfileStorage {
    checkRunLedger(run,envelope.profile);
    const last=run.last_op;
    if(last.request_id===args.request_id){
-    must(last.kind===operation&&(last.hash===hash||(run.snapshot.version<16&&same(upgradeSnapshot(run.snapshot),ended)))&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
+    must(last.kind===operation&&(last.hash===hash||(run.snapshot.version<17&&same(upgradeSnapshot(run.snapshot),ended)))&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
     const receipt=envelope.profile.receipts[args.id];
     must(receipt&&same(receipt.summary,expectedSummary),'REQUEST_CONFLICT');
     must(slot.activeRunId===args.id&&slot.revision===last.result_slot&&run.revision===last.result_revision&&run.status==='archived','SUPERSEDED_OPERATION');

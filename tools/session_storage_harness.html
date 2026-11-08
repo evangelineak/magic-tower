@@ -131,7 +131,7 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    r=await rpc('save',{auth,id:fixtures.next_fresh.run_id,expected:0,snapshot:fixtures.next_chapter_base,request_id:'draft_real_chapter_save_0001'});check(r.ok,'actual seed17 route reaches chapter victory');
    r=await rpc('settle',{auth,id:fixtures.next_fresh.run_id,expected:1,outcome:'chapter1',request_id:'draft_real_chapter_finish_01',base:fixtures.next_chapter_base,ended:fixtures.next_chapter_ended});check(r.ok&&eq(r.profile.milestones,[3,5]),'real archive unlocks tier5 strategy pool');
    auth.expectedSlotRevision=8;
-   const deniedBirth=structuredClone(fixtures.draft_fresh);deniedBirth.draft={version:1,pool:[],offers:[],choice:'none'};
+   const deniedBirth=structuredClone(fixtures.draft_fresh);deniedBirth.draft={version:1,pool:[],offers:[],choice:'none'};deniedBirth.legacy_points={version:1,capacity:0,study:0,reserve:0};deniedBirth.legacy_reserves=0;
    r=await rpc('create',{auth,snapshot:deniedBirth,replace:true,request_id:deniedBirth.run_id});check(!r.ok&&r.code==='INVALID_BIRTH_DRAFT','caller cannot replace profile-derived birth pool');
    const born=await rpc('create',{auth,snapshot:fixtures.draft_fresh,replace:true,request_id:fixtures.draft_fresh.run_id});check(born.ok&&eq(born.run.snapshot.draft,fixtures.draft_fresh.draft),'transaction validates deterministic actual-profile birth draft');auth.expectedSlotRevision=9;
    const pendingChanged=structuredClone(fixtures.draft_fresh);pendingChanged.gold+=10;
@@ -151,12 +151,18 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    const replacedDraft=await rpc('create',{auth,snapshot:fixtures.draft_next,replace:true,request_id:fixtures.draft_next.run_id});check(replacedDraft.ok&&eq(replacedDraft.run.snapshot.draft.offers,born.run.snapshot.draft.offers),'same seed and profile offer no reroll');
    r=await rpc('strategy',pickArgs);check(!r.ok&&r.code==='SUPERSEDED_OPERATION','old choice cannot revive replaced journey');
    auth.expectedSlotRevision=10;
-   r=await rpc('strategy',{auth,id:fixtures.draft_next.run_id,expected:0,choice:'none',request_id:'draft_keep_original_000001'});check(r.ok&&r.run.snapshot.draft.choice==='none'&&r.run.snapshot.moves===0,'original build is explicit locked option');
+   r=await rpc('strategy',{auth,id:fixtures.draft_next.run_id,expected:0,choice:'none',request_id:'draft_keep_original_000001',allocation:{study:1,reserve:1}});check(r.ok&&r.run.snapshot.draft.choice==='none'&&r.run.snapshot.moves===0,'original build is explicit locked option');
    const talentCurrent=await rpc('read');
-   check(talentCurrent.ok&&talentCurrent.run.snapshot.version===16&&talentCurrent.run.snapshot.talent_draft.version===1,'new schema16 keeps deterministic talent birth candidates');
+   check(talentCurrent.ok&&talentCurrent.run.snapshot.version===17&&talentCurrent.run.snapshot.talent_draft.version===1,'new schema16 keeps deterministic talent birth candidates');
    const downgraded=structuredClone(talentCurrent.run.snapshot);downgraded.talent_draft={version:0,offers:[['iron_skin','keen_edge','clean_finish'],['last_stand','sentinel_lore','trained_focus'],['giant_slayer','battle_medic','unbroken']]};
    r=await rpc('save',{auth,id:talentCurrent.run.id,expected:talentCurrent.run.revision,snapshot:downgraded,request_id:'talent_illegal_downgrade01'});check(!r.ok&&r.code==='TALENT_DRAFT_IMMUTABLE','ordinary save cannot downgrade or redraw talent candidates');
    r=await rpc('read');check(r.ok&&eq(r.run,talentCurrent.run)&&eq(r.profile,talentCurrent.profile),'rejected talent redraw leaves full run and ledger unchanged');
+   check(talentCurrent.run.snapshot.legacy_points.capacity===2&&talentCurrent.run.snapshot.legacy_points.study===1&&talentCurrent.run.snapshot.legacy_reserves===1,'none strategy atomically allocates earned per-run points');
+   r=await rpc('strategy',{auth,id:fixtures.draft_next.run_id,expected:0,choice:'none',request_id:'draft_keep_original_000001',allocation:{study:1,reserve:1}});check(r.ok&&r.duplicate&&r.run.revision===1,'same allocation retry is idempotent');
+   r=await rpc('strategy',{auth,id:fixtures.draft_next.run_id,expected:0,choice:'none',request_id:'draft_keep_original_000001',allocation:{study:2,reserve:0}});check(!r.ok&&r.code==='REQUEST_CONFLICT','same nonce cannot substitute allocation');
+   const pointsForged=structuredClone(talentCurrent.run.snapshot);pointsForged.legacy_points.study=0;
+   r=await rpc('save',{auth,id:talentCurrent.run.id,expected:talentCurrent.run.revision,snapshot:pointsForged,request_id:'points_illegal_reallocate01'});check(!r.ok&&r.code==='LEGACY_POINTS_IMMUTABLE','ordinary save cannot reallocate permanent birth points');
+   r=await rpc('read');check(r.ok&&eq(r.run,talentCurrent.run)&&eq(r.profile,talentCurrent.profile),'allocation retries and rejected changes preserve ledger and run');
    parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:window.MagicTowerJourneysTestDatabase,scope:'Production JS callback protocol + real IndexedDB, not Godot WebGL/JavaScriptBridge runtime'}},location.origin);
   }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,lastReply,checks,database:window.MagicTowerJourneysTestDatabase}},location.origin)}
  }

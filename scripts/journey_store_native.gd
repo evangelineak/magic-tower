@@ -12,7 +12,7 @@ func _init(path:String="user://journeys-v1"):
   if not c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_":allowed=false
  safe_path=allowed;root=ProjectSettings.globalize_path(path) if allowed else ""
 func _snapshot(value)->Dictionary:
- if not value is Dictionary or (value.get("version")!=13 and value.get("version")!=14 and value.get("version")!=15 and value.get("version")!=16) or value.get("run_id","")=="":return {}
+ if not value is Dictionary or (value.get("version")!=13 and value.get("version")!=14 and value.get("version")!=15 and value.get("version")!=16 and value.get("version")!=17) or value.get("run_id","")=="":return {}
  # World validates both live modes and replay-verified terminal death records.
  if value.get("mode") not in ["safe","risk"]:return {}
  var digest=JSON.stringify(value).sha256_text()
@@ -85,7 +85,7 @@ func _operation(data:Dictionary,op:String,args:Dictionary)->Dictionary:
  var digest=JSON.stringify(copied).sha256_text()
  if data.runs.has(id) and data.runs[id].last_op.request_id==request_id:
   var existing=data.runs[id];var last=existing.last_op
-  var same_hash=last.hash==digest or (existing.snapshot is Dictionary and existing.snapshot.get("version",16)<16 and _snapshot(existing.snapshot)==copied)
+  var same_hash=last.hash==digest or (existing.snapshot is Dictionary and existing.snapshot.get("version",17)<17 and _snapshot(existing.snapshot)==copied)
   if last.kind!=op or not same_hash or (op=="save" and last.expected_slot!=args.auth.expectedSlotRevision) or last.expected_revision!=expected_revision:return _error("REQUEST_CONFLICT")
   if slot.activeRunId!=id or slot.revision!=last.result_slot or existing.revision!=last.result_revision or existing.status!="active":return _error("SUPERSEDED_OPERATION")
   return {"ok":true,"run":existing.duplicate(true),"slotRevision":slot.revision,"leaseUntil":slot.writer.leaseUntil,"profile":data.profile.profile.duplicate(true),"duplicate":true,"changed":false}
@@ -116,6 +116,7 @@ func _operation(data:Dictionary,op:String,args:Dictionary)->Dictionary:
  var prior=_snapshot(run.snapshot)
  if prior.is_empty() or copied.draft!=prior.draft:return _error("DRAFT_IMMUTABLE")
  if copied.talent_draft!=prior.talent_draft:return _error("TALENT_DRAFT_IMMUTABLE")
+ if copied.legacy_points!=prior.legacy_points:return _error("LEGACY_POINTS_IMMUTABLE")
  if prior.draft.choice=="" and copied!=prior:return _error("DRAFT_PENDING")
  run.snapshot=copied;run.revision=int(run.revision)+1
  run.last_op={"request_id":request_id,"kind":op,"expected_slot":args.auth.expectedSlotRevision,"expected_revision":args.expected,"hash":digest,"result_slot":slot.revision,"result_revision":run.revision}
@@ -177,6 +178,10 @@ func settle_death_journey(id:String,auth,expected_revision,delta:Vector2i,reques
 func _choose(data:Dictionary,args:Dictionary)->Dictionary:
  var id=str(args.get("id",""));var request_id=str(args.get("request_id",""));var choice=args.get("choice")
  if not Profile.valid_run_id(request_id) or not choice is String:return _error("INVALID_STRATEGY")
+ var allocation=args.get("allocation",{})
+ if not allocation is Dictionary:return _error("INVALID_ALLOCATION")
+ if allocation.is_empty():allocation={"study":0,"reserve":0}
+ if not _keys(allocation,["study","reserve"]) or not _int(allocation.study,0,2) or not _int(allocation.reserve,0,2):return _error("INVALID_ALLOCATION")
  var slot:Dictionary=data.slot
  var fence_auth:Dictionary=args.auth.duplicate(true) if args.auth is Dictionary else {}
  fence_auth.expectedSlotRevision=slot.revision
@@ -189,17 +194,19 @@ func _choose(data:Dictionary,args:Dictionary)->Dictionary:
   if last.kind!="strategy" or last.expected_slot!=args.auth.expectedSlotRevision or last.expected_revision!=args.expected:return _error("REQUEST_CONFLICT")
   if slot.activeRunId!=id or slot.revision!=last.result_slot or run.revision!=last.result_revision or run.status!="active":return _error("SUPERSEDED_OPERATION")
   if run.snapshot.get("draft",{}).get("choice")!=choice:return _error("REQUEST_CONFLICT")
+  var points=_snapshot(run.snapshot).get("legacy_points",{})
+  if points.get("study")!=allocation.study or points.get("reserve")!=allocation.reserve:return _error("REQUEST_CONFLICT")
   return {"ok":true,"run":run.duplicate(true),"slotRevision":slot.revision,"leaseUntil":slot.writer.leaseUntil,"profile":data.profile.profile.duplicate(true),"duplicate":true,"changed":false}
  error=_auth(slot,args.auth,id)
  if error!="":return _error(error)
  if run.status!="active":return _error("RUN_NOT_ACTIVE")
  if not _int(args.expected) or run.revision!=args.expected:return _error("STALE_REVISION")
  var world=World.from_snapshot(run.snapshot)
- if world==null or not world.choose_strategy(choice):return _error("INVALID_STRATEGY")
+ if world==null or not world.choose_strategy(choice,allocation):return _error("INVALID_STRATEGY")
  var chosen=world.save_data()
  run.snapshot=chosen;run.revision=int(run.revision)+1;slot.writer.leaseUntil=_now()+60000
  run.last_op={"request_id":request_id,"kind":"strategy","expected_slot":args.auth.expectedSlotRevision,"expected_revision":args.expected,"hash":JSON.stringify(chosen).sha256_text(),"result_slot":slot.revision,"result_revision":run.revision}
  if test_fail_at=="after_choice":return _error("INJECTED_AFTER_CHOICE")
  return {"ok":true,"run":run.duplicate(true),"slotRevision":slot.revision,"leaseUntil":slot.writer.leaseUntil,"profile":data.profile.profile.duplicate(true),"changed":true}
-func choose_strategy(id:String,auth,expected_revision,choice:String,request_id:String)->Dictionary:
- return _mutate("strategy",{"id":id,"auth":auth,"expected":expected_revision,"choice":choice,"request_id":request_id})
+func choose_strategy(id:String,auth,expected_revision,choice:String,request_id:String,allocation:Dictionary={})->Dictionary:
+ return _mutate("strategy",{"id":id,"auth":auth,"expected":expected_revision,"choice":choice,"request_id":request_id,"allocation":allocation})

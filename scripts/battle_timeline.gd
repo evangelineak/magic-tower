@@ -4,19 +4,19 @@ const P=preload("res://scripts/progression.gd")
 const LIMIT=8192
 # Contact thorns happen before the corresponding hero hit. A lethal contact
 # stops that hit; this is explicit risk-mode ordering, not an old death rule.
-static func simulate(attack:int,defense:int,hp:int,enemy:Dictionary,hero:String,skill:bool,equipment:String,talents:Array,oath:String="none",flank:bool=false,attunement:String="none",strategy:String="none",last_kill_kind:String="")->Dictionary:
+static func simulate(attack:int,defense:int,hp:int,enemy:Dictionary,hero:String,skill:bool,equipment:String,talents:Array,oath:String="none",flank:bool=false,attunement:String="none",strategy:String="none",last_kill_kind:String="",legacy_study:int=0)->Dictionary:
  var invalid={"valid":false,"reason":"Invalid timeline input.","events":[]}
  for value in [attack,defense,hp]:
   if value<0 or value>10000000:return invalid
  for key in ["hp","atk","def","thorns"]:
   var value=enemy.get(key,0)
   if not (value is int or value is float) or not is_finite(float(value)) or value<0 or value>10000000:return invalid
- var forecast=P.battle(attack,defense,hp,enemy,hero,skill,equipment,talents,oath,flank,attunement,strategy,last_kill_kind)
+ var forecast=P.battle(attack,defense,hp,enemy,hero,skill,equipment,talents,oath,flank,attunement,strategy,last_kill_kind,legacy_study)
  if not forecast.valid:return invalid
  var r=forecast.duplicate(true)
  r.forecast=forecast.duplicate(true);r.events=[];r.start_hp=hp;r.remaining_hp=hp;r.enemy_hp=int(enemy.hp)
  r.fatal=false;r.fatal_index=-1;r.fatal_round=-1;r.hero_hits=0;r.counter_count=0
- r._raw=0;r._net=0;r._rate=P.brace_percent(talents,attunement,strategy) if skill and hero=="warden" else 0
+ r._raw=0;r._net=0;r._rate=P.brace_percent(talents,attunement,strategy,legacy_study) if skill and hero=="warden" else 0
  r._barrier=20 if "unbroken" in talents and hp>=400 else 0
  r._shield=equipment=="buckler";r._limit=false
  for key in ["damage","normal_damage","first_strike_damage","thorns_damage","blocked_damage","feint_damage","charged_damage","equipment_blocked","oath_blocked","flank_blocked","retaliations","rounds","heal_after"]:r[key]=0

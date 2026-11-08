@@ -9,7 +9,7 @@ for(const c of vectors.cases){assert.deepEqual(json(a.talentDraft(c.seed,c.expec
 for(const patch of [{version:true},{version:0.5},{extra:1},{offers:[[],[],[]]}]){assert.equal(a.validTalentDraft(0,{...a.talentDraft(0),...patch}),false);checks++;}
 for(const label of ['active','death']){
  const old=JSON.parse(fs.readFileSync(path.join(root,`tests/fixtures/schema15-${label}.json`)));a.snapshotCopy(old,label==='death');checks++;
- const up=a.upgradeSnapshot(old);assert.equal(up.version,16);assert.equal(up.last_kill_kind,'');assert.deepEqual(json(up.talent_draft),json(a.talentDraft(old.seed_value,0)));checks+=3;
+ const up=a.upgradeSnapshot(old);assert.equal(up.version,17);assert.equal(up.last_kill_kind,'');assert.deepEqual(json(up.talent_draft),json(a.talentDraft(old.seed_value,0)));checks+=3;
 }
 const f=JSON.parse(fs.readFileSync(path.join(root,'tools/session_bridge_fixtures.json')));
 a.validateDeathTransition(f.risk_base,f.risk_dead,f.risk_delta);checks++;

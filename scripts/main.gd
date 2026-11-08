@@ -19,6 +19,7 @@ var ui_notice := ""
 var finish_pending := ""
 var strategy_selection := ""
 var strategy_submitted := false
+var setup_allocation := {"study":0,"reserve":0}
 var walk_generation := 0
 var font = ThemeDB.fallback_font
 var art: Texture2D
@@ -429,7 +430,7 @@ func draw_attunement():
 	panel(Rect2(925,122,120,38),Color("253748")); label_at(Vector2(937,148),"NEXT ]",15)
 	var current: String=world.gear_attunement(attune_gear)
 	var info: Dictionary=world.skill_level_info() if attune_gear=="balanced" else world.attunement_preview(current,attune_gear).skill_level_info
-	label_at(Vector2(225,179),"Skill level %d = base %d + training %d + equipment %d + strategy %d" % [info.effective,info.base,info.training,info.gear,info.get("strategy",0)],16)
+	label_at(Vector2(225,179),skill_sources_text(info),14)
 	label_at(Vector2(225,206),"Only equipped modifiers apply; compare the trade-offs before locking." if attune_gear in world.inventory else "NOT OWNED: preview only. Claim this equipment before confirming.",14,MUTED)
 	draw_wrapped(Vector2(225,232),world.skill_description() if attune_gear=="balanced" else world.attunement_preview(current,attune_gear).skill_description,820,15,TEAL,2)
 	var rows: Array=attunement_rows()
@@ -861,6 +862,7 @@ func growth_actions() -> Array:
 					rows.append(["hero_"+id,Progression.HEROES[id].name,Progression.HEROES[id].description])
 			else:
 				rows.append(["mend" if world.hero_id=="scholar" else "arm",Progression.HEROES[world.hero_id].skill+(" (cancel armed skill)" if world.skill_armed else " / 1 focus"),skill_description()])
+				rows.append(["legacy_focus","Emergency focus: %d supplies left" % world.legacy_reserves,"Restore 1 focus only when not full. Otherwise no supply is spent."])
 		1:
 			for id in world.inventory:
 				if Progression.GEAR.has(id): rows.append(["equip_"+id,Progression.GEAR[id].name+(" [EQUIPPED]" if world.equipped==id else ""),Progression.GEAR[id].description])
@@ -925,6 +927,7 @@ func draw_growth():
 			panel(Rect2(915,548,120,38),Color("253748")); label_at(Vector2(927,574),"NEXT",14)
 			label_at(Vector2(530,574),"Page %d   [ / ]" % (gear_page+1),14,TEAL)
 		if world.equipped=="duelist": label_at(Vector2(225,610),"DUELIST COST: one EXTRA opening retaliation, even on a one-shot kill.",15,Color("ef928f"))
+	elif growth_tab==0: draw_wrapped(Vector2(225,560),world.legacy_summary(),815,14,MUTED,3)
 	else: label_at(Vector2(225,610),"Focus is finite. First visits restore it; repeating floors cannot farm it.",15,MUTED)
 	label_at(Vector2(225,646),display(status_message()).left(105),14,TEAL)
 	label_at(Vector2(225,697),"Choose 1-3. Tab changes section. Esc: keep default Warden." if world.moves==0 else "Click a card / press 1-3. Tab changes section. C / Esc closes.",15,MUTED)
@@ -948,6 +951,7 @@ func journal_lines() -> Array:
 	entries.append_array(world.audit_lines())
 	entries.append_array(world.winch_journal())
 	entries.append_array(world.attunement_journal())
+	entries.append(world.legacy_summary())
 	if not strategy_pending():
 		var strategy: Dictionary=world.strategy_preview(world.current_strategy())
 		if strategy.get("valid",false): entries.append("Run strategy: %s. %s" % [strategy.name,strategy.description])
@@ -1112,8 +1116,12 @@ func _unhandled_input(event):
 		if strategy_submitted: return
 		if event is InputEventKey and event.pressed and not event.echo:
 			match event.keycode:
-				KEY_ESCAPE: strategy_selection=""
+				KEY_ESCAPE: strategy_selection=""; setup_allocation={"study":0,"reserve":0}
 				KEY_0: strategy_selection="none"
+				KEY_Q: adjust_setup("study",1)
+				KEY_A: adjust_setup("study",-1)
+				KEY_W: adjust_setup("reserve",1)
+				KEY_S: adjust_setup("reserve",-1)
 				KEY_1,KEY_2,KEY_3:
 					var index: int=event.keycode-KEY_1
 					if index<world.draft.offers.size(): strategy_selection=world.draft.offers[index]
@@ -1123,8 +1131,12 @@ func _unhandled_input(event):
 		elif event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 			var mouse: Vector2=get_global_mouse_position()
 			for i in world.draft.offers.size():
-				if Rect2(220,200+i*95,840,88).has_point(mouse): strategy_selection=world.draft.offers[i]
-			if Rect2(220,490,840,46).has_point(mouse): strategy_selection="none"
+				if Rect2(220,200+i*95,500,88).has_point(mouse): strategy_selection=world.draft.offers[i]
+			if Rect2(220,490,500,46).has_point(mouse): strategy_selection="none"
+			for j in 2:
+				var node: String=["study","reserve"][j]
+				if Rect2(745,282+j*145,70,34).has_point(mouse): adjust_setup(node,-1)
+				if Rect2(975,282+j*145,70,34).has_point(mouse): adjust_setup(node,1)
 			if Rect2(220,650,840,45).has_point(mouse): confirm_strategy()
 		return
 	if not lethal_snapshot.is_empty():
@@ -1362,7 +1374,7 @@ func save_game(_announce:=true):
 	apply_session_result(await session.save())
 func load_game():
 	if session==null or session.busy: return
-	strategy_selection=""; strategy_submitted=false
+	strategy_selection=""; strategy_submitted=false; setup_allocation={"study":0,"reserve":0}
 	talent_selected=""; talent_submitted=false; talent_notice_time=0.0
 	close_attunement(); cancel_walk(); close_travel(); finish_pending=""; clear_lethal(); death_report=false; reset_armed=false
 	var result: Dictionary=await session.reacquire_and_reload()
@@ -1413,10 +1425,10 @@ func dispatch_committed_effect(effect: Dictionary):
 		"settle":
 			finish_pending=""; cancel_walk(); battle_time=0.0; play_sound("victory")
 		"strategy":
-			strategy_selection=""; strategy_submitted=false; cancel_walk(); growth=true; growth_tab=0
+			strategy_selection=""; strategy_submitted=false; setup_allocation={"study":0,"reserve":0}; cancel_walk(); growth=true; growth_tab=0
 		"create":
 			talent_selected=""; talent_submitted=false; talent_notice_time=0.0
-			strategy_selection=""; strategy_submitted=false
+			strategy_selection=""; strategy_submitted=false; setup_allocation={"study":0,"reserve":0}
 			clear_lethal(); death_report=false
 			finish_pending=""
 			close_attunement(); close_travel(); comparison=false; journal=false; book=false
@@ -1440,7 +1452,7 @@ func draw_finish_confirmation():
 	panel(Rect2(210,180,860,440),Color("101c2a"))
 	label_at(Vector2(245,225),"END THIS JOURNEY?",26,GOLD)
 	draw_wrapped(Vector2(245,270),"This permanently ends this run. Undo will no longer be available. Your current items do not carry into a new run.",770,19,INK,3)
-	draw_wrapped(Vector2(245,355),"Only newly reached floor milestones 3 / 5 / 8 are recorded. Records alone grant no stats. Only a strategy explicitly chosen for a new run applies.",770,18,TEAL,3)
+	draw_wrapped(Vector2(245,355),"First records of floors 3 / 5 / 8 each grant one point of per-run capacity. Retirement and defeat grant the same first-record reward; repeats grant nothing.",770,18,TEAL,3)
 	label_at(Vector2(245,440),"Pending first records: %s (only after saving)" % str(pending_milestones()),17,GOLD)
 	draw_wrapped(Vector2(245,475),settlement_notice(),770,15,MUTED,2)
 	panel(Rect2(250,525,350,48),Color("34463d"));panel(Rect2(650,525,350,48),Color("253748"))
@@ -1461,7 +1473,8 @@ func terminal_lines() -> Array[String]:
 	return [display({"defeat":"Journey ended in battle","withdrawn":"Exploration retired","chapter1":"Chapter one complete","victory":"Final victory recorded"}.get(receipt.get("summary",{}).get("outcome",""),"JOURNEY RECORDED")),"This journey is archived and read-only. Undo and further moves are unavailable.",
 		"New milestones: %s" % milestone_text(receipt.get("milestones",[])),
 		"Recorded milestones: %s" % milestone_text(profile.get("milestones",[])),
-		"Records alone grant no stats. Only a strategy explicitly chosen for a new run applies."]
+		"Legacy points gained: %d / capacity for each new run: %d" % [receipt.get("milestones",[]).size(),profile.get("milestones",[]).size()],
+		"Reassign only in a new run. Unused points are allowed; repeated records grant nothing."]
 func draw_terminal():
 	panel(Rect2(210,150,860,530),Color("101c2a"))
 	label_at(Vector2(245,200),"JOURNEY RECORDED",28,GOLD)
@@ -1531,31 +1544,55 @@ func strategy_pending() -> bool:
 	return world!=null and world.strategy_pending()
 func confirm_strategy():
 	if not strategy_pending() or strategy_selection=="" or strategy_submitted or not can_mutate(): return
+	if not setup_preview().get("can_choose",false): return
 	strategy_submitted=true
-	apply_session_result(await session.choose_strategy(strategy_selection))
+	apply_session_result(await session.choose_strategy(strategy_selection,setup_allocation.duplicate(true)))
+func skill_sources_text(info: Dictionary) -> String:
+	return "Skill %d = base %d + training %d + gear %d + strategy %d + legacy %d (overflow %d)" % [info.effective,info.base,info.training,info.gear,info.get("strategy",0),info.get("legacy",0),info.get("overflow",0)]
+func setup_hero_effects_text(preview: Dictionary) -> String:
+	var effects: Dictionary=preview.hero_effects
+	return "Warden: %d%% block / Ranger: ignore %d DEF / Scholar: heal %d HP" % [effects.warden_block_percent,effects.ranger_ignore_def,effects.scholar_heal]
+func setup_preview() -> Dictionary:
+	return world.setup_preview(strategy_selection if strategy_selection!="" else "none",setup_allocation)
+func adjust_setup(node: String,change: int):
+	if strategy_submitted or not strategy_pending() or node not in ["study","reserve"]: return
+	var candidate: Dictionary=setup_allocation.duplicate(true)
+	candidate[node]=int(candidate[node])+change
+	var preview: Dictionary=world.setup_preview(strategy_selection if strategy_selection!="" else "none",candidate)
+	if preview.get("valid",false): setup_allocation=candidate
 func draw_strategy_draft():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.8))
 	panel(Rect2(190,80,900,650),Color("101c2a"))
-	label_at(Vector2(220,122),"LEGACY STRATEGY / ONE CHOICE THIS RUN",24,GOLD)
-	draw_wrapped(Vector2(220,155),"Choose a trade-off before the first step. Original rules remain viable. This is separate from hero, equipment and kill talents.",840,16,INK,2)
+	label_at(Vector2(220,122),"PREPARE THIS RUN / STRATEGY + LEGACY POINTS",23,GOLD)
+	draw_wrapped(Vector2(220,155),"One confirmation locks both choices. You may leave points unused. No modifier means original strategy and zero points.",840,15,INK,2)
+	var preview:=setup_preview()
+	label_at(Vector2(740,190),"Capacity %d / unassigned %d" % [int(preview.get("capacity",0)),int(preview.get("remaining",0))],16,TEAL)
 	for i in world.draft.offers.size():
 		var id: String=world.draft.offers[i]
-		var preview: Dictionary=world.strategy_preview(id)
-		var r:=Rect2(220,200+i*95,840,88)
+		var card: Dictionary=world.strategy_preview(id)
+		var r:=Rect2(220,200+i*95,500,88)
 		panel(r,Color("345c62") if strategy_selection==id else Color("203343"))
-		label_at(r.position+Vector2(15,25),"%d  %s" % [i+1,display(preview.name)],20,GOLD)
-		draw_wrapped(r.position+Vector2(15,51),preview.description,810,16,INK,2)
-	panel(Rect2(220,490,840,46),Color("345c62") if strategy_selection=="none" else Color("203343"))
-	label_at(Vector2(235,520),"0  Original rules / no strategy modifier",19,TEAL)
-	if strategy_selection!="":
-		var preview: Dictionary=world.strategy_preview(strategy_selection)
+		label_at(r.position+Vector2(12,23),"%d  %s" % [i+1,display(card.name)],18,GOLD)
+		draw_wrapped(r.position+Vector2(12,44),card.description,476,14,INK,3)
+	panel(Rect2(220,490,500,46),Color("345c62") if strategy_selection=="none" else Color("203343"))
+	label_at(Vector2(232,519),"0  Original strategy / points still optional",17,TEAL)
+	for j in 2:
+		var node: String=["study","reserve"][j]
+		var y: float=200+j*145
+		panel(Rect2(735,y,325,135),Color("203343"))
+		label_at(Vector2(747,y+24),"Study: %d / 2" % setup_allocation.study if j==0 else "Emergency focus: %d / 2" % setup_allocation.reserve,18,GOLD)
+		draw_wrapped(Vector2(747,y+46),"Each point: +2 skill levels, capped at 20." if j==0 else "Each point: one +1 focus supply this run. Use in C when not full.",298,14,INK,2)
+		panel(Rect2(745,y+82,70,34),Color("253748")); panel(Rect2(975,y+82,70,34),Color("345c62"))
+		label_at(Vector2(755,y+106),"A: -" if j==0 else "S: -",16)
+		label_at(Vector2(985,y+106),"Q: +" if j==0 else "W: +",16)
+	label_at(Vector2(740,510),"New run: reassign, never farm deaths.",13,MUTED)
+	if preview.get("valid",false):
 		var info: Dictionary=preview.skill_level_info
-		label_at(Vector2(220,565),"Skill level %d = base %d + training %d + equipment %d + strategy %d" % [info.effective,info.base,info.training,info.gear,info.strategy],16,TEAL)
-		draw_wrapped(Vector2(220,593),preview.skill_description,840,16,INK,2)
-	else: label_at(Vector2(220,565),"Select a card to preview. Nothing is locked until Enter.",17,TEAL)
-	label_at(Vector2(220,632),"Locked for this run. Undo and reload do not reroll or undo this choice.",16,GOLD)
+		label_at(Vector2(220,562),skill_sources_text(info),15,TEAL)
+		draw_wrapped(Vector2(220,589),setup_hero_effects_text(preview),840,15,INK,2)
+	label_at(Vector2(220,632),"Locked for this run. Undo and reload cannot reassign. Zero points are allowed.",15,GOLD)
 	panel(Rect2(220,650,840,45),Color("345c62") if strategy_selection!="" else Color("203343"))
-	label_at(Vector2(235,679),"ENTER: LOCK STRATEGY / Esc: clear selection",18)
+	label_at(Vector2(235,679),"ENTER: LOCK WHOLE PLAN / Esc: clear preview",18)
 	draw_wrapped(Vector2(220,715),ui_notice if ui_notice!="" else "N: new seed / R: same seed new run / L: reload / F2: language",840,13,GOLD if ui_notice!="" else MUTED,1)
 
 func folio_progress_text() -> String:

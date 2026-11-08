@@ -307,3 +307,17 @@
 PCK JS SHA `2bc4bafce2f6738d111b9d42d5ea9583ff8fec9d5c8eeb2a5ee3807350f459b9` 与源码一致；PCK World.gdc `f7c5a8da96d10ea1c1adc8129eae3707ba906edd59b0c5994c9d329b39f88cf1`、main.gdc `bb60d3b608cb150a008da7d7ea3cba2cb917d2e293e8ae14997a7a46c2d141ca` 均与最终源码独立重编译一致，见`folio-pck-verified.log`。
 
 最终冻结后强化门禁完整回归`/tmp/tower-talent-verified-final.log`退出0：47个Godot套全部通过，UI177/本地化96，200首章+200远征种子、9条路线3882个合法存读状态；五组Node共870项通过。无SCRIPT ERROR/ERROR。此结果包含最后已学只读卡与无法破甲中文修复，不沿用早期UI截图作为最终包证据。
+
+## 有限传承配点：schema17
+
+首次实际结算3/5/8里程碑，分别形成每局1/2/3点可配置容量，不按死亡次数发币。研习0–2点，每点技能级+2且总上限20；应急专注0–2份，非满专注时主动消耗一份与一步换1专注。与开局策略同一个CAS事务确认；旧16活动、死亡、待选原始档案从冻结11369c0实际生成，不版本号伪降。旧待选仍可选原策略，但零点v0，不追溯加成。原装策略可配点，完全原规则须none+0/0。
+
+最终全套`/tmp/tower-points-verified-final.log`退出0，50套Godot、6组Node904项全通过，无SCRIPT ERROR/ERROR。新增World973、battle17779（8910组合）、storage189；Session366、UI189、本地化96；200首章+200远征种子和9条完整路线3882个合法存读状态。一次中间失败是旧attunement完整字典预期未加legacy/raw/overflow，已修保留原数值断言并完整重跑。字体917必需字缺0，1074 cmap/2127glyphs，420620bytes SHA256 af0370f97bcd496a18b4e81b30abe9fe5c6a61740f899a96fa10993eaed22e0d，manifest source hashes全匹配。
+
+真实GUI沿用真实3层结算得到的1点资格，不注入里程碑：none+study1学者实际治疗90，对照study0治疗80；none+reserve1在专注2时补给到3，余份1→0，U后L恢复专注2/余份1。实际继续到2F、满专注3按补给不扣余份1。57步、410HP、28ATK、12DEF、32金币、1钥，正常退役后显示新增0点、已有[3]、今后容量仍1，未重复发点。该run为074004817d5240dfbd1b1ccbd54f8baa，保留points-final-store.json；关闭再启动读到真实终局。为查看最新准备页之后明确新开pending局，不把已退役旧局冒充当前活动局。
+
+准备页在英雄选择之前，同屏显示三英雄真实技能数值；study1显示护卫40%/游侠12防/学者90HP，中英均无截断。截图points-three-heroes-zh/en、points-study-mend-actual、points-base-mend-actual、points-supply-used、points-supply-undo-load、points-full-refused、points-retired-reopened保留。
+
+合法路线工具先原装真实打完8层并结算赚取容量，再比较18条普通、6条高回焦路线。结果不是全局优化或全部种子平衡认证：储备早期保险与研习长期效率有真实差异，但channel+逆境学者在seed23的0点已2139HP，2研习/1储备达到2719HP。相关脚本、25条原始JSONL与风险说明已入库，不掩盖强协同，也未为抹平构筑差异直接削弱。Windows实际运行、听音和Godot Web实际游玩仍未验证。
+
+真实Chrome生产JS callback+IndexedDB harness82项通过，points-browser-82.png。中间发现伪空pool的测试夹具没有同步新容量0，先触发INVALID_LEGACY_POINTS；已修夹具使其内部schema合法，只违反真实档案出生pool，保留精确INVALID_BIRTH_DRAFT断言，并加Node前置检查。生产规则未放宽。此浏览器结果不代表Godot Web引擎成功加载。
