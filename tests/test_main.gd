@@ -429,8 +429,10 @@ func run_tests():
 	var draft_sounds=scene.sound_event_count
 	event.keycode=KEY_1;scene._unhandled_input(event)
 	var selected_strategy: String=scene.strategy_selection
+	var expected_setup_level: int=12+(4 if selected_strategy=="study" else 0)
+	var earned_setup_profile: Dictionary=scene.session.adapter.profile.duplicate(true)
 	event.keycode=KEY_Q;scene._unhandled_input(event)
-	check(scene.setup_allocation=={"study":1,"reserve":0} and scene.setup_preview().skill_level==12,"study previews actual +2 levels without spending capacity")
+	check(scene.setup_allocation=={"study":1,"reserve":0} and scene.setup_preview().skill_level==expected_setup_level,"study previews actual +2 levels without spending capacity")
 	event.keycode=KEY_W;scene._unhandled_input(event)
 	check(scene.setup_allocation=={"study":1,"reserve":0},"cannot allocate beyond earned first milestone capacity")
 	event.keycode=KEY_F2;scene._unhandled_input(event)
@@ -454,7 +456,7 @@ func run_tests():
 	check(scene.strategy_selection==selected_strategy,"pending strategy retry keeps the originally submitted preview, not a different card")
 	await scene.retry_save()
 	check(not scene.strategy_pending() and scene.world.current_strategy()==selected_strategy and scene.world.moves==0 and scene.history.is_empty(),"strategy retry locks exactly once without a move and clears Undo")
-	check(scene.world.legacy_points.study==1 and scene.world.skill_level()==12,"retry atomically locks study with selected strategy")
+	check(scene.world.legacy_points.study==1 and scene.world.skill_level()==expected_setup_level,"retry atomically locks study with selected strategy")
 	var locked_strategy=scene.world.save_data().duplicate(true)
 	await scene.undo()
 	await scene.load_game()
@@ -579,6 +581,24 @@ func run_tests():
 	event.keycode=KEY_1;scene._unhandled_input(event)
 	await scene.confirm_talent()
 	check(Fixture.snapshot(scene)==learned_before,"learned card number and confirmation cannot learn twice or spend resources")
+	# Explicit deterministic coverage: study strategy adds +4 on top of the
+	# same +2 legacy allocation; non-study retains level 12. No random-card assumption.
+	var SetupWorld=load("res://scripts/world.gd")
+	var setup_pool=SetupWorld.Strategy.pool_from_profile(earned_setup_profile)
+	for chosen in ["study","reserve"]:
+		var fixture_world
+		for fixture_seed in range(32):
+			fixture_world=SetupWorld.new(fixture_seed,2,"", "safe",false,setup_pool)
+			if chosen in fixture_world.draft.offers: break
+		check(chosen in fixture_world.draft.offers,"deterministic setup fixture offers "+chosen)
+		await Fixture.bind(scene,fixture_world,earned_setup_profile)
+		scene.strategy_selection=chosen;scene.setup_allocation={"study":0,"reserve":0};scene.strategy_submitted=false
+		var base_level=int(scene.setup_preview().skill_level)
+		scene.adjust_setup("study",1)
+		var expected_level=12+(4 if chosen=="study" else 0)
+		check(scene.setup_preview().skill_level==expected_level and scene.setup_preview().skill_level==base_level+2,"allocation preview adds exactly two for "+chosen)
+		await scene.confirm_strategy()
+		check(scene.world.skill_level()==expected_level and scene.world.legacy_points.study==1,"atomic setup stores additive skill level for "+chosen)
 	var effects_preview=scene.world.setup_preview("none",{})
 	check(scene.setup_hero_effects_text(effects_preview).contains("Scholar: heal"),"preparation exposes all three model-backed hero effects")
 	print("UI integration: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])

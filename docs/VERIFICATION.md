@@ -321,3 +321,5 @@ PCK JS SHA `2bc4bafce2f6738d111b9d42d5ea9583ff8fec9d5c8eeb2a5ee3807350f459b9` �
 合法路线工具先原装真实打完8层并结算赚取容量，再比较18条普通、6条高回焦路线。结果不是全局优化或全部种子平衡认证：储备早期保险与研习长期效率有真实差异，但channel+逆境学者在seed23的0点已2139HP，2研习/1储备达到2719HP。相关脚本、25条原始JSONL与风险说明已入库，不掩盖强协同，也未为抹平构筑差异直接削弱。Windows实际运行、听音和Godot Web实际游玩仍未验证。
 
 真实Chrome生产JS callback+IndexedDB harness82项通过，points-browser-82.png。中间发现伪空pool的测试夹具没有同步新容量0，先触发INVALID_LEGACY_POINTS；已修夹具使其内部schema合法，只违反真实档案出生pool，保留精确INVALID_BIRTH_DRAFT断言，并加Node前置检查。生产规则未放宽。此浏览器结果不代表Godot Web引擎成功加载。
+
+远端首轮PR CI暴露另一个测试假设：test_main随机新seed的第一张策略可能是研习策略（自带+4级），两处固定期待12级会把正确16级误报失败。已改成明确12+策略4，并补确定性研习/非研习策略两组真实预览与原子确认断言。生产代码未改；UI195项连续三次通过，不靠重跑掩盖问题。待该修复新head的CI通过才发布Web。
