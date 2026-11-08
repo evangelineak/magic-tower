@@ -1,0 +1,5 @@
+.godot/
+*.blend1
+*.blend2
+export/
+*.log
