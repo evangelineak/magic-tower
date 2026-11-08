@@ -3,6 +3,27 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"Sealed freight: the SAME 70 HP supply, not an extra reward. Open the floor 1 door with 1 key now, or ship it free and collect later. ":"封箱货物就是原本的 70 生命补给，并非额外奖励。可以现在花 1 把钥匙开启 1 层房门，或免费发往高层稍后领取。",
+"Freight contains only the original 70 HP supply; it is not an extra reward. ":"货物只有原本的 70 生命补给，并非额外奖励。",
+" Shipping removes the empty source lock. Destination is fixed; this supply can only be collected once. Normal Undo remains available.":"发货会移除空置的源房锁门；目的地固定，这份补给只能领取一次；仍可使用普通撤销。",
+
+"Sealed medical supply":"封箱医疗补给",
+"Medical supply collected: +70 HP.":"已领取医疗补给：恢复 70 生命。",
+"Freight chute":"货梯收货口",
+"Freight status: sealed on floor 1; dispatch is still available.":"货物状态：仍封存在 1 层，可以选择发货。",
+"Freight status: source opened; the 70 HP supply is still inside.":"货物状态：源房门已开，70 生命补给仍在箱内。",
+"Freight status: the source supply was collected locally.":"货物状态：已在源房领取补给。",
+"Freight status: ready for manual collection.":"货物状态：已可手动领取。",
+"Freight status: dispatched; destination seal is still locked.":"货物状态：已发出，目的地封印尚未解除。",
+"Freight status: collected at destination; no further reward.":"货物状态：已在目的地领取，不再有额外奖励。",
+"Floor 3 freight chute: the Vault Colossus must be defeated.":"3 层货梯收货口：须先击败宝库巨像。",
+"Floor 5 cargo beside the calibration stand: defeat the Regent AND continue the expedition before collection.":"5 层校准台旁的货箱：须击败摄政王，并选择继续远征后才能领取。",
+"Destination: floor 3 freight chute, after defeating the Vault Colossus.":"目的地：3 层货梯收货口，击败宝库巨像后领取。",
+"Destination: cargo beside the floor 5 calibration stand, after the Regent and expedition continuation.":"目的地：5 层校准台旁，击败摄政王并继续远征后领取。",
+"Collect the shipped supply: +70 HP once. This is the original floor 1 box.":"领取运来的补给：一次性恢复 70 生命。这就是原本 1 层的那箱货物。",
+"Freight dispatched. The empty source door is removed; the original 70 HP supply awaits its stated destination.":"货物已发出，空置的源房门已移除；原本的 70 生命补给将在标明的目的地等待领取。",
+"Freight collected: +70 HP. The original supply cannot be collected again.":"货物已领取：恢复 70 生命。原补给不能再次领取。",
+
 "Emergency reserve used: +1 focus. One supply consumed.":"已使用应急补给：专注 +1，消耗一份补给。",
 "Dedicated study":"专精研习",
 "Skill level +4 / ATK -4 / DEF -2.":"技能等级 +4 / 攻击 -4 / 防御 -2。",
@@ -347,6 +368,9 @@ const EXACT = {
 # Preserve conversion types and argument order. The display adapter matches
 # these full English templates; %s values may themselves have catalog names.
 const TEMPLATES = [
+["%s Sealed freight: the SAME 70 HP supply, not an extra reward. Open the floor 1 door with 1 key now, or ship it free and collect later. %s Shipping removes the empty source lock. Destination is fixed; this supply can only be collected once. Normal Undo remains available.", "%s 封箱货物就是原本的 70 生命补给，并非额外奖励。可以现在花 1 把钥匙开启 1 层房门，或免费发往高层稍后领取。%s 发货会移除空置的源房锁门；目的地固定，这份补给只能领取一次；仍可使用普通撤销。"],
+["%s Freight contains only the original 70 HP supply; it is not an extra reward. %s Shipping removes the empty source lock. Destination is fixed; this supply can only be collected once. Normal Undo remains available.", "%s 货物只有原本的 70 生命补给，并非额外奖励。%s 发货会移除空置的源房锁门；目的地固定，这份补给只能领取一次；仍可使用普通撤销。"],
+
 ["Legacy points: study %d (+%d levels) / reserve %d / capacity %d. Supplies left: %d. Skill level %d (raw %d; overflow %d).", "传承配点：研习 %d（等级 +%d）/ 补给 %d / 总点数 %d。剩余补给：%d。技能等级 %d（原始 %d；溢出 %d）。"],
 ["Skill level %d = base %d + training %d + equipment %d + strategy %d + legacy %d (raw %d; overflow %d)", "技能等级 %d = 基础 %d + 训练 %d + 装备 %d + 策略 %d + 传承 %d（原始 %d；溢出 %d）"],
 ["%s / floor %d", "%s / 第 %d 层"],

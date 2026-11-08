@@ -241,3 +241,24 @@ settlement preserves remaining supplies and replays combat with the saved study
 allocation. Authentic schema 16 active/death/pending fixtures migrate to version
 0, zero capacity and no reserve grant. The old pending strategy remains choosable
 with zero allocation; a genuinely new run uses the earned profile's birth pool.
+
+The schema 17 production JavaScript harness passed all 82 checks in a real
+Chrome tab (evidence: `points-browser-82.png`). The forged birth-pool negative
+fixture uses an internally consistent zero-capacity allocation, so it tests
+actual profile entitlement rejection rather than an unrelated schema failure.
+This remains callback/IndexedDB evidence, not Godot WebGL runtime coverage.
+
+## Schema 18 sealed cargo
+
+New layout-2 journeys receive a seed-fixed cargo destination; layout 1 remains
+off. Ordinary commits cannot change cargo rule version or destination, while
+real dispatch/open/claim state and its corresponding map changes can be saved
+and undone together. Production JS checks the exact record, source door/supply,
+permanent vault chute and collection prerequisites; Godot additionally validates
+the complete World. Atomic death does not alter cargo state or maps.
+
+Authentic schema 17 active, defeated, pending and allocated containers from
+isolated `2d2855f` migrate to cargo off without map replacement or new rewards.
+Their actual talent history, strategy choices, allocated points and supplies
+are preserved field by field. Fixtures are generated through the old production
+adapter, not by changing a current snapshot's version number.

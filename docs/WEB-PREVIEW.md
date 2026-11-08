@@ -1,19 +1,19 @@
-# Optional legacy allocation Web preview
+# Optional sealed freight Web preview
 
-Root remains v0.17, rebuilt from pinned Web source `4122fa416091eb3d89c7825b6d9eabd55d7c273e`.
-Optional `/preview/` game source is `add23ffbf8e17549f9eb34ffc478f3da46190333`.
+Root remains v0.17, rebuilt from fixed source4122fa416091eb3d89c7825b6d9eabd55d7c273e.
+Optional /preview/ game source194c0e3e6c8e857c489ac26a3de0d096b9f9012f.
 
-Actual Linux gameplay, finite legacy point allocation, emergency focus, persistence,
-and production JavaScript IndexedDB transactions are verified. The cloud Chromium
-browser blocklists WebGL2; no security setting was bypassed. **Godot Web gameplay
-and its engine-to-JavaScript bridge remain unverified.** Export is not runtime QA.
+Native Linux source/final-package gameplay and actual old-checkpoint combat receipts
+are verified, alongside production JavaScript IndexedDB transactions. Cloud Chromium
+blocklists WebGL2. No security setting was bypassed. Godot Web gameplay and its
+engine-to-JavaScript bridge remain unverified; export success is not runtime QA.
 
-The Session database does not import or delete old v0.17 saves. Schema16 and older
-journeys retain zero allocation and their original talent offers. Start an explicit
-new journey to allocate capacity earned from first recorded floors3/5/8. Repeated
-death does not earn more. Existing records remain. Close old game tabs before
-reloading the new version; concurrent stale writers cannot overwrite newer data.
+Old journeys retain maps and receive no retroactive cargo. Start an explicit new
+journey to choose between the original70HP supply now for a key or shipping that
+same supply to its stated guarded destination later. No reward duplication.
+The Session database does not import/delete legacy v0.17 save files. Close old game
+tabs before reloading; stale writers cannot overwrite current state.
 
-Single-thread Web includes `scripts/*.js`; no SharedArrayBuffer, COOP/COEP or service
-worker is required. Root remains separate while this optional build is playtested.
-Windows exports are not actual Windows runtime validation; audio remains unaudited.
+Single-thread Web includes scripts/*.js, requires no SharedArrayBuffer/COOP/COEP
+or service worker. Keep root stable while this optional build is playtested.
+Windows remains cross-exported, not Windows runtime certification. Audio unaudited.

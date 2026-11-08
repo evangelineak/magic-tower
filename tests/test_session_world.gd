@@ -23,7 +23,7 @@ func terminal(w):
 func _init():
 	var w=World.new(0,2,ID,"risk")
 	check(w.generation_valid and w.reward_eligible() and w.mode=="risk" and w.ended_reason=="","new session identity accepted")
-	check(w.save_data().version==17,"schema17")
+	check(w.save_data().version==18,"schema18")
 	var fast=World.from_snapshot(w.save_data())
 	check(fast!=null and fast.generation_valid and canonical(fast)==canonical(w),"validated no-generation snapshot constructor")
 	check(World.from_snapshot({})==null,"bad fast restore never exposes usable instance")

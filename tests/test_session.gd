@@ -223,6 +223,8 @@ func run():
  await strategy_cases()
  await talent_draft_cases()
  await legacy_points_cases()
+ await combat_effect_cases()
+ await cargo_identity_cases()
  print("SESSION: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
  quit(0 if failures==0 else 1)
 
@@ -445,7 +447,7 @@ func strategy_cases():
  check((await session.choose_strategy("none")).ok and session.world.draft.choice=="none","original kit remains always selectable")
  # Existing eligible schema14 active run migrates to locked original, no lottery.
  var old=World.new(0,2,"legacy_run_0123456789","safe").save_data()
- old.version=14;old.erase("draft")
+ old.version=14;old.erase("draft");old.erase("cargo");old.floors[2][2][9]="#"
  store.record={"snapshot":old,"run_id":old.run_id,"slot":store.record.slot+1,"revision":0,"eligible":true}
  store.op="migration_fixture"
  check((await session.open_current()).ok and session.world.draft=={"version":0,"pool":[],"offers":[],"choice":"none"},"old active run does not receive newly unlocked draw")
@@ -484,7 +486,7 @@ func talent_draft_cases():
  var session=Session.new(store)
  check((await session.new_run(42)).ok,"schema16 JSON new run")
  var born=session.world.save_data().duplicate(true)
- check(born.version==17 and born.talent_draft==World.Progression.talent_draft(42) and born.last_kill_kind=="","birth has fixed talent draft and no fabricated last kill")
+ check(born.version==18 and born.talent_draft==World.Progression.talent_draft(42) and born.last_kill_kind=="","birth has fixed talent draft and no fabricated last kill")
  check((await session.save()).ok and (await session.open_current()).ok and session.world.talent_draft==born.talent_draft,"JSON save/read never rerolls offers")
  # A fully valid revision-zero historical offer set is still not this run's set.
  var graft=born.duplicate(true);graft.talent_draft=World.Progression.talent_draft(0,0)
@@ -494,7 +496,7 @@ func talent_draft_cases():
  check(not (await session.undo()).ok and store.writes==writes and session.world.save_data()==born,"Undo cannot swap a valid different immutable talent draft")
  session.history.clear()
  # Old v15 journey preserves identity and migrates old fixed offers, no redraw.
- var legacy=born.duplicate(true);legacy.version=15;legacy.erase("talent_draft");legacy.erase("last_kill_kind")
+ var legacy=born.duplicate(true);legacy.version=15;legacy.erase("talent_draft");legacy.erase("last_kill_kind");legacy.erase("cargo");legacy.floors[2][2][9]="#"
  store.record.snapshot=legacy
  check((await session.open_current()).ok and session.world.run_id==born.run_id and session.world.talent_draft==World.Progression.talent_draft(0,0) and session.world.last_kill_kind=="","v15 migration uses original talent offers and does not invent kill context")
  check((await session.save()).ok and session.world.talent_draft.version==0,"saving upgraded legacy run does not acquire new offers")
@@ -591,3 +593,66 @@ func legacy_points_cases():
  check((await session.action("legacy_focus")).ok and session.world.focus==3 and session.world.legacy_reserves==1,"one reserve reaches focus cap")
  var full=session.world.save_data().duplicate(true)
  check(not (await session.action("legacy_focus")).ok and session.world.save_data()==full,"full focus refuses consumption without wasting remaining supply")
+
+func combat_effect_cases():
+ # Restore-valid controller fixtures isolate exact accounting; gameplay-route
+ # evidence is separately recorded by tools/audit_legacy_gate_routes.gd.
+ for scenario in ["cap","armed","debt"]:
+  var store=FakeStore.new()
+  store.profile=Profile.settle(Profile.fresh(),"combat_past_0123456789",{"seed":1,"max_floor":8,"moves":100,"outcome":"victory"}).profile
+  var session=Session.new(store)
+  var seed_id=23
+  if scenario=="debt":
+   for candidate_seed in range(100):
+    if "forager" in Strategy.draft(candidate_seed,Strategy.pool_from_profile(store.profile)).offers:seed_id=candidate_seed;break
+  check((await session.new_run(seed_id)).ok,"combat summary creates authorized run")
+  check((await session.choose_strategy("forager" if scenario=="debt" else "channel")).ok,"combat summary strategy chosen")
+  var w=World.from_snapshot(session.world.save_data())
+  w.floor_index=3;w.floor_seen=[true,true,true,true,false]
+  w.hp=500;w.atk=60;w.defense=20;w.focus=3
+  w.skill_armed=scenario=="armed"
+  if scenario=="debt":
+   w.loan_used=true;w.principal=10;w.fees=0;w.interest=0;w.checkpoints=2;w.overdue=true;w.gold=7
+  var delta=Vector2i.ZERO
+  for y in range(1,10):
+   for x in range(1,10):
+    var target=Vector2i(x,y)
+    if w.tile(target)!="w":continue
+    for direction in [Vector2i.RIGHT,Vector2i.DOWN,Vector2i.LEFT,Vector2i.UP]:
+     if w.tile(target-direction)==".":w.pos=target-direction;delta=direction;break
+  check(delta!=Vector2i.ZERO and World.from_snapshot(w.save_data())!=null,"combat summary fixture fully restores")
+  store.record.snapshot=w.save_data()
+  check((await session.open_current()).ok,"combat summary fixture read")
+  var before=session.world.save_data().duplicate(true)
+  store.lost_ack=true
+  var failed=await session.step(delta)
+  check(not failed.ok and not failed.has("effect") and session.world.save_data()==before,"unacknowledged battle reveals no speculative reward effect")
+  var writes=store.writes
+  var result=await session.retry_pending()
+  check(result.ok and store.writes==writes and result.effect.has("combat"),"ACK retry publishes exact committed battle summary without duplicate write")
+  var c=result.effect.combat
+  check(c.hp_before==500 and c.hp_after==session.world.hp and c.hp_restored==session.world.hp-500+c.hp_lost,"HP summary distinguishes actual loss from recovery")
+  if scenario=="cap":check(c.focus_before==3 and c.focus_after==3 and c.focus_spent==0 and c.focus_restored==0,"full focus displays zero actual restoration, not nominal channel reward")
+  elif scenario=="armed":check(c.focus_before==3 and c.focus_after==3 and c.focus_spent==1 and c.focus_restored==1,"skill spends before channel restores same focus, net zero is not no reward")
+  else:check(c.gold_before==7 and c.gold_reward==18 and c.debt_paid==10 and c.gold_after==15 and c.hp_restored==12,"24 gold minus forager tax gives 18 reward; debt takes 10, only 8 enters pocket")
+  check(not (await session.retry_pending()).has("effect"),"completed battle effect cannot replay")
+  var loaded=await session.open_current()
+  check(loaded.ok and not loaded.has("effect"),"load does not replay battle reward summary")
+
+func cargo_identity_cases():
+ var store=FakeStore.new();var session=Session.new(store)
+ check((await session.new_run(0)).ok,"cargo identity new run")
+ var original=session.world.save_data().duplicate(true)
+ var graft=original.duplicate(true)
+ graft.cargo={"version":0,"state":"off","destination":""};graft.floors[2][2][9]="#"
+ check(World.from_snapshot(graft)!=null,"alternative legacy cargo is restore-valid but not this birth")
+ session.history.append(graft)
+ check(not (await session.undo()).ok and session.world.save_data()==original,"Undo cannot graft a different cargo birth version or destination")
+ session.history.clear()
+ # Controlled nearby source position checks normal state transitions, not birth.
+ var current=World.from_snapshot(original);current.pos=Vector2i(8,3)
+ store.record.snapshot=current.save_data()
+ check((await session.open_current()).ok,"cargo source fixture restores")
+ var before=session.world.save_data().duplicate(true)
+ check((await session.action("cargo_ship")).ok and session.world.cargo.state=="shipped","normal action may advance mutable cargo state")
+ check((await session.undo()).ok and session.world.save_data()==before,"Undo restores cargo state and map while preserving birth")

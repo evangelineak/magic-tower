@@ -22,7 +22,7 @@ func run():
  for label in ["active","death"]:
   var s=prepared(label);var r=await s.read_active()
   if not need(r,"real16 migration "+label):return
-  check(r.snapshot.version==17 and r.snapshot.legacy_points=={"version":0,"capacity":0,"study":0,"reserve":0} and r.snapshot.legacy_reserves==0,"old16 no midrun point grants")
+  check(r.snapshot.version==18 and r.snapshot.legacy_points=={"version":0,"capacity":0,"study":0,"reserve":0} and r.snapshot.legacy_reserves==0,"old16 no midrun point grants")
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema16-"+label+".json"))
   for key in old:
    if key!="version":check(JSON.parse_string(JSON.stringify(r.snapshot[key]))==old[key],"old16 keeps "+label+" "+key)

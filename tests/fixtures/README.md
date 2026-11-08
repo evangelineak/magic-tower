@@ -229,3 +229,20 @@ The same isolated generator additionally creates a genuinely pending seed-51
 run after the real defeat ledger unlocks [3,5]. It tests zero-point migration
 without disabling the old unconfirmed strategy choice.
 - `schema16-pending-store.json`: `74250b9e04445d63b4e63a466dc8ad8667d7ea942ea2efea29b5b89fac96ca54`
+
+## Authentic schema 17 storage fixtures
+
+Generated from isolated `git archive 2d2855f` by `generate_schema17_store.gd`.
+The actual old production adapter follows the legal seed0 risk route to early W,
+archives defeat, then creates a genuine pending run using its earned [3,5] pool
+and atomically chooses none with study1/reserve1. No edited versions, injected
+stats or user data. Raw files only project stored snapshots.
+
+- `schema17-active-store.json`: `b6d6e6ecfec6805ef0f254e96a5f7ac539aaa3ee9c6db138d79d7190bed07f27`
+- `schema17-active.json`: `7594d9b2ce247e3f99baed51ec132088c3d58ae8ff6d35c1af7bac3737af0845`
+- `schema17-death-store.json`: `c0af064c545e8e55d7fed4b8b17628bd7d22413f4b56d0c4af4baed794061faf`
+- `schema17-death.json`: `bc558a3c0fce25201982fc8b0906e3f0515725e46019432e0aeb5008fb2378b9`
+- `schema17-pending-store.json`: `966f3ffa450bc7177e1f500269cf503c07875fbd3732b5e591baaa5aa46a96cf`
+- `schema17-pending.json`: `a13d874ab0ba4ec8f8987df0bd8715ffd582df3ad1d780df269d4b6e577e34f5`
+- `schema17-allocated-store.json`: `917d9a9f2fd6de506fd417f90a5874a7d7f9d67508e5c343c707e82aa55bf5eb`
+- `schema17-allocated.json`: `d144d664d9fe9ca89a7c02719eb18844837111584912d6217e1f19ff54a0ecb6`

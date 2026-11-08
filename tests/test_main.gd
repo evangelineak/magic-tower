@@ -128,6 +128,22 @@ func run_tests():
 	check(scene.battle_time==0 and scene.world.save_data()==after_combat,"skip animation does not repeat combat or move")
 	await scene.undo()
 	check(scene.world.save_data()==before_combat and scene.battle_time==0,"combat undo restores enemy, focus, hero and stats together")
+	var combat_audio=scene.sound_event_count
+	scene.battle_receipt={};scene.session.adapter.lost_ack=true
+	await scene.move(Vector2i.LEFT)
+	check(scene.world.save_data()==before_combat and scene.battle_time==0 and scene.battle_receipt.is_empty() and scene.sound_event_count==combat_audio,"lost ACK publishes no speculative combat gains or animation")
+	await scene.retry_save()
+	check(scene.battle_time>0 and scene.sound_event_count==combat_audio+1 and not scene.battle_receipt.is_empty(),"F5 publishes actual committed battle receipt and effect once")
+	check(scene.battle_receipt.hp_before==before_combat.hp and scene.battle_receipt.hp_after==scene.world.hp and scene.battle_receipt.focus_spent==1,"receipt uses exact before/committed HP and active-skill spending")
+	var receipt_before_retry=scene.battle_receipt.duplicate(true)
+	await scene.retry_save()
+	check(scene.battle_receipt==receipt_before_retry and scene.sound_event_count==combat_audio+1,"duplicate retry cannot duplicate receipt effect")
+	await scene.load_game()
+	check(scene.battle_time==0 and scene.sound_event_count==combat_audio+1,"loading stored victory does not replay battle reward effects")
+	await Fixture.bind(scene,load("res://scripts/world.gd").new(0,1))
+	check(scene.world.restore(before_combat),"restore exact prebattle fixture after receipt tests")
+	await Fixture.sync(scene)
+
 	scene.world.kills=3
 	await Fixture.sync(scene)
 	event.keycode=KEY_C; scene._unhandled_input(event)
@@ -599,6 +615,61 @@ func run_tests():
 		check(scene.setup_preview().skill_level==expected_level and scene.setup_preview().skill_level==base_level+2,"allocation preview adds exactly two for "+chosen)
 		await scene.confirm_strategy()
 		check(scene.world.skill_level()==expected_level and scene.world.legacy_points.study==1,"atomic setup stores additive skill level for "+chosen)
+	# Presentation is cosmetic and follows the model's contact-before-hit order.
+	scene.battle_hero="ranger";scene.battle_skill=false;scene.battle_kind="b"
+	scene.battle_details={"retaliations":2,"first_strike_suppression":"none"}
+	check(scene.battle_phase_state(0.32).contact and not scene.battle_phase_state(0.32).hero_attack,"contact thorns shown before the hero strike")
+	check(not scene.battle_phase_state(0.5).contact and scene.battle_phase_state(0.5).hero_attack,"hero strike follows contact phase")
+	check(scene.battle_phase_state(0.5).text=="Hero attacks","unarmed Ranger never claims Precision")
+	scene.battle_skill=true
+	check(scene.battle_phase_state(0.5).text=="Precision shot","actual active Ranger skill labels Precision")
+	scene.battle_kind="H"
+	for suppressed in ["oath","flank"]:
+		scene.battle_details.first_strike_suppression=suppressed
+		check(scene.battle_phase_state(0.2).blocked and not scene.battle_phase_state(0.2).enemy_attack,"cancelled opening shows protection without hit: "+suppressed)
+	scene.battle_details.first_strike_suppression="none"
+	check(scene.battle_phase_state(0.2).enemy_attack,"unsuppressed first strike still animates enemy")
+	scene.battle_receipt={"hp_before":100,"hp_after":72,"hp_lost":40,"hp_restored":12,"focus_before":3,"focus_after":3,"focus_spent":1,"focus_restored":1,"gold_before":7,"gold_after":9,"gold_reward":18,"debt_paid":16}
+	var actual_lines=scene.battle_gain_lines()
+	check(actual_lines[0]=="HP 100 -> 72 / loss 40 / recovered +12","HP receipt distinguishes damage from net recovery")
+	check(actual_lines[1]=="Focus 3 -> 3 / skill spent 1 / actually restored +1","focus receipt separates spent and capped actual restoration")
+	check(actual_lines[2]=="Gold loot 18 / debt paid 16 / pocket +2 (7 -> 9)","gold receipt distinguishes loot, debt and pocket change")
+	# Cargo is an explicit local choice, not a mouse/tooltip pickup.
+	await Fixture.bind(scene,SetupWorld.new(0,2))
+	scene.world.pos=Vector2i(7,2)
+	await Fixture.sync(scene)
+	var cargo_before=Fixture.snapshot(scene)
+	var cargo_sound=scene.sound_event_count
+	scene.interaction=true
+	check(scene.available_actions().any(func(row):return row[0]=="cargo_ship"),"source freight exposes shipment action")
+	await scene.perform_action("cargo_ship")
+	check(scene.cargo_pending and Fixture.snapshot(scene)==cargo_before,"shipment first selection is confirmation only")
+	event.keycode=KEY_F2;scene._unhandled_input(event)
+	event.keycode=KEY_D;scene._unhandled_input(event)
+	check(scene.cargo_pending and Fixture.snapshot(scene)==cargo_before,"cargo confirmation language and direction do not commit")
+	await scene.perform_action("cargo_cancel")
+	check(not scene.cargo_pending and Fixture.snapshot(scene)==cargo_before,"shipment cancel preserves box and key")
+	await scene.perform_action("cargo_ship")
+	scene.session.adapter.lost_ack=true
+	await scene.perform_action("cargo_confirm")
+	check(scene.world.cargo.state=="waiting" and scene.sound_event_count==cargo_sound,"shipment ACK loss keeps old live cargo and no pickup sound")
+	await scene.retry_save()
+	check(scene.world.cargo.state=="shipped" and scene.world.hp==cargo_before.record.snapshot.hp and scene.world.keys==cargo_before.record.snapshot.keys,"shipment delays same HP and spends no key")
+	await scene.undo()
+	check(scene.world.cargo.state=="waiting" and scene.world.floors[0][2][8]=="D" and scene.world.floors[0][2][9]=="h","shipment Undo restores source lock and original supply")
+	await scene.perform_action("cargo_ship")
+	event.keycode=KEY_ESCAPE;scene._unhandled_input(event)
+	check(not scene.cargo_pending and not scene.interaction,"Escape cancels cargo confirmation")
+	# Crown freight coexists with the calibration interface without replacing it.
+	await Fixture.bind(scene,SetupWorld.new(1,2))
+	scene.world.floor_index=4;scene.world.pos=Vector2i(1,2);scene.world.floor_seen=[true,true,true,true,true]
+	await Fixture.sync(scene)
+	check(scene.available_actions().any(func(row):return row[0]=="cargo_inspect"),"calibration location retains a separate read-only freight label entry")
+	var crown_before=Fixture.snapshot(scene)
+	await scene.perform_action("cargo_inspect")
+	check(scene.cargo_inspecting and Fixture.snapshot(scene)==crown_before,"freight label at Q is read-only")
+	event.keycode=KEY_E;scene._unhandled_input(event)
+	check(not scene.cargo_inspecting,"E returns from freight label without persisting anything")
 	var effects_preview=scene.world.setup_preview("none",{})
 	check(scene.setup_hero_effects_text(effects_preview).contains("Scholar: heal"),"preparation exposes all three model-backed hero effects")
 	print("UI integration: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])

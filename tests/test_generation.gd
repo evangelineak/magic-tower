@@ -1,4 +1,5 @@
 extends SceneTree
+const Cargo=preload("res://scripts/cargo.gd")
 const Layout=preload("res://scripts/layout.gd")
 const Generator = preload("res://scripts/generation.gd")
 const World = preload("res://scripts/world.gd")
@@ -156,8 +157,9 @@ func _init():
 		for p in [Vector2i(9,2),Vector2i(9,4),Vector2i(10,3)]: check(canonical[2][p.y][p.x]=="#","vault wall remains intact")
 		check(canonical[2][3][8]=="V" and canonical[2][3][9]=="T","vault guard/reward unmoved")
 		check(canonical[1][1][6]=="#","flooded alcove has no western dry bypass")
-		var world = World.new(0)
-		world.floors=result.maps.duplicate(true)
+		var world = World.new(seed_value)
+		check(world.cargo==Cargo.birth(seed_value),"real seeded World cargo destination matches seed")
+		check(Cargo.valid_maps(world.floors,world.cargo,false),"real seeded World cargo source and destination topology are valid")
 		var replay_ok := true
 		var spent_key := false
 		var entered_cage := false
@@ -182,6 +184,7 @@ func _init():
 	for seed_value in [1,42,199]:
 		var actual = World.new(seed_value)
 		var expected := Generator.generate(seed_value,World.MAPS)
+		Cargo.install(expected.maps,Cargo.birth(seed_value))
 		check(actual.generation_valid and actual.floors==expected.maps,"World constructor uses requested skeleton seed")
 		var encoded: Dictionary=JSON.parse_string(JSON.stringify(actual.save_data()))
 		var loaded = World.new(seed_value+1)

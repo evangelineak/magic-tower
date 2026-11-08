@@ -153,7 +153,7 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    auth.expectedSlotRevision=10;
    r=await rpc('strategy',{auth,id:fixtures.draft_next.run_id,expected:0,choice:'none',request_id:'draft_keep_original_000001',allocation:{study:1,reserve:1}});check(r.ok&&r.run.snapshot.draft.choice==='none'&&r.run.snapshot.moves===0,'original build is explicit locked option');
    const talentCurrent=await rpc('read');
-   check(talentCurrent.ok&&talentCurrent.run.snapshot.version===17&&talentCurrent.run.snapshot.talent_draft.version===1,'new schema16 keeps deterministic talent birth candidates');
+   check(talentCurrent.ok&&talentCurrent.run.snapshot.version===18&&talentCurrent.run.snapshot.talent_draft.version===1,'new schema16 keeps deterministic talent birth candidates');
    const downgraded=structuredClone(talentCurrent.run.snapshot);downgraded.talent_draft={version:0,offers:[['iron_skin','keen_edge','clean_finish'],['last_stand','sentinel_lore','trained_focus'],['giant_slayer','battle_medic','unbroken']]};
    r=await rpc('save',{auth,id:talentCurrent.run.id,expected:talentCurrent.run.revision,snapshot:downgraded,request_id:'talent_illegal_downgrade01'});check(!r.ok&&r.code==='TALENT_DRAFT_IMMUTABLE','ordinary save cannot downgrade or redraw talent candidates');
    r=await rpc('read');check(r.ok&&eq(r.run,talentCurrent.run)&&eq(r.profile,talentCurrent.profile),'rejected talent redraw leaves full run and ledger unchanged');
@@ -163,6 +163,15 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    const pointsForged=structuredClone(talentCurrent.run.snapshot);pointsForged.legacy_points.study=0;
    r=await rpc('save',{auth,id:talentCurrent.run.id,expected:talentCurrent.run.revision,snapshot:pointsForged,request_id:'points_illegal_reallocate01'});check(!r.ok&&r.code==='LEGACY_POINTS_IMMUTABLE','ordinary save cannot reallocate permanent birth points');
    r=await rpc('read');check(r.ok&&eq(r.run,talentCurrent.run)&&eq(r.profile,talentCurrent.profile),'allocation retries and rejected changes preserve ledger and run');
+   auth.expectedSlotRevision=10;
+   const cargoBorn=await rpc('create',{auth,snapshot:fixtures.cargo_fresh,replace:true,request_id:fixtures.cargo_fresh.run_id});check(cargoBorn.ok&&cargoBorn.run.snapshot.cargo.state==='waiting','new run receives fixed cargo rules');auth.expectedSlotRevision=11;
+   r=await rpc('strategy',{auth,id:fixtures.cargo_fresh.run_id,expected:0,choice:'none',request_id:'cargo_strategy_none_00001'});check(r.ok,'cargo test locks original strategy');
+   r=await rpc('save',{auth,id:fixtures.cargo_fresh.run_id,expected:1,snapshot:fixtures.cargo_approach,request_id:'cargo_real_approach_00001'});check(r.ok,'actual source approach persisted');
+   r=await rpc('save',{auth,id:fixtures.cargo_fresh.run_id,expected:2,snapshot:fixtures.cargo_shipped,request_id:'cargo_real_dispatch_00001'});check(r.ok&&r.run.snapshot.cargo.state==='shipped','actual dispatch persists source removal');
+   const cargoForged=structuredClone(fixtures.cargo_shipped);cargoForged.cargo={version:0,state:'off',destination:''};cargoForged.floors[2][2][9]='#';
+   r=await rpc('save',{auth,id:fixtures.cargo_fresh.run_id,expected:3,snapshot:cargoForged,request_id:'cargo_disable_birth_00001'});check(!r.ok&&r.code==='CARGO_BIRTH_IMMUTABLE','ordinary save cannot disable cargo birth contract');
+   r=await rpc('save',{auth,id:fixtures.cargo_fresh.run_id,expected:3,snapshot:fixtures.cargo_approach,request_id:'cargo_undo_dispatch_00001'});check(r.ok&&eq(r.run.snapshot,fixtures.cargo_approach),'ordinary Undo restores complete pre-dispatch state');
+   r=await rpc('read');check(r.ok&&eq(r.run.snapshot,fixtures.cargo_approach),'cargo rules and dynamic state survive read');
    parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:window.MagicTowerJourneysTestDatabase,scope:'Production JS callback protocol + real IndexedDB, not Godot WebGL/JavaScriptBridge runtime'}},location.origin);
   }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,lastReply,checks,database:window.MagicTowerJourneysTestDatabase}},location.origin)}
  }

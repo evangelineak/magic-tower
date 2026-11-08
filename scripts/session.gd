@@ -128,7 +128,7 @@ func _perform(kind:String,value) -> Dictionary:
  if kind=="undo" and history.is_empty(): return _reply(false,"invalid","No move to undo in this session.")
  var before:Dictionary=world.save_data().duplicate(true)
  var candidate=_clone(history.back() if kind=="undo" else before)
- if candidate==null or candidate.run_id!=world.run_id or not _same_json(candidate.draft,world.draft) or not _same_json(candidate.talent_draft,world.talent_draft) or not _same_json(candidate.legacy_points,world.legacy_points): return _reply(false,"invalid","Journey identity or history is invalid.")
+ if candidate==null or candidate.run_id!=world.run_id or not _same_json(candidate.draft,world.draft) or not _same_json(candidate.talent_draft,world.talent_draft) or not _same_json(candidate.legacy_points,world.legacy_points) or candidate.cargo.version!=world.cargo.version or candidate.cargo.destination!=world.cargo.destination: return _reply(false,"invalid","Journey identity or history is invalid.")
  var accepted=true
  match kind:
   "step": accepted=candidate.step(value)
@@ -143,6 +143,10 @@ func _perform(kind:String,value) -> Dictionary:
   effect.input=value
   effect.token=world.tile(world.pos+value)
   effect.hero=world.hero_id
+  if World.ENEMIES.has(effect.token):
+   var spent=1 if candidate.last_battle.get("skill_consumed",false) else 0
+   var loss=int(candidate.last_battle.get("damage",0))
+   effect.combat={"focus_before":world.focus,"focus_after":candidate.focus,"focus_spent":spent,"focus_restored":candidate.focus-world.focus+spent,"gold_before":world.gold,"gold_after":candidate.gold,"gold_reward":int(candidate.last_battle.get("gold_after",0)),"debt_paid":world.debt()-candidate.debt(),"hp_before":world.hp,"hp_after":candidate.hp,"hp_lost":loss,"hp_restored":candidate.hp-world.hp+loss}
  elif kind=="action": effect.input=value
  _pending={"effect":effect,"kind":"commit","operation":kind,"candidate":candidate,"before":before,"snapshot":candidate.save_data().duplicate(true),"slot":slot,"revision":revision,"run_id":world.run_id,"request_id":_nonce()}
  return await _commit_pending()
