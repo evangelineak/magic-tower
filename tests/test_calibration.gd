@@ -1,4 +1,5 @@
 extends SceneTree
+const Fixture=preload("res://tests/ui_fixture.gd")
 # Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
 # New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
@@ -105,68 +106,61 @@ func run_tests():
 		var bad: Dictionary=valid.duplicate(true); bad.merge(bad_fields,true)
 		check(not w.restore(bad) and state(w)==valid,"invalid calibration save rejected without changing live state")
 	# Controller reward undo restores debt, map, puzzle and payout together.
-	var scene=load("res://main.tscn").instantiate(); root.add_child(scene)
-	scene.save_path="user://calibration-integration-test.json"; scene.world=at_seal(); scene.growth=false
+	var scene=load("res://main.tscn").instantiate(); Fixture.attach(scene); root.add_child(scene)
 	await process_frame
+	await Fixture.bind(scene,at_seal()); scene.growth=false
 	var event:=InputEventKey.new(); event.pressed=true; event.keycode=KEY_E
-	scene._unhandled_input(event)
+	await scene._unhandled_input(event)
 	check(scene.interaction and scene.available_actions().size()==4,"ready Q opens four unique symbol actions")
 	var input_resources:=resources(scene.world)
-	event.keycode=KEY_1; scene._unhandled_input(event)
+	event.keycode=KEY_1; await scene._unhandled_input(event)
 	check(scene.world.seal_input.size()==1 and scene.available_actions().size()==5,"choosing a symbol hides it and offers backspace/reset")
 	var input_before: Dictionary=state(scene.world)
-	event.keycode=KEY_D; scene._unhandled_input(event)
-	event.keycode=KEY_F2; scene._unhandled_input(event); scene._unhandled_input(event)
+	event.keycode=KEY_D; await scene._unhandled_input(event)
+	event.keycode=KEY_F2; await scene._unhandled_input(event); await scene._unhandled_input(event)
 	check(state(scene.world)==input_before and resources(scene.world)==input_resources,"calibration modal blocks movement and F2 does not change input or resources")
-	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
+	event.keycode=KEY_ESCAPE; await scene._unhandled_input(event)
 	check(not scene.interaction and state(scene.world)==input_before,"closing calibration preserves partial input")
-	event.keycode=KEY_E; scene._unhandled_input(event)
-	scene.perform_action("secret_backspace")
+	event.keycode=KEY_E; await scene._unhandled_input(event)
+	await scene.perform_action("secret_backspace")
 	check(scene.world.seal_input.is_empty(),"UI backspace edits only partial input")
-	scene.perform_action("secret_ring_"+solution[0]); scene.perform_action("secret_reset")
+	await scene.perform_action("secret_ring_"+solution[0]); await scene.perform_action("secret_reset")
 	check(scene.world.seal_input.is_empty() and resources(scene.world)==input_resources,"UI reset is free")
-	solve(scene.world); before=state(scene.world)
-	scene.perform_action("secret_provisions")
-	scene.undo()
+	solve(scene.world); await Fixture.sync(scene); before=state(scene.world)
+	await scene.perform_action("secret_provisions")
+	await scene.undo()
 	check(state(scene.world)==before,"controller reward undo restores full solved-unclaimed state")
-	check(scene.world.restore(debt_before),"controller voucher fixture restores solved indebted state")
+	await Fixture.bind(scene,World.from_snapshot(debt_before))
+	scene.interaction=true
+	check(scene.world.principal==debt_before.principal,"controller voucher fixture restores solved indebted state")
 	var voucher_label:=""
 	for row in scene.available_actions():
 		if row[0]=="secret_voucher": voucher_label=row[1]
 	check("repay 42" in voucher_label and "receive 8" in voucher_label,"reward menu predicts debt offset and cash remainder")
 	before=state(scene.world)
-	scene.perform_action("secret_voucher"); scene.undo()
+	await scene.perform_action("secret_voucher"); await scene.undo()
 	check(state(scene.world)==before,"controller voucher undo restores debt, cash, seal and loan history")
-	# Loading legacy JSON creates a byte-preserving, one-time backup before upgrade.
-	var backup_path: String=scene.save_path.get_basename()+".pre-schema5.json"
-	if FileAccess.file_exists(backup_path): DirAccess.remove_absolute(backup_path)
-	var legacy_save: Dictionary=state(World.new(0,1)); legacy_save.version=4
+	# The new Session never imports arbitrary old bytes into an eligible run.
+	var legacy_path="user://calibration-integration-legacy.json"
+	var legacy_save:Dictionary=state(World.new(0,1)); legacy_save.version=4
 	for key in ["seal_version","seal_clues","seal_input","seal_solved","seal_reward"]: legacy_save.erase(key)
-	var original_bytes: String=JSON.stringify(legacy_save,"\t")
-	write_file(scene.save_path,original_bytes)
-	scene.load_game()
-	check(FileAccess.file_exists(backup_path) and FileAccess.get_file_as_string(backup_path)==original_bytes,"legacy JSON backup preserves original bytes")
-	var upgraded=JSON.parse_string(FileAccess.get_file_as_string(scene.save_path))
-	check(upgraded is Dictionary and upgraded.version==11 and scene.world.seal_clues==0,"successful legacy load atomically writes current schema eleven")
-	legacy_save.gold=1; write_file(scene.save_path,JSON.stringify(legacy_save))
-	scene.load_game()
-	check(scene.world.gold==1 and FileAccess.get_file_as_string(backup_path)==original_bytes,"second legacy load never overwrites first backup")
-	DirAccess.remove_absolute(scene.save_path); DirAccess.remove_absolute(backup_path)
-	scene.save_path="user://invalid-calibration-v4-test.json"
-	backup_path=scene.save_path.get_basename()+".pre-schema5.json"
-	write_file(scene.save_path,'{"version":4}')
-	before=state(scene.world); scene.load_game()
-	check(state(scene.world)==before and not FileAccess.file_exists(backup_path),"invalid legacy JSON creates no backup and changes no live state")
-	DirAccess.remove_absolute(scene.save_path)
-	scene.save_path="user://backup-failure-calibration-test.json"
-	backup_path=scene.save_path.get_basename()+".pre-schema5.json"
-	write_file(scene.save_path,original_bytes)
-	DirAccess.make_dir_recursive_absolute(backup_path)
-	before=state(scene.world)
-	print("EXPECTED negative-path diagnostic: backup destination is deliberately a directory.")
-	scene.load_game()
-	check(state(scene.world)==before and FileAccess.get_file_as_string(scene.save_path)==original_bytes,"backup failure preserves current world and original legacy file")
-	DirAccess.remove_absolute(backup_path); DirAccess.remove_absolute(scene.save_path)
+	var original_bytes:String=JSON.stringify(legacy_save,"\t")
+	write_file(legacy_path,original_bytes)
+	before=state(scene.world); var durable=Fixture.snapshot(scene)
+	await scene.load_game()
+	check(FileAccess.get_file_as_string(legacy_path)==original_bytes,"old bytes remain untouched under new Session")
+	check(state(scene.world)==before and Fixture.snapshot(scene)==durable,"L reads active slot rather than legacy payload")
+	write_file(legacy_path,'{"version":4}')
+	await scene.load_game()
+	check(state(scene.world)==before and FileAccess.get_file_as_string(legacy_path)=='{"version":4}',"even malformed unrelated legacy bytes never affect active journey")
+	var valid_record=scene.session.adapter.record.duplicate(true)
+	scene.session.adapter.record.snapshot={"version":13}
+	await scene.load_game()
+	check(state(scene.world)==before and scene.session.read_only,"invalid active snapshot fails without changing live world and becomes read-only")
+	scene.session.adapter.record=valid_record
+	await scene.load_game()
+	check(state(scene.world)==before and not scene.session.read_only,"explicit reload of valid active slot recovers without grafting legacy data")
+	DirAccess.remove_absolute(legacy_path)
 	# Actual no-teleport route with an early missed cage and late return.
 	w=World.new(0,1)
 	check(walk(w,Vector2i(2,1)) and w.action("seal_contract"),"real route reads merchant clue")

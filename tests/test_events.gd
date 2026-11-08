@@ -1,6 +1,7 @@
 extends SceneTree
 # Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
 # New layout-2 behavior is covered by test_usability and both generator suites.
+# Synthetic deep-floor fixtures below explicitly include previously traversed floors.
 const World=preload("res://scripts/world.gd")
 var checks:=0
 var failures:=0
@@ -9,7 +10,7 @@ func check(ok: bool, message: String):
 	if not ok: failures+=1; push_error("FAIL: "+message)
 func at_event(seed_number: int):
 	var w=World.new(seed_number,1)
-	w.enter_floor(3); w.pos=Vector2i(2,4)
+	w.floor_seen=[true,true,true,true,false]; w.enter_floor(3); w.pos=Vector2i(2,4)
 	return w
 func state(w) -> Dictionary:
 	return w.save_data().duplicate(true)
@@ -47,7 +48,7 @@ func _init():
 	check(w.action("smuggler_buy") and w.gold==0 and w.keys==2,"key purchase exact exchange")
 	unchanged_rejection(w,"smuggler_sell")
 	w=World.new(1,1); w.pos=Vector2i(2,1); w.action("borrow"); w.gold=0
-	w.settle_checkpoint(2); w.enter_floor(3); w.pos=Vector2i(2,4); w.keys=1
+	w.settle_checkpoint(2); w.floor_seen=[true,true,true,true,false]; w.enter_floor(3); w.pos=Vector2i(2,4); w.keys=1
 	check(w.action("smuggler_sell") and w.gold==0 and w.keys==0 and w.debt()==5,"sale proceeds repay overdue debt rather than bypassing it")
 	roundtrip(w)
 	w=at_event(2); w.focus=0

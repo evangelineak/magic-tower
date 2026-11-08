@@ -1,11 +1,20 @@
-# Public browser playtest
+# Optional strategy Web preview
 
-This isolated deployment branch publishes verified v0.17 usability fixes. GitHub Pages builds on pushes to `pages/playtest`; in-progress development does not auto-deploy. The old `pages/stable-v0.15` branch remains a rollback reference.
+The stable root remains the v0.17 game, rebuilt from fixed Web source
+`4122fa416091eb3d89c7825b6d9eabd55d7c273e`.
+The optional `/preview/` path uses verified development game source
+`186400d3b9338c2625927f199900d3326b3273e9`.
 
-Godot 4.6.3 Compatibility, single-thread Web export; no service worker or SharedArrayBuffer requirement. Workflow verifies official engine/template SHA-256 and exports only public game resources.
+Native Linux gameplay, persistence, actual strategy effects and production
+JavaScript IndexedDB transactions are verified. The cloud browser explicitly
+blocklists WebGL2; a normal fresh Chromium profile has the same result, and no
+other installed supported browser was found. No sandbox, blocklist or security
+setting was bypassed. **Godot Web gameplay and the engine-to-JavaScript bridge
+remain unverified.** Export success is not a substitute for this test.
 
-Hover a tile for nearby information. Click clear floor to walk safely; clicking monsters, doors, items, stairs or events only inspects. Use arrows/WASD for deliberate interaction. Start a new run for this playtest to experience aligned stairs and sealed reward rooms. Legacy-save loading remains available but is not required.
-
-Saves stay in this browser IndexedDB, not a server or desktop. Reload then L to continue; clearing site data removes saves. A new run replaces the active save, so preserve it first if needed.
-
-Public development preview, not final release. Cloud Chromium blocks WebGL2 so public delivery can be checked but cloud Web gameplay/save-refresh is not claimed; native Godot gameplay has been tested. Windows runtime and subjective audio testing remain separate.
+The new Session database does not import or delete legacy v0.17 save files.
+Keep the stable root available while this opt-in path receives real playtesting.
+This Web preset includes `scripts/*.js`, required by the Session bridge. The Web
+PCK's production JS and compiled World match the verified desktop package.
+Single-thread export needs WebGL2, but no SharedArrayBuffer/COOP/COEP or service
+worker. Windows binaries remain cross-exported, not Windows runtime certified.

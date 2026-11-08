@@ -56,7 +56,10 @@ func _init():
 	for choice in ["elevator","forge","sell_core"]:
 		w=World.new(0,1); w.core=true; w.floors[1][4][2]="."
 		if choice=="elevator": w.pos=Vector2i(2,5)
-		elif choice=="forge": w.enter_floor(3); w.pos=Vector2i(3,5)
+		elif choice=="forge":
+			# Synthetic forge setup represents having traversed preceding floors.
+			w.floor_seen=[true,true,true,true,false]
+			w.enter_floor(3); w.pos=Vector2i(3,5)
 		else: w.pos=Vector2i(2,1)
 		check(w.action(choice) and not w.core,"core spent once: "+choice)
 		check(not w.action(choice),"repeat core action blocked: "+choice)

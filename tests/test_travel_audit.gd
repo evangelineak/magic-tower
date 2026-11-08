@@ -1,6 +1,7 @@
 extends SceneTree
 # Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
 # New layout-2 behavior is covered by test_usability and both generator suites.
+const Fixture=preload("res://tests/ui_fixture.gd")
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -64,7 +65,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema8-"+reward+".json"))
   check(w.restore(old) and w.travel_anchors.is_empty() and not w.audit_read and not w.audit_solved and w.audit_reward=="","old seen floors do not create anchors or audit rewards")
   var upgraded=state(w)
-  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision"]: upgraded.erase(field)
+  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft"]: upgraded.erase(field)
   upgraded.version=8
   check(JSON.parse_string(JSON.stringify(upgraded))==old,"real old oath/NPC/stock state completely preserved: "+reward)
   reject(w,"fast_travel_3:1:3"); restore_check(w)
@@ -132,9 +133,12 @@ func run_tests():
   var bad=claimed.duplicate(true); bad.merge(patch,true)
   check(not w.restore(bad) and state(w)==claimed,"inconsistent audit claims reject atomically")
  # UI snapshots may be cached, but a confirmation never authorizes stale routing.
- var scene=load("res://main.tscn").instantiate(); root.add_child(scene); await process_frame
- scene.growth=false; scene.world.restore(camp); scene.save_path="user://travel-audit-test.json"; scene.save_game()
- var disk=FileAccess.get_file_as_string(scene.save_path); var sound=scene.sound_event_count; var history=scene.history.duplicate(true); before=state(scene.world)
+ var scene=load("res://main.tscn").instantiate(); Fixture.prepare(scene); root.add_child(scene); await process_frame
+ scene.growth=false
+ await Fixture.bind(scene,World.from_snapshot(camp))
+ var ui_camp=state(scene.world)
+ await scene.save_game()
+ var disk=Fixture.snapshot(scene); var sound=scene.sound_event_count; var history=scene.history.duplicate(true); before=state(scene.world)
  key(scene,KEY_T)
  var index=-1
  for i in scene.visible_travel_options().size():
@@ -147,20 +151,21 @@ func run_tests():
   scene.queue_redraw(); await process_frame
  check(scene.travel_refresh_count==refreshes,"repeated rendered frames reuse cached route proofs")
  for code in [KEY_F2,KEY_BRACKETRIGHT,KEY_BRACKETLEFT,KEY_UP,KEY_1,KEY_C,KEY_E,KEY_H,KEY_J,KEY_V,KEY_U,KEY_R,KEY_L]: key(scene,code)
- check(scene.travel_menu and scene.travel_pending==anchor_id and scene.travel_refresh_count==refreshes and state(scene.world)==before and scene.sound_event_count==sound and scene.history==history and FileAccess.get_file_as_string(scene.save_path)==disk,"pending modal blocks gameplay; F2 does not recompute or change state")
+ check(scene.travel_menu and scene.travel_pending==anchor_id and scene.travel_refresh_count==refreshes and state(scene.world)==before and scene.sound_event_count==sound and scene.history==history and Fixture.snapshot(scene)==disk,"pending modal blocks gameplay; F2 does not recompute or change state")
  for d in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
   var p=scene.world.pos+d; scene.world.floors[scene.world.floor_index][p.y][p.x]="#"
- var blocked=state(scene.world); scene.confirm_travel()
+ var blocked=state(scene.world); await scene.confirm_travel()
  check(state(scene.world)==blocked and scene.travel_pending=="","stale cached reachable option is refused after live route becomes blocked")
- scene.world.restore(camp); scene.close_travel(); scene.open_travel(); scene.select_travel(index); scene.confirm_travel()
- check(only_navigation(camp,state(scene.world)),"confirmed safe return commits exactly navigation delta")
- scene.undo(); check(state(scene.world)==camp,"controller undo restores whole pre-travel state")
- # v8 exact-byte backup with no inferred map registration or oath reset.
+ scene.world.restore(ui_camp); scene.close_travel(); scene.open_travel(); scene.select_travel(index); await scene.confirm_travel()
+ check(only_navigation(ui_camp,state(scene.world)),"confirmed safe return commits exactly navigation delta")
+ await scene.undo(); check(state(scene.world)==ui_camp,"controller undo restores whole pre-travel state")
+ # L never imports an unrelated legacy journey into the eligible active run.
  var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema8-repeater.json")
- var backup=scene.save_path.get_basename()+".pre-schema9.json"
- if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
- var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.oath_state=="active" and scene.world.travel_anchors.is_empty() and scene.world.inventory.has("repeater") and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==11,"real v8 backup and migration preserve active oath/reward but invent no travel visits")
+ var legacy_path="user://travel-audit-test.json"
+ var file=FileAccess.open(legacy_path,FileAccess.WRITE); file.store_string(old_text); file.close()
+ await scene.load_game()
+ check(FileAccess.get_file_as_string(legacy_path)==old_text and state(scene.world)==ui_camp,"L preserves v8 bytes and reloads only registered active slot")
+ var old_world=World.new(); check(old_world.restore(JSON.parse_string(old_text)) and old_world.oath_state=="active" and old_world.travel_anchors.is_empty() and old_world.inventory.has("repeater") and not old_world.reward_eligible(),"World legacy migration preserves oath/reward but invents neither anchor visits nor identity")
  scene.language="en"; scene.world.restore(camp)
  check(not str(scene.journal_lines()).contains("Label A:"),"journal hides unread audit statements")
  scene.world.restore(read_state); scene.interaction=true

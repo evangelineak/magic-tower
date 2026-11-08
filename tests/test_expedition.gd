@@ -1,6 +1,7 @@
 extends SceneTree
 # Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
 # New layout-2 behavior is covered by test_usability and both generator suites.
+const Fixture=preload("res://tests/ui_fixture.gd")
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -160,27 +161,33 @@ func run_tests():
 	check(replay(medicine_run,second_proof.route) and medicine_run.won and medicine_run.hp==int(combat_result.hp)+140 and medicine_run.gold==int(combat_result.gold)-70 and medicine_run.kills==combat_result.kills,"medicine preserves warden gold/kills but saves only 140 HP for seventy gold")
 	print("ROUTE TRADEOFF: bridge 80 gold / 334 HP saved / forgo 180 gold+3 kills; medicine 70 gold / +140 HP; hypothetical same-growth shields/duelist change crossing loss to 224/396.")
 	# UI continuation remains explicit, can be undone, and does not consume keys.
-	var scene=load("res://main.tscn").instantiate(); root.add_child(scene)
-	scene.save_path="user://expedition-integration-test.json"; scene.world=from_victory(); scene.growth=false; scene.battle_time=0.0
+	var scene=load("res://main.tscn").instantiate(); Fixture.prepare(scene); root.add_child(scene)
+	scene.growth=false; scene.battle_time=0.0
+	await Fixture.bind(scene,from_victory())
+	var ui_victory=state(scene.world)
 	await process_frame
 	check(scene.world.won and scene.world.floors.size()==5,"rendering first ending does not auto-start new chapter")
 	var event:=InputEventKey.new(); event.pressed=true; event.keycode=KEY_1
 	scene._unhandled_input(event)
+	await process_frame
 	check(scene.world.expedition_started and not scene.world.won and scene.world.floors.size()==8,"victory key-one button starts chapter exactly once")
-	scene.undo()
-	check(state(scene.world)==victory,"controller undo restores five-floor ending and removes recovery bonus")
-	scene.perform_action("expedition")
+	await scene.undo()
+	check(state(scene.world)==ui_victory,"controller undo restores five-floor ending and removes recovery bonus")
+	await scene.perform_action("expedition")
 	scene.world.pos=Vector2i(2,2); scene.world.gold=70
+	await Fixture.bind(scene,scene.world)
 	var before_camp: Dictionary=state(scene.world)
-	scene.perform_action("camp_medicine")
+	await scene.perform_action("camp_medicine")
 	check(scene.world.camp_medicine_left==1 and scene.world.gold==0,"controller camp purchase commits stock and cost together")
-	scene.undo(); check(state(scene.world)==before_camp,"controller camp undo restores HP gold and shared stock")
-	scene.world.hp=1; scene.load_game()
+	await scene.undo(); check(state(scene.world)==before_camp,"controller camp undo restores HP gold and shared stock")
+	scene.world.hp=1; await scene.load_game()
 	check(state(scene.world)==before_camp,"controller loads actual schema-six eight-floor autosave")
 	# Debt fixture tests UI timing, not claims about a normally paid-off ending.
 	scene.world.loan_used=true; scene.world.principal=40; scene.world.fees=2; scene.world.interest=8; scene.world.checkpoints=2; scene.world.overdue=true
-	scene.world.pos=Vector2i(8,9); var debt_before: int=scene.world.debt()
-	scene.move(Vector2i.RIGHT)
+	scene.world.pos=Vector2i(8,9)
+	await Fixture.bind(scene,scene.world)
+	var debt_before: int=scene.world.debt()
+	await scene.move(Vector2i.RIGHT)
 	check(scene.world.floor_index==6 and not scene.interaction and scene.world.debt()==debt_before and scene.world.checkpoints==2,"six-to-seven stairs neither prompt nor charge another loan period")
 	var book_state: Dictionary=state(scene.world)
 	scene.book=false; scene.interaction=false
@@ -193,23 +200,20 @@ func run_tests():
 	check(scene.book_page==1 and state(scene.world)==book_state,"guide pagination blocks movement and language switch preserves page")
 	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	check(not scene.book,"Escape closes paginated guide")
-	DirAccess.remove_absolute(scene.save_path)
+	var active_snapshot=state(scene.world)
 	for version in [4,5]:
-		scene.save_path="user://expedition-legacy-v%d-test.json" % version
-		var backup_path: String=scene.save_path.get_basename()+(".pre-schema5.json" if version==4 else ".pre-schema6.json")
-		if FileAccess.file_exists(backup_path): DirAccess.remove_absolute(backup_path)
+		var legacy_path="user://expedition-legacy-v%d-test.json" % version
 		var legacy: Dictionary=victory.duplicate(true); legacy.version=version
 		for key in ["expedition_started","expedition_bridge","camp_medicine_left","camp_focus_left"]: legacy.erase(key)
 		if version==4:
 			for key in ["seal_version","seal_clues","seal_input","seal_solved","seal_reward"]: legacy.erase(key)
 		var original: String=JSON.stringify(legacy,"\t")
-		write_file(scene.save_path,original); scene.load_game()
-		var upgraded=JSON.parse_string(FileAccess.get_file_as_string(scene.save_path))
-		check(FileAccess.file_exists(backup_path) and FileAccess.get_file_as_string(backup_path)==original and upgraded.version==11,"legacy JSON upgraded with byte-preserving matching backup: "+str(version))
-		check(scene.world.won and scene.world.floors.size()==5 and not scene.world.expedition_started,"UI load preserves legacy first ending until explicit continuation")
-		legacy.gold+=1; write_file(scene.save_path,JSON.stringify(legacy)); scene.load_game()
-		check(FileAccess.get_file_as_string(backup_path)==original,"legacy backup is never overwritten: "+str(version))
-		DirAccess.remove_absolute(scene.save_path); DirAccess.remove_absolute(backup_path)
+		write_file(legacy_path,original); await scene.load_game()
+		check(FileAccess.get_file_as_string(legacy_path)==original and state(scene.world)==active_snapshot,"legacy file remains untouched while L reloads active slot: "+str(version))
+		var old_world=World.new()
+		check(old_world.restore(legacy) and old_world.won and old_world.floors.size()==5 and not old_world.expedition_started and not old_world.reward_eligible(),"World preserves legacy chapter ending without session identity")
+		legacy.gold+=1; var changed=JSON.stringify(legacy); write_file(legacy_path,changed); await scene.load_game()
+		check(FileAccess.get_file_as_string(legacy_path)==changed and state(scene.world)==active_snapshot,"edited legacy cannot graft progress onto current eligible run")
 	print("EXPEDITION: %s (%d checks; actual two-chapter route %d moves, %d HP)" % ["PASS" if failures==0 else "FAIL",checks,final_moves,final_hp])
 	quit(0 if failures==0 else 1)
 

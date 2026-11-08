@@ -3,6 +3,19 @@ extends RefCounted
 # Pure display catalog. English simulation IDs and rule text remain untouched.
 # Dynamic templates retain argument order; %% is a literal percent sign.
 const EXACT = {
+"Skill training +4 levels. Brace, Precision and Mend use your total level.": "技能训练 +4 级。架盾、精准破甲和治愈按实际总等级生效。",
+"Clear focus":"澄明专注",
+"Deep focus":"深度专注",
+"Honed edge":"精磨锋刃",
+"Razor edge":"极锐锋刃",
+"Light plating":"轻型覆甲",
+"Heavy plating":"重型覆甲",
+"Skill level +1 / DEF -2. Armor penetration, Brace and Mend use the new level.":"技能等级 +1 / 防御 -2。破甲、架盾和治疗均按新等级计算。",
+"Skill level +2 / ATK -1 / DEF -3. Stronger skills, weaker physical defenses.":"技能等级 +2 / 攻击 -1 / 防御 -3。技能更强，物理攻防更弱。",
+"ATK +3 / DEF -2. Faster kills can cost more damage per counter.":"攻击 +3 / 防御 -2。可能更快击杀，但每次反击更疼。",
+"ATK +6 / DEF -5. Stronger attacks at a larger defensive cost.":"攻击 +6 / 防御 -5。更强的攻击，需要付出更大的防御代价。",
+"DEF +2 / ATK -2. Softer counters, but armor thresholds may worsen.":"防御 +2 / 攻击 -2。反击更轻，但可能更难突破敌方护甲。",
+"DEF +4 / ATK -5. Stronger protection at a larger attack cost.":"防御 +4 / 攻击 -5。保护更强，但牺牲更多攻击。",
 "Siege maul":"攻城锤",
 "-4 DEF. Double damage per strike; each nonlethal strike draws two counters. Ambush and thorns still apply.":"防御-4。每击伤害翻倍；每次未击杀的攻击招致两次反击。先制与荆棘仍然生效。",
 "Repeating crossbow":"连发弩",

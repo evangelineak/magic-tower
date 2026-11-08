@@ -1,6 +1,9 @@
 extends SceneTree
+const Fixture=preload("res://tests/ui_fixture.gd")
 const Loc=preload("res://scripts/localization.gd")
 const World=preload("res://scripts/world.gd")
+const Attunement=preload("res://scripts/attunement.gd")
+const Strategy=preload("res://scripts/legacy_strategy.gd")
 const Progression=preload("res://scripts/progression.gd")
 var checks:=0
 var failures:=0
@@ -44,6 +47,16 @@ func source_strings(source: String) -> Array:
 func _initialize():
 	call_deferred("run_tests")
 func run_tests():
+	for id in Strategy.IDS:
+		check(cjk(Loc.text(Strategy.TEMPLATES[id].name)),"strategy name localized: "+id)
+		check(cjk(Loc.text(Strategy.TEMPLATES[id].description)),"strategy tradeoff localized: "+id)
+	for id in Attunement.TEMPLATE_IDS:
+		check(cjk(Loc.text(Attunement.TEMPLATES[id].name)),"attunement name localized: "+id)
+		check(cjk(Loc.text(Attunement.TEMPLATES[id].description)),"attunement tradeoff localized: "+id)
+	for level_id in ["none","focus_light","focus_deep"]:
+		for hero in Progression.HEROES:
+			var message:String=Progression.skill_description(hero,["iron_skin","trained_focus"],level_id)
+			check(cjk(Loc.text(message)) and Loc.text(message,"en")==message,"dynamic attuned skill bilingual: "+hero+"/"+level_id)
 	check(Loc.text("Warden")=="护卫" and Loc.text("Warden","en")=="Warden","Chinese default and untouched English mode")
 	check(Loc.text("warden") == "warden" and Loc.text("")=="","technical IDs and empty text unchanged")
 	var font_text:="%+-/" # Actual display symbols; all CJK characters are collected from catalogs below.
@@ -98,8 +111,9 @@ func run_tests():
 			if not cjk(Loc.text(sample)) and not sample in missing: missing.append(sample)
 		check(missing.is_empty(),"visible source audit "+path+": "+str(missing))
 	var scene=load("res://main.tscn").instantiate()
-	root.add_child(scene); scene.save_path="user://localization-integration-test.json"; scene.world=World.new(0)
+	Fixture.attach(scene); root.add_child(scene)
 	await process_frame
+	await Fixture.bind(scene,World.new(0))
 	check(scene.language=="zh" and scene.display("Warden")=="护卫","main starts in Chinese and display uses translator")
 	var font_path:="res://assets/fonts/MagicTowerCJK.otf"
 	check(ResourceLoader.exists(font_path) and scene.font is FontFile and scene.font.resource_path==font_path,"packaged CJK font actually loads and is selected")
@@ -108,9 +122,9 @@ func run_tests():
 		for ch in font_text:
 			if (ch.unicode_at(0)>=0x3000 or ch in "%+-/") and not scene.font.has_char(ch.unicode_at(0)) and not ch in missing_chars: missing_chars+=ch
 	check(missing_chars.is_empty(),"font cmap covers catalog Chinese/punctuation and numeric symbols: "+missing_chars)
-	scene.save_game(false)
+	await scene.save_game(false)
 	var before: Dictionary=scene.world.save_data().duplicate(true)
-	var file_before: String=FileAccess.get_file_as_string(scene.save_path)
+	var file_before: Dictionary=Fixture.snapshot(scene)
 	var event:=InputEventKey.new(); event.pressed=true; event.keycode=KEY_F2
 	for mode in ["growth","book","journal","interaction","battle"]:
 		scene.growth=mode=="growth"; scene.book=mode=="book"; scene.journal=mode=="journal"; scene.interaction=mode=="interaction"; scene.battle_time=2.0 if mode=="battle" else 0.0
@@ -118,14 +132,14 @@ func run_tests():
 		scene.pending_reason="interest" if mode=="interaction" else ""
 		var modal_before: Array=[scene.growth,scene.book,scene.journal,scene.interaction,scene.battle_time,scene.checkpoint_pending,scene.pending_reason]
 		var sound_before: int=scene.sound_event_count
-		scene._unhandled_input(event)
+		await scene._unhandled_input(event)
 		check(scene.language=="en" and scene.display("Warden")=="Warden","F2 switches to English inside "+mode)
-		scene._unhandled_input(event)
+		await scene._unhandled_input(event)
 		check(scene.language=="zh" and [scene.growth,scene.book,scene.journal,scene.interaction,scene.battle_time,scene.checkpoint_pending,scene.pending_reason]==modal_before,"F2 returns Chinese without dismissing or acting on "+mode)
-		check(scene.world.save_data()==before and scene.history.is_empty() and scene.sound_event_count==sound_before and FileAccess.get_file_as_string(scene.save_path)==file_before,"F2 is state, history, audio and save neutral in "+mode)
+		check(scene.world.save_data()==before and scene.history.is_empty() and scene.sound_event_count==sound_before and Fixture.snapshot(scene)==file_before,"F2 is state, history, audio and save neutral in "+mode)
 	event.echo=true
-	scene._unhandled_input(event)
+	await scene._unhandled_input(event)
 	check(scene.language=="zh","held F2 auto-repeat does not flicker language")
-	DirAccess.remove_absolute(scene.save_path)
+	scene.queue_free(); await process_frame
 	print("LOCALIZATION: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
 	quit(0 if failures==0 else 1)

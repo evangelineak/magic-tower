@@ -17,20 +17,28 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "697cacb41459deeffcb0fa40bd0a162755bd4a135e2e9bbcaf167359d661d5c8",
-  "bytes": 380200,
+  "output_sha256": "55f20b8f4a01643e7ab7232644454b5f33ce41077396340e8bbc54c90d26c9e9",
+  "bytes": 411876,
   "coverage": {
-    "mapped_codepoints": 986,
-    "glyphs": 1965,
-    "required_codepoints": 827,
+    "mapped_codepoints": 1057,
+    "glyphs": 2093,
+    "required_codepoints": 899,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
   },
   "scanned_sources": [
     {
+      "path": "scripts/attunement.gd",
+      "sha256": "3191d14dfb7ab61f4262a324c08a3b9c5fc7d3f46e0f4b587a04b4c8a75e54f3"
+    },
+    {
       "path": "scripts/audit_puzzle.gd",
       "sha256": "adff6ad910d356f55334fdd325193211610d85cd3385e31056ca30fdeb900f29"
+    },
+    {
+      "path": "scripts/battle_timeline.gd",
+      "sha256": "a65612c4eb5ea5af7514caa71dbc6212b0585bfc5bd2cba33357ea7fb80c9440"
     },
     {
       "path": "scripts/expedition.gd",
@@ -41,8 +49,24 @@
       "sha256": "fec08254bd67de4bd08e6137050ec0774c5cf5031b98523e602c1068c632797c"
     },
     {
+      "path": "scripts/journey_store_native.gd",
+      "sha256": "add5bffcb229905781e11b2ded524e35c1752ad825ff2232bf0f061e76296653"
+    },
+    {
       "path": "scripts/layout.gd",
       "sha256": "f504dce5873a8b0583ceb70d43a8e882f63106e58572d6b0371bc71b3ab42369"
+    },
+    {
+      "path": "scripts/legacy_profile.gd",
+      "sha256": "7aff4a98e76554d21fdfb992fe462e0e9d2e7b95f448fccf5ea800d17d4222ed"
+    },
+    {
+      "path": "scripts/legacy_store_native.gd",
+      "sha256": "6252c058ac8c3aadd93a3b20bb49c0e51ff40a3b607fb42824a14f608c862346"
+    },
+    {
+      "path": "scripts/legacy_strategy.gd",
+      "sha256": "83e2db53609b50bbeb2c93a61826791823f16fb2b66e5af322e6527c704fbc39"
     },
     {
       "path": "scripts/localization.gd",
@@ -50,19 +74,19 @@
     },
     {
       "path": "scripts/localization_progression.gd",
-      "sha256": "a3018ae23b5d5a5110bf137e51764086d151ea7992584ab7a949faad1bb4ae1f"
+      "sha256": "ecb9d6c64a60649877cad62a00e6c699d14d06b342439951b619b07191430694"
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "79af794813843e86dc7770a2df3af884fc8a470af14504d9f9890c9e966ecdcf"
+      "sha256": "fb55c3e71e762e4d57f9b3f7087451cdff22eb641c85f0fa2d090fab3c3c0783"
     },
     {
       "path": "scripts/localization_world.gd",
-      "sha256": "96d44582bf39353685ab4b2b2e5e3bc7c4dc2d01fd14c2dfbacb0e85875a2027"
+      "sha256": "5124177f81f3bf2524003bac32ca4d250581de8bb76963f0416b9ba7c8d77231"
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "e54906769160ba3ecd7f2c44551e01ac808370ad9b9a3d315418a4d59deb1d69"
+      "sha256": "8ac72b773701b939e1561574ce620db7a4e9c4da5fc1482a0007ebfad4f24830"
     },
     {
       "path": "scripts/navigation.gd",
@@ -70,15 +94,23 @@
     },
     {
       "path": "scripts/progression.gd",
-      "sha256": "137f02b2d482dd019ca55bb3bd3e272771acb963955c433835c91db02b4b1b02"
+      "sha256": "a0078c43b6f878478526e277d189e7f9b202948d3f6a5a46c9a4f81d695841fc"
     },
     {
       "path": "scripts/riddle.gd",
       "sha256": "b7c68f76f7d7eeca23ab18a0c94133a474d58752314f909f0c9698c631a274da"
     },
     {
+      "path": "scripts/session.gd",
+      "sha256": "ea618f202c0006b2f13f453594933b67bc9d5478f58ba2c020625816acf2e673"
+    },
+    {
+      "path": "scripts/session_storage.gd",
+      "sha256": "67b077ed321df74bbc4e8c442d22ba2165108928448af47a76729c99b7337eba"
+    },
+    {
       "path": "scripts/world.gd",
-      "sha256": "f66b2f65295e356a8664561be3960474a062753e2f9725c349fa7de6b2d303eb"
+      "sha256": "c6283ab2a39b99794277a1a0b43f4ab8fab19270d2c3452492165ec72b73f3f7"
     },
     {
       "path": "project.godot",

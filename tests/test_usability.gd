@@ -1,4 +1,5 @@
 extends SceneTree
+const Fixture=preload("res://tests/ui_fixture.gd")
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -10,7 +11,7 @@ func check(ok:bool,label:String):
  if not ok: failures+=1; push_error(label)
 func state(w)->Dictionary: return w.save_data().duplicate(true)
 func key(scene,code):
- var event=InputEventKey.new(); event.pressed=true; event.keycode=code; scene._unhandled_input(event)
+ var event=InputEventKey.new(); event.pressed=true; event.keycode=code; await scene._unhandled_input(event)
 func movement_only(before:Dictionary,after:Dictionary)->bool:
  var a=after.duplicate(true); var b=before.duplicate(true)
  for field in ["x","y","moves"]: a.erase(field); b.erase(field)
@@ -108,36 +109,37 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema10-"+branch+".json"))
   check(w.restore(old) and w.layout_revision==1,"old schema10 retains layout1")
   var migrated=state(w); migrated.erase("layout_revision"); migrated.version=10
+  for field in ["attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft"]: migrated.erase(field)
   check(JSON.parse_string(JSON.stringify(migrated))==old,"old map, rewards, resources and coordinates are unchanged")
   var landing=Layout.stair_destination(w.floors,1,0,Vector2i(9,9))
   check(landing.ok and landing.pos==Vector2i(1,1),"old stair corner mapping remains compatible")
  # Main controller never converts a click into an interaction or combat.
- var scene=load("res://main.tscn").instantiate(); root.add_child(scene); await process_frame
- scene.growth=false; scene.world=World.new(0); scene.save_path="user://usability-test.json"
+ var scene=load("res://main.tscn").instantiate(); Fixture.attach(scene); root.add_child(scene); await process_frame
+ await Fixture.bind(scene,World.new(0)); scene.growth=false
  check(scene.CELL==64 and scene.ORIGIN==Vector2(24,72),"new board uses 64px cells at the intended origin")
  scene.world.step(Vector2i.DOWN); scene.world.step(Vector2i.RIGHT)
  route=find_walk(scene.world); var target:Vector2i=route[-1]; before=state(scene.world)
- scene.save_game(); var disk=FileAccess.get_file_as_string(scene.save_path); var sounds=scene.sound_event_count
+ await scene.save_game(); var disk=Fixture.snapshot(scene); var sounds=scene.sound_event_count
  scene.start_walk(target)
- check(scene.walk_route==route and state(scene.world)==before and FileAccess.get_file_as_string(scene.save_path)==disk,"click planning does not commit a move or save")
- scene.advance_walk(0.11)
+ check(scene.walk_route==route and state(scene.world)==before and Fixture.snapshot(scene)==disk,"click planning does not commit a move or save")
+ await scene.advance_walk(0.11)
  check(state(scene.world)==before and scene.history.is_empty(),"walking waits for its interval")
- scene.advance_walk(0.02)
+ await scene.advance_walk(0.02)
  check(movement_only(before,state(scene.world)) and scene.history.size()==1 and scene.sound_event_count==sounds+1,"one interval commits exactly one normal move and history entry")
- scene.undo(); check(state(scene.world)==before and scene.walk_route.is_empty(),"undo cancels remaining route and restores exact pre-step world")
+ await scene.undo(); check(state(scene.world)==before and scene.walk_route.is_empty(),"undo cancels remaining route and restores exact pre-step world")
  for code in [KEY_ESCAPE,KEY_C,KEY_E,KEY_H,KEY_J,KEY_V,KEY_T,KEY_F2,KEY_UP]:
   scene.book=false; scene.journal=false; scene.growth=false; scene.interaction=false; scene.comparison=false; scene.travel_menu=false
   scene.start_walk(target); key(scene,code)
   check(scene.walk_route.is_empty(),"keyboard action cancels auto route before acting: "+str(code))
-  scene.world.restore(before)
+  scene.world.restore(before); await Fixture.sync(scene)
  scene.book=false; scene.journal=false; scene.growth=false; scene.interaction=false; scene.comparison=false; scene.travel_menu=false
  scene.start_walk(target); var upcoming:Vector2i=scene.walk_route[0]
  scene.world.floors[scene.world.floor_index][upcoming.y][upcoming.x]="h"; var changed=state(scene.world); var count=scene.history.size()
- scene.advance_walk(0.2)
+ await scene.advance_walk(0.2)
  check(scene.walk_route.is_empty() and state(scene.world)==changed and scene.history.size()==count,"changed route stops without pickup, reroute or history entry")
- scene.world.restore(before); scene.start_walk(Vector2i(4,3))
+ scene.world.restore(before); await Fixture.sync(scene); scene.start_walk(Vector2i(4,3))
  check(scene.walk_route.is_empty() and state(scene.world)==before,"clicking a monster never arms automatic battle")
- scene.start_walk(target); scene.book=true; scene.advance_walk(0.2)
+ scene.start_walk(target); scene.book=true; await scene.advance_walk(0.2)
  check(scene.walk_route.is_empty() and state(scene.world)==before,"modal opening stops movement")
  scene.book=false
  for corner in [Vector2i(1,1),Vector2i(9,1),Vector2i(1,9),Vector2i(9,9),Vector2i(4,3)]:
@@ -147,10 +149,13 @@ func run_tests():
   for line in lines:
    if scene.font.get_string_size(line,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x>298.1:widths_ok=false
   check(widths_ok and state(scene.world)==prior,"tooltip pixel wrap is bounded and entirely read only")
- var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema10-armory.json"); var backup=scene.save_path.get_basename()+".pre-schema11.json"
- if FileAccess.file_exists(backup):DirAccess.remove_absolute(backup)
- var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(scene.walk_route.is_empty() and scene.world.layout_revision==1 and FileAccess.get_file_as_string(backup)==old_text and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==11,"load cancels auto route and backs up genuine old map before schema11 migration")
+ var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema10-armory.json")
+ var legacy_path="user://usability-test-legacy.json"
+ var file=FileAccess.open(legacy_path,FileAccess.WRITE); file.store_string(old_text); file.close()
+ var expected=state(scene.world); var durable=Fixture.snapshot(scene)
+ scene.start_walk(target); await scene.load_game()
+ check(scene.walk_route.is_empty() and state(scene.world)==expected and Fixture.snapshot(scene)==durable and FileAccess.get_file_as_string(legacy_path)==old_text,"load cancels route, reads active slot, and never grafts old map bytes")
+ DirAccess.remove_absolute(legacy_path)
  scene.queue_free(); await process_frame
  print("USABILITY: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

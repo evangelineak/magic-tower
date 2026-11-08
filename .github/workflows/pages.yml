@@ -1,4 +1,4 @@
-name: Stable Web preview on GitHub Pages
+name: Stable game and opt-in strategy preview on GitHub Pages
 on:
   push:
     branches: ['pages/playtest']
@@ -34,19 +34,35 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Import, smoke test and export stable game
+      - name: Verify and export opt-in strategy preview
         run: |
-          "$GODOT_BIN" --headless --path . --editor --import --quit
-          "$GODOT_BIN" --headless --path . --quit-after 30
-          mkdir -p export/web
-          "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/web/index.html
-          cp assets/fonts/LICENSE-OFL.txt export/web/FONT-LICENSE.txt
-          "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/web/GODOT-LICENSES.txt
-          printf 'Magic Tower v0.17 usability web preview\nGame source: 612199af7fda9d5600711ffc150f031c301c1f50\nWeb deployment source: %s\nSaves remain in this browser, not on a server.\n' "$GITHUB_SHA" > export/web/BUILD.txt
-          touch export/web/.nojekyll
+          bash tools/test_all.sh
+          mkdir -p export/next
+          "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
+          cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
+          "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
+          printf 'Magic Tower opt-in strategy preview\nGame source: 186400d3b9338c2625927f199900d3326b3273e9\nWeb deployment source: %s\nDesktop gameplay and production JS storage verified. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+      - name: Check out unchanged stable Web source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: 4122fa416091eb3d89c7825b6d9eabd55d7c273e
+          path: stable-source
+          persist-credentials: false
+      - name: Rebuild stable root and assemble optional preview
+        run: |
+          "$GODOT_BIN" --headless --path stable-source --editor --import --quit
+          "$GODOT_BIN" --headless --path stable-source --quit-after 30
+          mkdir -p stable-source/export/web site-output/preview
+          "$GODOT_BIN" --headless --path stable-source --export-release 'Web Single Thread' export/web/index.html
+          cp stable-source/assets/fonts/LICENSE-OFL.txt stable-source/export/web/FONT-LICENSE.txt
+          "$GODOT_BIN" --headless --path stable-source --script tools/export_license.gd -- export/web/GODOT-LICENSES.txt
+          printf 'Magic Tower v0.17 stable usability web preview\nGame source: 612199af7fda9d5600711ffc150f031c301c1f50\nStable Web source: 4122fa416091eb3d89c7825b6d9eabd55d7c273e\nSite deployment source: %s\nOptional strategy preview is separate at ./preview/; root game remains v0.17.\n' "$GITHUB_SHA" > stable-source/export/web/BUILD.txt
+          cp -a stable-source/export/web/. site-output/
+          cp -a export/next/. site-output/preview/
+          touch site-output/.nojekyll
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
         with:
-          path: export/web
+          path: site-output
   deploy:
     needs: build
     runs-on: ubuntu-latest

@@ -1,0 +1,64 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>魔塔档案事务测试（独立原型）</title>
+<style>body{max-width:960px;margin:20px auto;background:#10202b;color:#e7eff5;font:15px system-ui}button,input,select{font:inherit;padding:7px;margin:3px}pre{white-space:pre-wrap;background:#07131b;padding:14px;max-height:430px;overflow:auto}small{color:#bbcad5}fieldset{margin:12px 0;border:1px solid #4a7880}</style>
+<h1>本地档案事务测试</h1><p>独立 IndexedDB / 无 WebGL / 不连接游戏、不读取或清除现有游戏存档。</p>
+<p>数据库：<code id="database"></code><br>标签身份：<code id="owner"></code></p>
+<fieldset><legend>真实双标签测试</legend>
+租约毫秒 <input id="ttl" type="number" value="5000" size="7"><button id="claim">获取全局写入权 / 接管</button><button id="renew">续租（保留旧 fence）</button>
+<br><button id="create">建立第8层模拟存档</button><button id="replace">明确替换当前局</button><button id="save">保存一步（CAS）</button><button id="stale">重复旧版本保存</button>
+<br>run ID <input id="run" size="40" aria-label="run ID"><button id="read">读取当前槽 / 档案</button>
+<br>结算 <select id="outcome"><option value="withdrawn">撤离</option><option value="victory">谎报胜利（应拒绝）</option></select>
+中断点 <select id="abort"><option value="">正常提交</option><option>before_writes</option><option>after_profile</option><option>after_receipt</option><option>after_archive</option><option>after_slot</option></select><button id="settle">提交结算</button>
+</fieldset>
+<button id="selftest">独立随机库自动自测（中断 / 幂等 / CAS / 槽冲突）</button>
+<small>点击“读取”不刷新本标签已持写凭证，因此可验证旧标签被 fencing 拒绝。没有清库按钮。</small><pre id="log">加载中…</pre>
+<script type="module">
+import {ProfileStorage,validateProfile} from './profile_storage.js';
+const name=new URL(location.href).searchParams.get('db')||'magic-tower-profile-harness-v2-manual';
+window.owner=crypto.randomUUID();window.storage=await ProfileStorage.open(name);window.auth=null;window.runRevision=0;window.previousRevision=0;
+window.sample=(floor=8)=>({seed_value:0,floor_seen:Array.from({length:8},(_,i)=>i<floor),floor:floor-1,hp:100,moves:100,won:false});
+document.querySelector('#database').textContent=name;document.querySelector('#owner').textContent=owner;
+const log=value=>document.querySelector('#log').textContent=JSON.stringify(value,null,2);
+const id=()=>document.querySelector('#run').value.trim();const ttl=()=>Number(document.querySelector('#ttl').value);
+const action=(button,body)=>document.querySelector(button).onclick=async()=>{try{log(await body())}catch(e){log({error:e.code||e.name,message:e.message})}};
+const create=async replace=>{const r=await storage.createRun(auth,sample(),replace);auth.expectedSlotRevision=r.slotRevision;runRevision=0;document.querySelector('#run').value=r.run.id;return r};
+action('#claim',async()=>auth=await storage.claimWriter(owner,ttl()));
+action('#renew',async()=>auth=await storage.renewWriter(auth,ttl()));
+action('#create',()=>create(false));action('#replace',()=>create(true));
+action('#save',async()=>{const run=await storage.readRun(id());const s=structuredClone(run.snapshot);s.moves++;previousRevision=runRevision;const r=await storage.saveRun(id(),auth,runRevision,s);runRevision=r.revision;return r});
+action('#stale',async()=>storage.saveRun(id(),auth,previousRevision,(await storage.readRun(id())).snapshot));
+action('#settle',async()=>{const r=await storage.settleRun(id(),auth,runRevision,document.querySelector('#outcome').value,document.querySelector('#abort').value);if(r.slotRevision!==undefined)auth.expectedSlotRevision=r.slotRevision;return r});
+action('#read',async()=>{const slot=await storage.readSlot();if(!id()&&slot.activeRunId)document.querySelector('#run').value=slot.activeRunId;const run=id()?await storage.readRun(id()):null;if(run)runRevision=run.revision;return {slot,profile:await storage.readProfile(),run,receipt:id()?await storage.readReceipt(id()):null}});
+window.runStorageChecks=async()=>{
+ const dbname='magic-tower-profile-harness-check-'+crypto.randomUUID();const a=await ProfileStorage.open(dbname),b=await ProfileStorage.open(dbname);const checks=[];
+ const check=(ok,label)=>{if(!ok)throw Error('FAIL '+label);checks.push(label)};
+ const rejected=async(fn,code)=>{try{await fn();throw Error('unexpected success')}catch(e){check(e.code===code,code)}};
+ let authA=await a.claimWriter('testA',60000);await rejected(()=>b.claimWriter('testB',60000),'WRITER_BUSY');
+ const staleSlot=structuredClone(authA);let created=await a.createRun(authA,sample());authA.expectedSlotRevision=created.slotRevision;const run=created.run;
+ await rejected(()=>a.createRun(staleSlot,sample(),true),'STALE_SLOT_REVISION');
+ await rejected(()=>a.createRun(authA,sample()),'ACTIVE_RUN_EXISTS');
+ for(const point of ['before_writes','after_profile','after_receipt','after_archive','after_slot']){
+  const before=JSON.stringify({profile:await a.readProfile(),run:await a.readRun(run.id),slot:await a.readSlot()});
+  await rejected(()=>a.settleRun(run.id,authA,0,'withdrawn',point),'INJECTED_ABORT_'+point);
+  check(before===JSON.stringify({profile:await a.readProfile(),run:await a.readRun(run.id),slot:await a.readSlot()})&&!await a.readReceipt(run.id),'abort rolls back all stores '+point);
+ }
+ await rejected(()=>a.settleRun(run.id,authA,0,'victory'),'NOT_FINAL_WIN');
+ await rejected(()=>a.saveRun(run.id,authA,0,{...sample(),floor_seen:[true,false,false,false,false,false,false,true]}),'INVALID_SNAPSHOT');
+ const races=await Promise.allSettled([a.saveRun(run.id,authA,0,{...sample(),moves:101}),b.saveRun(run.id,authA,0,{...sample(),moves:102})]);
+ check(races.filter(x=>x.status==='fulfilled').length===1&&races.some(x=>x.reason?.code==='STALE_REVISION'),'concurrent revision CAS one winner');
+ const same=await Promise.all([a.settleRun(run.id,authA,1,'withdrawn'),b.settleRun(run.id,authA,1,'withdrawn')]);
+ check(same.filter(x=>x.status==='applied').length===1&&same.filter(x=>x.status==='duplicate').length===1,'concurrent same-run settlement one receipt');
+ const p=await a.readProfile();check(validateProfile(p)&&p.milestones.join()==='3,5,8'&&p.unlocked.join()==='legacy_scout,legacy_tactician,legacy_veteran','canonical pure-profile schema and finite milestones');
+ const goodEnvelope=await a.transaction(['profiles'],'readonly',s=>new Promise((ok,no)=>{const r=s('profiles').get('local');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}));
+ await a.transaction(['profiles'],'readwrite',s=>{s('profiles').put({...goodEnvelope,profile:null})});
+ await rejected(()=>a.readProfile(),'CORRUPT_PROFILE');await rejected(()=>a.settleRun(run.id,authA,1,'withdrawn'),'CORRUPT_PROFILE');
+ await a.transaction(['profiles'],'readwrite',s=>{s('profiles').put(goodEnvelope)});
+ authA.expectedSlotRevision=(await a.readSlot()).revision;created=await a.createRun(authA,sample());authA.expectedSlotRevision=created.slotRevision;
+ const second=await a.settleRun(created.run.id,authA,0,'withdrawn');check(second.receipt.milestones.length===0&&second.new_unlocks.length===0,'different run cannot farm already earned milestones');
+ authA.expectedSlotRevision=second.slotRevision;authA=await a.renewWriter(authA,70);await new Promise(r=>setTimeout(r,100));
+ const authB=await b.claimWriter('testB',60000);await rejected(()=>a.createRun(authA,sample(),true),'STALE_WRITER');
+ const newRun=await b.createRun(authB,sample());check(newRun.run.status==='active','new fenced owner can create run');
+ a.close();b.close();const reopened=await ProfileStorage.open(dbname);check((await reopened.readRun(run.id)).status==='archived'&&JSON.stringify(await reopened.readReceipt(run.id))===JSON.stringify(same[0].receipt),'close/reopen preserves archived run and immutable receipt');reopened.close();
+ return {PASS:true,count:checks.length,checks,database:dbname,note:'Real IndexedDB connections; manual two-tab test remains separate.'};
+};
+action('#selftest',window.runStorageChecks);window.harnessReady=true;log({ready:true,instructions:'先获取写入权，再建模拟局。第二标签同URL测试忙碌与过期接管。'});
+</script></html>

@@ -1,4 +1,5 @@
 extends SceneTree
+const Fixture=preload("res://tests/ui_fixture.gd")
 # Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
 # New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
@@ -50,7 +51,7 @@ func travel(w,floor_id:int)->bool:
   if not walk(w,Vector2i(1,1) if w.floor_index>floor_id else Vector2i(9,9)): return false
  return false
 func key(scene,code):
- var event=InputEventKey.new(); event.pressed=true; event.keycode=code; scene._unhandled_input(event)
+ var event=InputEventKey.new(); event.pressed=true; event.keycode=code; await scene._unhandled_input(event)
 func _initialize(): call_deferred("run_tests")
 func run_tests():
  var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema6-expedition.json")
@@ -155,8 +156,8 @@ func run_tests():
  var long_enemy={"hp":1000,"atk":30,"def":0}
  check(Progression.battle(50,20,5000,short_enemy,"warden",false,"repeater",[]).damage<Progression.battle(50,20,5000,short_enemy,"warden",false,"balanced",[]).damage,"repeater has genuine short-fight advantage")
  check(Progression.battle(50,20,5000,long_enemy,"warden",false,"repeater",[]).damage>Progression.battle(50,20,5000,long_enemy,"warden",false,"balanced",[]).damage,"repeater low defense loses in long fights")
- var scene=load("res://main.tscn").instantiate(); root.add_child(scene); await process_frame
- scene.world.restore(gear_reward); scene.growth=true; scene.growth_tab=1
+ var scene=load("res://main.tscn").instantiate(); Fixture.attach(scene); root.add_child(scene); await process_frame
+ await Fixture.bind(scene,World.from_snapshot(gear_reward)); scene.growth=true; scene.growth_tab=1
  # Four rows are deliberately a presentation fixture, not a legal inventory claim.
  scene.world.inventory=["balanced","buckler","duelist","repeater"]
  check(scene.visible_growth_actions().size()==3,"gear first page caps at three rows")
@@ -165,12 +166,14 @@ func run_tests():
  before=state(scene.world); key(scene,KEY_F2)
  check(scene.gear_page==1 and state(scene.world)==before,"language switch preserves gear page and game state")
  check(scene.enemy_traits({"first_strike":true,"thorns":6,"heavy_every":3}).size()==3,"all simultaneous enemy traits display independently")
- scene.save_path="user://rescue-schema6-test.json"
- var backup=scene.save_path.get_basename()+".pre-schema7.json"
- if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
- var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close()
- scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==1 and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==11,"real old expedition load backs up exact bytes and upgrades without new rewards")
+ # Legacy files are no longer imported into eligible Session identities.
+ await Fixture.bind(scene,World.from_snapshot(gear_reward))
+ var legacy_path="user://rescue-schema6-test.json"
+ var file=FileAccess.open(legacy_path,FileAccess.WRITE); file.store_string(old_text); file.close()
+ before=state(scene.world); var durable=Fixture.snapshot(scene)
+ await scene.load_game()
+ check(FileAccess.get_file_as_string(legacy_path)==old_text and state(scene.world)==before and Fixture.snapshot(scene)==durable,"L loads active slot and never imports or overwrites old expedition bytes")
+ DirAccess.remove_absolute(legacy_path)
  scene.queue_free(); await process_frame
  print("RESCUE: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

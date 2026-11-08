@@ -1,5 +1,6 @@
 extends SceneTree
 # Fixed event/combat fixtures use legacy coordinates; seeded determinism below stays layout 2.
+# Synthetic deep-floor fixtures below explicitly include previously traversed floors.
 const World=preload("res://scripts/world.gd")
 var checks:=0
 var failures:=0
@@ -30,7 +31,7 @@ func _init():
 	check(snapshot(w)==before,"repeated preview cannot consume skill or change world")
 	w.pos=Vector2i(1,1)
 	check(not w.step(Vector2i.UP) and w.skill_armed and w.focus==focus_before,"wall does not spend skill")
-	w.enter_floor(2); w.pos=Vector2i(7,3); focus_before=w.focus
+	w.floor_seen=[true,true,true,false,false]; w.enter_floor(2); w.pos=Vector2i(7,3); focus_before=w.focus
 	check(not w.step(Vector2i.RIGHT) and w.skill_armed and w.focus==focus_before,"impossible fight does not spend skill")
 	w=World.new(0,1); w.action("hero_warden"); w.action("arm"); w.pos=Vector2i(5,3)
 	var hp_before: int=w.hp
@@ -71,7 +72,7 @@ func _init():
 	w=World.new(0,1)
 	check(w.action("quest_accept") and w.quest_state==1,"NPC quest accepted")
 	check(not w.action("quest_gold"),"quest reward requires sample")
-	w.enter_floor(2); w.pos=Vector2i(2,7)
+	w.floor_seen=[true,true,true,false,false]; w.enter_floor(2); w.pos=Vector2i(2,7)
 	check(w.step(Vector2i.DOWN) and w.quest_state==2,"sample acquired through movement")
 	w.enter_floor(0); w.pos=Vector2i(1,1)
 	var gold_before: int=w.gold
@@ -79,18 +80,18 @@ func _init():
 	check(not w.action("quest_scroll") and not w.action("quest_gold"),"quest reward cannot be doubled")
 	roundtrip(w,"completed quest persists")
 	# Bargain has an explicit, survivable cost and cannot be rerolled.
-	w=World.new(0,1); w.enter_floor(3); w.pos=Vector2i(2,4); w.hp=80; before=snapshot(w)
+	w=World.new(0,1); w.floor_seen=[true,true,true,true,false]; w.enter_floor(3); w.pos=Vector2i(2,4); w.hp=80; before=snapshot(w)
 	check(not w.action("bargain_blood") and snapshot(w)==before,"blood bargain cannot kill player")
 	w.hp=81
 	var atk_before: int=w.atk
 	check(w.action("bargain_blood") and w.hp==1 and w.atk==atk_before+6,"blood bargain pays exact declared cost")
 	check(not w.action("bargain_gold") and not w.action("bargain_leave"),"bargain selection irreversible within state")
-	w=World.new(0,1); w.enter_floor(3); w.pos=Vector2i(2,4); w.gold=24
+	w=World.new(0,1); w.floor_seen=[true,true,true,true,false]; w.enter_floor(3); w.pos=Vector2i(2,4); w.gold=24
 	check(not w.action("bargain_gold"),"gold bargain cannot overdraw")
 	w.gold=25
 	var def_before: int=w.defense
 	check(w.action("bargain_gold") and w.gold==0 and w.defense==def_before+5,"gold bargain cost and reward")
-	w=World.new(0,1); w.enter_floor(3); w.pos=Vector2i(2,4)
+	w=World.new(0,1); w.floor_seen=[true,true,true,true,false]; w.enter_floor(3); w.pos=Vector2i(2,4)
 	check(w.action("bargain_leave") and w.event_done,"leaving event is a real completed choice")
 	check(not w.action("bargain_blood"),"cannot return to reverse leaving")
 	roundtrip(w,"event decision persists")

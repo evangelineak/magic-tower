@@ -12,12 +12,21 @@ U 撤销；L 读档；M 静音；R 连按两次同种子重开；N 连按两次�
 悬停敌人按V可只读比较已持装备。N可立守望誓约，攻击-10换先制/荆棘保护；
 回N可免费退约，但永久不能再立。比较会包含当前誓约和备战技能。
 
-仍使用 journey-v4.json 文件名，内部存档结构为版本11。
-读取有效版本4旧档先保留 .pre-schema5.json，版本5保留 .pre-schema6.json 原文备份。
-版本6/7升级分别保留 .pre-schema7.json / .pre-schema8.json；版本8/9/10分别保留 .pre-schema9.json / .pre-schema10.json / .pre-schema11.json 原字节。旧图不补生新任务房。
-旧版本已经领过秘密奖励的存档不会再领奖。升级前仍建议自行备份存档。
+新版采用独立Session存档：桌面 user://journeys-v1/，网页本地 IndexedDB。
+启动读取当前旅程；L重新取得写入权并读最新状态；F5重试尚未确认的保存。
+每次动作保存成功才显示结果。保存期间请稍候；失败不预扣资源，重试不重复收益。
+旧 journey-v4.json 原样保留，但不自动导入；本版请新开局。
+其他窗口占用时只读，请关闭其他窗口并稍候，再按L读取，不能覆盖别人的更新。
+X打开明确退役确认，Enter后结束本局并记录首次到达3/5/8层的里程碑。
+结算保存成功后不能撤销；新局保留跨局记录，不携带物品。里程碑当前不增加属性。
+默认安全模式保留致死保护。新局确认页 S选择安全 / D明确选择风险，再确认开局。
+风险模式遇到可预判的致死战斗，仍先二次确认；取消不扣资源。
+确认后只战斗到真正致命事件，原子记录战败；不能撤销、不发击杀奖励或战后回血。
+荆棘先接触后出手，接触已致命则该次攻击不会发生。B可只读复盘死亡战报。
+死亡后可明确新开一局；跨局天赋数值与抽选仍未启用。
 
-五层首章胜利可按1或点击主动继续三层远征，一次补120生命，不自动续章。
+五层首章胜利按1主动继续三层远征并补120生命，或按2打开首章结算确认。
+最终胜利按2打开结算确认；不自动结算，L恢复终局也不重复领奖。
 六层营地药剂与专注各限两份，工程80金币开放三座桥；可回旧塔取宝。
 图鉴按 [ / ] 或点击页钮翻页，装备页同样可翻页。
 七层救出米拉后，务必在击败最后首领Z前回J领弩，或到U选择营地帮助。
@@ -34,7 +43,7 @@ This build is unsigned and experimental. It is not a production release.
 
 Arrows / WASD: move       E: nearby choices / loan ledger
 C: hero, equipment, talents    H: enemy guide    J: journey journal
-U: undo    L: load    SAVE button: save
+U: undo    L: reload current slot    F5: retry pending save    SAVE: save
 R twice: restart same seed    N twice: new seed    M: mute/unmute
 Battle display can be skipped with any key/click without changing the result.
 F2: Chinese / English (defaults to Chinese). Language does not change your save.
@@ -77,3 +86,29 @@ T：安全快旅（续章后、最后胜利前）。只到实际到访地标，�
 试玩整改版：棋盘64像素格、人物怪物新专图；悬停任何对象在附近显示说明。
 点击空地仅沿空地自动行走，每步重验，按键/点击/模态会停止；点击怪/门/物品/NPC/楼梯等只查看，必须用方向键手动触发。每步都有撤销和保存。
 新开局上下楼在同一个格子对应。新1/4/5层单钥房分别封住70生命、4防御、70生命，不可从侧面绕入；开锁前悬停看收益。旧档为保留进度仍使用原布局与旧楼梯规则，要体验新地图需新开局。
+
+开发版 v0.18：G 打开装备调校，方括号 [ / ] 切换装备。
+未取得装备也能提前看本局固定的三候选；取得后选择 1/2/3 或 4 保留原装，回车确认。
+仅当前穿戴的词条生效；锁定后不再改选，可用完整 U 撤销本次动作，候选不刷新。
+技能基础10级、训练+4、词条最多+2，目前最高16；不是已有完整20级成长。
+World内部schema13；新版Session不自动导入旧文件，不把旧档补成可领奖身份。
+公开网页仍按其BUILD独立发布，不随开发分支自动更新。
+
+Settlement: X opens a retirement confirmation; Enter permanently ends this run.
+At chapter-one victory, 1 continues the expedition, or 2 opens settlement.
+At final victory, 2 opens settlement. No automatic awards before saving succeeds.
+Undo cannot reopen a settled run. New journeys retain milestone records, not items.
+First visits to floors 3/5/8 are recorded once; these records currently add no stats.
+Safe mode remains the default. In new-run confirmation, S selects safe and D selects risk.
+Risk mode still requires explicit confirmation before a predictable lethal fight.
+Only actual events through death occur; no kill reward or recovery is granted.
+Death and its receipt save atomically. B reviews the saved death report without replaying rewards.
+Contact thorns resolve before the hero hit. A fatal contact stops that hit.
+A new journey may be started explicitly; permanent talent effects and drafts are not enabled yet.
+
+开局策略（开发分支，网页独立发布）
+完成旅程并取得首次3/5/8层档案后，下一新局会出现三个已解锁策略候选。
+1/2/3预选候选，0选原装，Enter明确锁定。Esc取消预选，但不能绕过待选阶段行动。
+策略有收益也有代价，锁定后不能Undo改选；读档和重试不重抽。N换种子可换塔和候选。
+无已解锁池时自动原装。旧活动旅程不补抽，必须明确新局才使用档案解锁。
+策略不直接修改基础攻防，按每战条件计入预览。技能20级须基础10+训练4+装备2+研习4全部具备。
