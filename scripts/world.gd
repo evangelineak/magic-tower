@@ -34,6 +34,7 @@ var quest_state := 0
 var event_done := false
 var event_kind := "bargain"
 var water_choice := ""
+var bridge_built := false
 var chest_claimed := false
 var last_battle: Dictionary = {}
 var core := false
@@ -85,8 +86,8 @@ func step(direction: Vector2i) -> bool:
 	var target := pos + direction
 	var t := tile(target)
 	if t == "#": return false
-	if t == "~" and water_choice!="drain":
-		message="Flooded. The valve offers a route or healing, not both."
+	if t == "~" and water_choice!="drain" and not bridge_built:
+		message="Flooded. Drain at O, or bring the survey to F to preserve the spring."
 		return false
 	if (t == ">" and floor_index >= MAPS.size()-1) or (t == "<" and floor_index == 0): return false
 	if t in ["D","L"] and keys < (2 if t=="L" else 1):
@@ -118,8 +119,9 @@ func step(direction: Vector2i) -> bool:
 		hp+=140; focus=mini(focus_cap,focus+1)
 		message="Sealed provisions: +140 HP / +1 focus up to capacity."
 	elif t == "I":
+		if quest_state>=2: return false
 		quest_state=2
-		message="Recovered survey: return to the cartographer on floor 1."
+		message="Survey: J offers gold or focus; F can build a bridge preserving the spring."
 	elif t == "C":
 		core = true
 		message = "Core: repair lift / forge +8 DEF / sell for 35. Choose once."
@@ -235,21 +237,25 @@ func action(id: String) -> bool:
 		"quest_accept":
 			if not nearby("J") or quest_state!=0: return false
 			quest_state=1
-			message="Find the lost survey on floor 3. Return for one of two rewards."
+			message="Find the floor 3 survey. J: gold or focus. F: bridge, keeping the spring."
 		"quest_gold","quest_scroll":
 			if not nearby("J") or quest_state!=2: return false
 			quest_state=3
 			if id=="quest_gold":
 				gain_gold(45)
-				message="Survey delivered: 45 gold. The focus training is forgone."
+				message="Survey delivered: 45 gold. Focus training and survey bridge forgone."
 			else:
 				focus_cap=4; focus=4
-				message="Survey delivered: focus capacity 4 and full refill. Gold forgone."
+				message="Survey delivered: focus capacity 4 and refill. Gold and bridge forgone."
+		"quest_bridge":
+			if not nearby("F") or quest_state!=2 or bridge_built or water_choice=="drain": return false
+			quest_state=4; bridge_built=true
+			message="Survey spent: flood bridge built on floor 2. Spring preserved; J rewards forgone."
 		"drain","spring":
-			if not nearby("O") or water_choice!="": return false
+			if not nearby("O") or water_choice!="" or (id=="drain" and bridge_built): return false
 			water_choice=id
 			if id=="spring": hp+=120
-			message="Water drained: north relic vault accessible; healing forgone." if id=="drain" else "Spring consumed: +120 HP. Northern vault stays flooded."
+			message="Water drained: north relic vault accessible; healing forgone." if id=="drain" else ("Spring consumed: +120 HP. The bridge keeps the relic route open." if bridge_built else ("Spring consumed: +120 HP. Survey spent at J: no bridge remains." if quest_state==3 else "Spring consumed: +120 HP. A survey bridge can still open the route."))
 		"relic_buckler","relic_duelist":
 			if not nearby("R") or chest_claimed: return false
 			var choice:=id.trim_prefix("relic_")
@@ -328,10 +334,13 @@ func save_data() -> Dictionary:
 	return {"version":4,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
-	"quest_state":quest_state,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
+	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
 	"core":core,"core_use":core_use,"weapon":weapon,"secret":secret,"clue":clue,"principal":principal,"fees":fees,"interest":interest,"loan_used":loan_used,"overdue":overdue,"checkpoints":checkpoints}
 func restore(d: Dictionary) -> bool:
 	if d.get("version") != 4: return false
+	if not d.get("bridge_built",false) is bool: return false
+	if d.get("bridge_built",false)!=(d.get("quest_state")==4): return false
+	if d.get("bridge_built",false) and d.get("water_choice")=="drain": return false
 	for key in ["floor","x","y","hp","atk","def","keys","gold","moves","principal","fees","interest","checkpoints","generation_attempts","focus","focus_cap","kills","quest_state"]:
 		if not d.has(key) or not (d[key] is float or d[key] is int): return false
 		if not is_finite(float(d[key])) or float(d[key])!=floor(float(d[key])) or d[key]<0 or d[key]>1000000: return false
@@ -358,7 +367,7 @@ func restore(d: Dictionary) -> bool:
 		if not seen is bool: return false
 	if not d.floor_seen[0]: return false
 	if not d.get("water_choice") in ["","drain","spring"]: return false
-	if int(d.focus_cap) not in [3,4] or d.focus>d.focus_cap or d.quest_state>3: return false
+	if int(d.focus_cap) not in [3,4] or d.focus>d.focus_cap or d.quest_state>4: return false
 	if d.hero_id=="scholar" and d.skill_armed: return false
 	if d.generation_attempts>16: return false
 	if not d.get("core_use") in ["","sold","forge","elevator"]: return false
@@ -384,7 +393,7 @@ func restore(d: Dictionary) -> bool:
 	seed_value=int(d.seed_value); generation_attempts=int(d.generation_attempts); generation_fallback=d.generation_fallback
 	hero_id=d.hero_id; focus=int(d.focus); focus_cap=int(d.focus_cap); skill_armed=d.skill_armed
 	equipped=d.equipped; inventory=d.inventory.duplicate(); talents=d.talents.duplicate(); kills=int(d.kills); floor_seen=d.floor_seen.duplicate()
-	quest_state=int(d.quest_state); event_done=d.event_done; event_kind=d.event_kind; water_choice=d.water_choice; chest_claimed=d.chest_claimed
+	quest_state=int(d.quest_state); bridge_built=d.get("bridge_built",false); event_done=d.event_done; event_kind=d.event_kind; water_choice=d.water_choice; chest_claimed=d.chest_claimed
 	last_battle={}
 	floors = d.floors.duplicate(true)
 	floor_index = int(d.floor)

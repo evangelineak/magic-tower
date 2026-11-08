@@ -3,3 +3,5 @@
 *.blend2
 export/
 *.log
+__pycache__/
+*.pyc

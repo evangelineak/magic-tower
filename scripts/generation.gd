@@ -14,8 +14,59 @@ const ENEMIES := {
 	"K": {"hp":450, "atk":65, "def":40}
 }
 const DIRS := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-# Only the left wing can gain openings. In particular, never breach the vault.
-const SHORTCUTS := [Vector2i(3,2), Vector2i(3,3), Vector2i(3,6), Vector2i(4,6), Vector2i(4,8), Vector2i(4,9)]
+# These authored patches exclude stairs, specials, water, the left cage walls,
+# the cage doors, and the third-floor vault. A template may add AND remove
+# walls; ordinary tokens inside a patch are moved onto its new walkable cells.
+const ROOM_REGIONS := [
+	{"id":"lower_left", "origin":Vector2i(2,6), "size":Vector2i(3,2), "templates":[
+		{"id":"arch", "rows":["...","#.."]},
+		{"id":"west_turn", "rows":["..#","..."]},
+		{"id":"east_turn", "rows":["#..","..."]},
+		{"id":"split_entry", "rows":[".#.","..."]}
+	]},
+	{"id":"lower_right", "origin":Vector2i(6,6), "size":Vector2i(3,3), "templates":[
+		{"id":"north_bend", "rows":["..#","#..","..."]},
+		{"id":"south_bend", "rows":["...","..#","#.."]},
+		{"id":"pillar", "rows":["...",".#.","..."]},
+		{"id":"zigzag", "rows":[".#.","...",".#."]}
+	]}
+]
+const GEOMETRY_REVISION := 1
+
+static func in_room(p: Vector2i) -> bool:
+	for region in ROOM_REGIONS:
+		if Rect2i(region.origin,region.size).has_point(p): return true
+	return false
+
+static func apply_room(grid: Array, region: Dictionary, template: Dictionary, rng: RandomNumberGenerator) -> bool:
+	var tokens: Array=[]
+	var positions: Array=[]
+	for y in range(region.size.y):
+		for x in range(region.size.x):
+			var p: Vector2i=region.origin+Vector2i(x,y)
+			var token: String=grid[p.y][p.x]
+			# Future authored specials win: skip the entire room atomically.
+			if token not in ["#","."] and token not in LOOT: return false
+			if token in LOOT: tokens.append(token)
+			if template.rows[y][x]==".": positions.append(p)
+	if positions.size()<tokens.size(): return false
+	for y in range(region.size.y):
+		for x in range(region.size.x):
+			var p: Vector2i=region.origin+Vector2i(x,y)
+			grid[p.y][p.x]=template.rows[y][x]
+	for token in tokens:
+		var index := rng.randi_range(0,positions.size()-1)
+		var p: Vector2i=positions.pop_at(index)
+		grid[p.y][p.x]=token
+	return true
+
+static func authored_rooms(floor_count: int) -> Array:
+	var result: Array=[]
+	for _floor in range(floor_count):
+		var ids := {}
+		for region in ROOM_REGIONS: ids[region.id]="authored"
+		result.append(ids)
+	return result
 
 static func normalize(base_maps: Array) -> Array:
 	var result: Array = []
@@ -33,13 +84,19 @@ static func normalize(base_maps: Array) -> Array:
 static func generate(seed_value: int, base_maps: Array) -> Dictionary:
 	var baseline := normalize(base_maps)
 	if seed_value==0:
-		return {"maps":baseline,"attempts":0,"fallback":false,"validation":validate(baseline)}
+		return {"maps":baseline,"attempts":0,"fallback":false,"validation":validate(baseline),"room_templates":authored_rooms(baseline.size()),"geometry_revision":GEOMETRY_REVISION}
 	var rng := RandomNumberGenerator.new()
 	rng.seed=seed_value
 	for attempt in range(1,MAX_ATTEMPTS+1):
 		var candidate := baseline.duplicate(true)
+		var room_templates: Array=[]
 		for floor_index in candidate.size():
 			var grid: Array=candidate[floor_index]
+			var room_ids := {}
+			for region in ROOM_REGIONS:
+				var template: Dictionary=region.templates[rng.randi_range(0,region.templates.size()-1)]
+				room_ids[region.id]=template.id if apply_room(grid,region,template,rng) else "authored"
+			room_templates.append(room_ids)
 			var slots: Array=[]
 			var tokens: Array=[]
 			for y in range(1,10):
@@ -51,20 +108,12 @@ static func generate(seed_value: int, base_maps: Array) -> Dictionary:
 				var j := rng.randi_range(0,i)
 				var temp = tokens[i]; tokens[i]=tokens[j]; tokens[j]=temp
 			for i in slots.size(): grid[slots[i].y][slots[i].x]=tokens[i]
-			var openings := rng.randi_range(0,2)
-			var choices := SHORTCUTS.duplicate()
-			while openings>0 and not choices.is_empty():
-				var index := rng.randi_range(0,choices.size()-1)
-				var p: Vector2i=choices.pop_at(index)
-				if grid[p.y][p.x]=="#":
-					grid[p.y][p.x]="."
-					openings-=1
 		# Authored water is preserved. The proof never needs to cross it.
 		var proof := validate(candidate)
 		if proof.solvable:
-			return {"maps":candidate,"attempts":attempt,"fallback":false,"validation":proof}
+			return {"maps":candidate,"attempts":attempt,"fallback":false,"validation":proof,"room_templates":room_templates,"geometry_revision":GEOMETRY_REVISION}
 	# A seed is never silently allowed to create an unverified impossible map.
-	return {"maps":baseline,"attempts":MAX_ATTEMPTS,"fallback":true,"validation":validate(baseline)}
+	return {"maps":baseline,"attempts":MAX_ATTEMPTS,"fallback":true,"validation":validate(baseline),"room_templates":authored_rooms(baseline.size()),"geometry_revision":GEOMETRY_REVISION}
 
 static func damage(kind: String, stats: Dictionary) -> int:
 	if not ENEMIES.has(kind): return -1
@@ -120,12 +169,52 @@ static func execute(grid: Array, start: Vector2i, path: Array, stats: Dictionary
 		route += "U" if d==Vector2i.UP else ("D" if d==Vector2i.DOWN else ("L" if d==Vector2i.LEFT else "R"))
 	return {"ok":true,"pos":pos,"route":route}
 
+# Pure topology: ignore combat strength, but enforce every intended gate.
+# Combat validation below then constructs a real no-key/no-water winning path.
+static func reachable(grid: Array, blocked: Array) -> Dictionary:
+	var start := Vector2i(1,1)
+	if tile(grid,start) in blocked: return {}
+	var seen := {start:true}
+	var queue: Array=[start]
+	var head := 0
+	while head<queue.size():
+		var p: Vector2i=queue[head]; head+=1
+		for d in DIRS:
+			var next: Vector2i=p+d
+			if seen.has(next) or tile(grid,next) in blocked: continue
+			seen[next]=true; queue.append(next)
+	return seen
+
+static func topology(maps: Array) -> Dictionary:
+	for grid in maps:
+		var closed := reachable(grid,["#","D","L","~","V","K"])
+		var opened := reachable(grid,["#","D","~","K"])
+		var guard_closed := reachable(grid,["#","D","~","V","K"])
+		var cages_closed := reachable(grid,["#","D","~","L","K"])
+		var drained := reachable(grid,["#","D","L","V","K"])
+		for y in range(1,10):
+			for x in range(1,10):
+				var p := Vector2i(x,y)
+				var token: String=grid[y][x]
+				if token in ["M","C","E","F","N","Q","J","O","I","X"] and not closed.has(p):
+					return {"valid":false,"reason":"A special object is disconnected"}
+				if token in ["T","$","A","P"]:
+					if (token=="T" and guard_closed.has(p)) or (token!="T" and cages_closed.has(p)):
+						return {"valid":false,"reason":"A guarded reward has a bypass"}
+					if not opened.has(p): return {"valid":false,"reason":"A guarded reward is sealed forever"}
+				if token=="R":
+					if closed.has(p): return {"valid":false,"reason":"The flooded reward has a dry bypass"}
+					if not drained.has(p): return {"valid":false,"reason":"The flooded reward remains sealed after draining"}
+	return {"valid":true}
+
 static func validate(maps: Array) -> Dictionary:
 	if maps.size()!=5: return {"solvable":false,"reason":"Expected five authored floors"}
 	for grid in maps:
 		if not grid is Array or grid.size()!=11: return {"solvable":false,"reason":"Invalid grid"}
 		for row in grid:
 			if not row is Array or row.size()!=11: return {"solvable":false,"reason":"Invalid row"}
+	var connectivity := topology(maps)
+	if not connectivity.valid: return {"solvable":false,"reason":connectivity.reason}
 	var work := maps.duplicate(true)
 	var stats := {"hp":280,"atk":18,"def":8}
 	var route := ""

@@ -1,0 +1,27 @@
+Magic Tower - development preview
+================================
+Start magic-tower.exe (Windows x86_64) or magic-tower.x86_64 (Linux x86_64).
+No account, network connection, payment, or Godot installation is required.
+This build is unsigned and experimental. It is not a production release.
+
+Arrows / WASD: move       E: nearby choices / loan ledger
+C: hero, equipment, talents    H: enemy guide    J: journey journal
+U: undo    L: load    SAVE button: save
+R twice: restart same seed    N twice: new seed    M: mute/unmute
+Battle display can be skipped with any key/click without changing the result.
+All loans use fictional game gold, not real money.
+
+Look at battle previews. Not every route is affordable. The third-floor vault
+is optional: return stronger before defeating the final boss. A survey sample
+can buy a reward back on floor 1 OR a bridge on floor 4, not both. Keep the
+single machine core for the elevator, the forge, or a sale. Read each choice.
+
+Saves are under the operating system's Godot app_userdata folder, in
+Magic Tower · 苍穹之钥/journey-v4.json. Old saves are not deleted by exports.
+Back up a save before upgrading. Game-only undo does not restore deleted files.
+
+Public source: https://github.com/evangelineak/magic-tower
+Work-in-progress branch: feature/choices-and-debt
+The game code/art has no open-source license selected yet. Public source does
+not itself grant general redistribution or modification rights. The Godot
+runtime and its components carry their own notices in GODOT-LICENSES.txt.

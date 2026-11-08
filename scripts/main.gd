@@ -12,6 +12,11 @@ var world = initial_world()
 var font = ThemeDB.fallback_font
 var art: Texture2D
 var combat_art: Dictionary = {}
+var sound_player: AudioStreamPlayer
+var sound_bank: Dictionary = {}
+var muted := false
+var sound_event_count := 0
+var last_sound_event := ""
 const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","V":"colossus","K":"regent","B":"regent"}
 var history: Array = []
 var save_path := "user://journey-v4.json"
@@ -42,7 +47,24 @@ func initial_world():
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--seed=") and arg.substr(7).is_valid_int(): seed_number=int(arg.substr(7))
 	return World.new(seed_number)
+func play_sound(id: String):
+	# Instrument committed events separately from device playback for deterministic QA.
+	sound_event_count+=1
+	last_sound_event=id
+	if muted or not sound_bank.has(id) or DisplayServer.get_name()=="headless": return
+	sound_player.stream=sound_bank[id]
+	sound_player.play()
+func toggle_mute():
+	muted=not muted
+	if muted and sound_player: sound_player.stop()
+	queue_redraw()
 func _ready():
+	sound_player=AudioStreamPlayer.new()
+	sound_player.volume_db=-6.0
+	add_child(sound_player)
+	for id in ["move","pickup","door","impact","victory","water"]:
+		var sound_path := "res://assets/audio/%s.wav" % id
+		if ResourceLoader.exists(sound_path): sound_bank[id]=load(sound_path)
 	if ResourceLoader.exists("res://assets/tower.png"): art = load("res://assets/tower.png")
 	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","colossus","regent"]:
 		var path := "res://assets/combat/%s.png" % id
@@ -67,6 +89,7 @@ func _draw():
 	label_at(Vector2(36,45),"N O C T U R N E   /   G A M E S",14,MUTED)
 	label_at(Vector2(350,52),"MAGIC TOWER",32,INK)
 	label_at(Vector2(350,83),"SEED %d  /  THE KEY OF THE SKY" % world.seed_value,14,TEAL)
+	label_at(Vector2(1030,83),"M: SOUND OFF" if muted else "M: SOUND ON (LOW)",13,MUTED)
 	label_at(Vector2(1040,48),"FLOOR 0%d / 05" % (world.floor_index+1),16,GOLD)
 	draw_line(Vector2(36,108),Vector2(1244,108),Color("243342"))
 	if art:
@@ -179,6 +202,10 @@ func draw_token(c: Vector2, t: String):
 			for i in range(3):
 				var shift := sin(tick*2+i)*3
 				draw_line(c+Vector2(-17+shift,-12+i*11),c+Vector2(17+shift,-12+i*11),Color("6ac9de"),2)
+			if world.bridge_built:
+				draw_line(c+Vector2(-18,-20),c+Vector2(-18,20),GOLD,3)
+				draw_line(c+Vector2(18,-20),c+Vector2(18,20),GOLD,3)
+				for plank in range(5): draw_line(c+Vector2(-18,-16+plank*8),c+Vector2(18,-16+plank*8),Color("ba9563"),5)
 		"<",">":
 			for i in range(4): draw_line(c+Vector2(-15,12-i*7),c+Vector2(15-i*6,12-i*7),TEAL,3)
 			label_at(c+Vector2(8,-8),"+" if t==">" else "-",16,TEAL)
@@ -203,6 +230,7 @@ func draw_book():
 	var lines := ["Exact forecasts include ambush, thorns, gear, skills and talents.","Thorns ignores DEF. Brace and total-loss reduction still apply.","C: hero / gear / talents. E: local choices, quests and ledger.","J: researcher / I: sample / O: valve / R: relic / X: encounter.","Interest: first entry to floors 4 and 5 only, never steps or waiting.","Grow stronger and revisit. U reverses the entire previous action.","L: 2-key lock / $: +60 gold / A: +5 ATK / P: +140 HP, +1 focus.","H / Esc / click closes. Battles are cosmetic replays; any key skips."]
 	for i in lines.size(): label_at(Vector2(265,505+i*27),lines[i],15,MUTED)
 func token_name(t: String) -> String:
+	if t=="~" and world.bridge_built: return "Survey bridge: cross safely above the water"
 	if t=="~" and world.water_choice=="drain": return "Drained passage to the relic vault"
 	if t=="X": return world.event_title()
 	return {"M":"Merchant: trade & loans","C":"One core. Three choices.","E":"The old elevator","F":"Workshop: a lasting choice","T":"A treasure worth returning for","N":"An inscription. Read carefully.","Q":"A door with a secret","<":"Return to a lower floor",">":"Ascend: check your ledger","a":"Ruby: +5 attack","d":"Sapphire: +4 defense","h":"Spring water: +70 HP","k":"Gold key","D":"Gold door: costs 1 key","L":"Double lock: costs 2 keys","$":"Gold cache: +60 gold","A":"Blade relic: +5 attack","P":"Supplies: +140 HP / +1 focus","J":"A traveler with a request","I":"An unusual research sample","O":"Drain the route or keep the spring?","~":"Deep water blocks this route","R":"A choice of equipment","X":"A costly opportunity"}.get(t,"SCOUT BEFORE YOU STRIKE")
@@ -224,16 +252,19 @@ func available_actions() -> Array:
 	if nearby("E"):
 		rows.append(["elevator","Use core: repair elevator / excludes forge & sale"])
 		rows.append(["travel","Ride repaired elevator: floors 1 <-> 3"])
-	if nearby("F"): rows.append(["forge","Use core: permanent +8 DEF / excludes lift & sale"])
+	if nearby("F"):
+		rows.append(["forge","Use core: permanent +8 DEF / excludes lift & sale"])
+		if not world.bridge_built:
+			rows.append(["quest_bridge","Spend survey (I): bridge on floor 2 / no J reward; no core"])
 	if nearby("Q"): rows.append(["secret","Inspect the mechanism using the inscription's clue"])
 	if nearby("J"):
-		if world.quest_state==0: rows.append(["quest_accept","Accept: retrieve the sample and return here"])
+		if world.quest_state==0: rows.append(["quest_accept","Accept: find survey / choose J rewards or F flood bridge"])
 		if world.quest_state==2:
-			rows.append(["quest_gold","Turn in sample: +45 gold / give up focus training"])
-			rows.append(["quest_scroll","Turn in sample: focus cap 4 + full refill / give up gold"])
+			rows.append(["quest_gold","Spend survey: +45 gold / give up focus training AND bridge"])
+			rows.append(["quest_scroll","Spend survey: focus cap 4 + refill / give up gold AND bridge"])
 	if nearby("O") and world.water_choice=="":
-		rows.append(["drain","Drain the water: open a route / give up the spring"])
-		rows.append(["spring","Keep the spring: +120 HP / relic route stays flooded"])
+		if not world.bridge_built: rows.append(["drain","Drain the water: open a route / give up the spring"])
+		rows.append(["spring","Use spring: +120 HP / bridge remains open" if world.bridge_built else ("Use spring: +120 HP / survey spent; route stays flooded" if world.quest_state==3 else "Use spring: +120 HP / survey bridge can still open route")])
 	if nearby("R") and not world.chest_claimed:
 		rows.append(["relic_buckler","Choose heavy buckler: +6 DEF / -4 ATK"])
 		rows.append(["relic_duelist","Choose duelist rig: +6 ATK / -3 DEF"])
@@ -296,14 +327,16 @@ func perform_action(id: String):
 	reset_armed=false
 	var before: Dictionary=world.save_data().duplicate(true)
 	if world.action(id):
+		if id in ["spring","drain","quest_bridge"]: play_sound("water")
+		elif id in ["buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret"]: play_sound("pickup")
 		if id.begins_with("hero_") or id.begins_with("talent_"): growth=false
 		history.append(before)
 		if history.size()>100: history.pop_front()
 		save_game(false)
 	else:
-		world.message={"borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"The bell is silent. Find the inscription and restore its mechanism."}.get(id,"This choice is unavailable. Check its cost and requirements.")
+		world.message={"quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"The bell is silent. Find the inscription and restore its mechanism."}.get(id,"This choice is unavailable. Check its cost and requirements.")
 func quest_hint() -> String:
-	return ["J: find the researcher's request","QUEST: seek the sample (I)","QUEST: return sample to J","QUEST COMPLETE"][clampi(world.quest_state,0,3)]
+	return ["J: find the researcher's request","QUEST: seek the sample (I)","SURVEY: J reward or F bridge","SURVEY: delivered to J","SURVEY: flood bridge built"][clampi(world.quest_state,0,4)]
 func skill_description() -> String:
 	return Progression.skill_description(world.hero_id,world.talents)
 func growth_actions() -> Array:
@@ -376,8 +409,9 @@ func journal_lines() -> Array:
 		entries.append({"elevator":"Core used for lift. Forge and sale are forgone.","forge":"Core forged: +8 DEF. Lift and sale are forgone.","sold":"Core sold: +35 gold. Lift and forge are forgone."}[world.core_use])
 	else: entries.append("No mechanism core in your pack.")
 	if world.floor_seen[1]:
-		entries.append({"":"Floor 2: the water decision is still open.","drain":"Floor 2 drained: relic route opened; spring healing forgone.","spring":"Floor 2 spring used: +120 HP; relic route remains flooded."}[world.water_choice])
-	entries.append(["No research task accepted.","Research task: find the sample and return to the researcher (J).","Research sample obtained: return to J and choose your reward.","Research task completed. Its other reward is no longer available."][world.quest_state])
+		entries.append({"":"Floor 2: spring still available." if world.bridge_built else "Floor 2: the water decision is still open.","drain":"Floor 2 drained: relic route opened; spring healing forgone.","spring":"Floor 2 spring used: +120 HP; bridge open." if world.bridge_built else ("Floor 2 spring used: survey spent at J; relic route stays flooded." if world.quest_state==3 else "Floor 2 spring used: +120 HP; a survey bridge can still open the route.")}[world.water_choice])
+	if world.bridge_built: entries.append("Survey bridge built: floor 2 water is walkable; core unchanged.")
+	entries.append(["No research task accepted.","Find the survey (I): J rewards or F flood bridge, choose once.","Survey held: J = gold / focus; F = bridge preserving spring (no core).","Survey spent at J: alternative reward and flood bridge forgone.","Survey spent at F: bridge built; both researcher rewards forgone."][world.quest_state])
 	if world.floor_seen[2]:
 		if floor_has(2,"V"): entries.append("Floor 3: a powerful guardian still watches the star vault.")
 		elif floor_has(2,"T"): entries.append("Floor 3: the guardian is defeated; its treasure is unclaimed.")
@@ -474,6 +508,9 @@ func draw_ellipse_shadow(center: Vector2):
 	draw_circle(Vector2.ZERO,49,Color(0,0,0,0.35))
 	draw_set_transform(Vector2.ZERO)
 func _unhandled_input(event):
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode==KEY_M:
+		toggle_mute()
+		return
 	if event is InputEventMouseMotion:
 		hover = Vector2i((get_global_mouse_position()-ORIGIN)/CELL)
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
@@ -574,6 +611,11 @@ func move(direction: Vector2i, confirmed:=false):
 	var used_skill: bool = preview.get("skill_consumed",false)
 	var hero_before: String = world.hero_id
 	if world.step(direction):
+		if World.ENEMIES.has(enemy): play_sound("victory" if world.won else "impact")
+		elif enemy in ["D","L"]: play_sound("door")
+		elif enemy in ["k","h","a","d","C","I","T","$","A","P"]: play_sound("pickup")
+		elif enemy=="~": play_sound("water")
+		else: play_sound("move")
 		if World.ENEMIES.has(enemy):
 			battle_time=2.4; battle_name=World.ENEMIES[enemy].name; battle_loss=int(preview.get("damage",0))
 			battle_details=preview; battle_kind=enemy; battle_hero=hero_before; battle_skill=used_skill
