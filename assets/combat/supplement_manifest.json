@@ -1,0 +1,22 @@
+[
+  {
+    "path": "assets/combat/gate_brute.png",
+    "bytes": 149457,
+    "sha256": "240f5c66871f547e1331993b7895a70fb95ac1c58e869821afa522a3349cbefb"
+  },
+  {
+    "path": "assets/combat/ferryman.png",
+    "bytes": 171085,
+    "sha256": "b79f2b7df9bb9d953f4bceefe094d119499a0d84dd0c04e3f7901e4c9b1ce7d5"
+  },
+  {
+    "path": "assets/combat/jailer.png",
+    "bytes": 178650,
+    "sha256": "d72b5b25083e8383ee91aea4afb876cbbe2bc795081463af527e9929d55f1bdb"
+  },
+  {
+    "path": "assets/combat/combat_supplement.blend",
+    "bytes": 122003,
+    "sha256": "179880ac157ac7030fdec04a4326034effad2895d67070cc1b1c6be2b3c4aa35"
+  }
+]

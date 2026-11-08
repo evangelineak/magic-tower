@@ -337,3 +337,16 @@ PCK JS SHA `2bc4bafce2f6738d111b9d42d5ea9583ff8fec9d5c8eeb2a5ee3807350f459b9` �
 真实Chrome生产JS callback+IndexedDB89项通过（cargo-browser-89.png），不是Godot Web实玩。新增原创Blender货箱/空货位资产独立，不覆盖旧角色；原文件、生成脚本及manifest入库。字体921字缺0、1077 cmap/2138glyphs、422864bytes SHA256 440f7846b26a62e6259b9ad502ed8cc305f9303f845f8c90eb241f7b719cea20，所有扫描source hashes一致。
 
 玩法而非仅架构证据：合法货梯对照见CARGO-ROUTE-AUDIT.md。seed1发运保钥能在2F后提前回1F花2钥取60金币，开箱组此时少1钥但以后仍能回访。延迟70HP使K后166→96；继续章节+120与货物+70明确分开。gate审查见LEGACY-GATE-ROUTE-AUDIT.md：8组合法构筑首次3F都不能破V防，5F未K回访仍不够；7F W原装学者已可打，未借高回焦为由任意削弱玩家构筑。全局最优平衡、Windows实际运行、音频实听与Godot Web引擎实玩仍未认证。
+
+## 回访目标与独立守卫肖像（当前批次）
+
+- 只读 `exploration_goals()` 4类目标与实际UI：货箱、宝库、样本、米拉。模型435检查、独立审查19、UI233、本地化97；无schema/存储协议改变。
+- `tools/audit_exploration_routes.gd` 完整合法行动的23阶段观察通过，含接受任务、跨层、首章暂停、继续远征、货箱实领、救人回营、回3F击败守卫拿宝物及终局；未注入资源或地图，反复只读不改变完整world/message/battle。
+- 真实原生GUI加载上一批真实10步货箱checkpoint：J目标卡、1钉选、F2中英、Esc、Tab详细、L清pin，完整World+profile与原实际存档一致。截图 `targets-cargo-zh.png` / `targets-cargo-en.png`。最长4卡及移除Q后的货箱标记用明确的布局测试夹具验证（`targets-four-fixture-zh/en.png`、`targets-crown-marker-fixture.png`），不当作合法旅程实玩。
+- 实际Chrome生产JavaScript callback+IndexedDB既有89项通过，`targets-browser-89.png`；不是Godot Web引擎玩法验收。WebGL2仍受正常浏览器环境限制，没有绕过安全配置。
+- B/H/W三张独立战斗肖像：384×384 RGBA，原始Blender集合新渲染，非放大旧PNG；本轮查看156px实际绘制比例与大图，校验621195bytes PNG+blend SHA，旧图不变。已接入加载及映射，但本轮未额外真实走到B/H/W战斗，不冒称三场实战完成。
+- 字体926必需字符缺0，424696bytes，SHA256 `fd2ee7dcf828de14636b77889c531bedee414f1663d0e5f4aa1a0298d467c335`。
+- 本地验证过程两次非产品失败保留说明：首次单测忘设可写HOME导致Godot用户目录创建失败，设定隔离HOME后435检查通过；首次全套执行期间更新runner造成bash后续读取偏移、末尾exit126，未放宽权限或忽略失败，冻结runner后完整重跑作为最终门禁。
+- 仍无Windows实际运行、可听音频验收；没有新增水闸推石或完整战术试算。本批改善已有探索闭环，不声称增加了新地图或新奖励。
+
+- 最终冻结代码全套 `tools/test_all.sh` 正常exit0：54个Godot测试套件、Node940检查、首章/远征各200种子、9条完整对抗路线与3882合法存读状态；无SCRIPT ERROR。独立实际23阶段路线与浏览器89检查另计。日志 `/tmp/tower-exploration-final.log`。

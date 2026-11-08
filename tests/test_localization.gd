@@ -106,7 +106,7 @@ func run_tests():
 	# joined to a complete translated string and technical engine labels.
 	var allow := [" (cancel armed skill)"," / 1 focus"," [EQUIPPED]","BLENDER  +  GODOT"]
 	var words:=RegEx.new(); words.compile("[A-Za-z]{3,}")
-	for path in ["res://scripts/main.gd","res://scripts/world.gd","res://scripts/progression.gd","res://scripts/riddle.gd"]:
+	for path in ["res://scripts/main.gd","res://scripts/world.gd","res://scripts/progression.gd","res://scripts/riddle.gd","res://scripts/exploration.gd"]:
 		var missing: Array=[]
 		for source in source_strings(FileAccess.get_file_as_string(path)):
 			if not " " in source or source in allow or source.begins_with("res://") or words.search(source)==null: continue

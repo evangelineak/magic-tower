@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "440f7846b26a62e6259b9ad502ed8cc305f9303f845f8c90eb241f7b719cea20",
-  "bytes": 422864,
+  "output_sha256": "fd2ee7dcf828de14636b77889c531bedee414f1663d0e5f4aa1a0298d467c335",
+  "bytes": 424696,
   "coverage": {
-    "mapped_codepoints": 1077,
-    "glyphs": 2138,
-    "required_codepoints": 921,
+    "mapped_codepoints": 1082,
+    "glyphs": 2146,
+    "required_codepoints": 926,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -47,6 +47,10 @@
     {
       "path": "scripts/expedition.gd",
       "sha256": "e669d2b04b2796285118df64fc8a8d20742c72671ddeb230990e05a27a069eb9"
+    },
+    {
+      "path": "scripts/exploration.gd",
+      "sha256": "b8ac5d80f86add9b9ea8c341244216a12718c8bf8775bd216df39e65253e1184"
     },
     {
       "path": "scripts/generation.gd",
@@ -86,15 +90,15 @@
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "745c12dde31d7e2be99ddc7c46e81188368633d21e23c3f41004ff61661bd120"
+      "sha256": "3fc86826ba08f4f7baa39b08bf1f1b91347663ff0f394ff0bf0431376dc7a63b"
     },
     {
       "path": "scripts/localization_world.gd",
-      "sha256": "0911530f8a2dc5ee5670c9d596b1c681a054e79b5992bef2d820a07a7204f2fd"
+      "sha256": "fe7f6a3558730d8eecb975f955746e4e078c809781952548e1fc5f7c94e85318"
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "dc554269b55bce7429030fc3b78844d9b68b0ab5eafe83bcdafa81a344e4f5f8"
+      "sha256": "f5a2dc4b0c9d5304001c97beb715060de1c65494a2f67b629cae4495ed5841be"
     },
     {
       "path": "scripts/navigation.gd",
@@ -118,7 +122,7 @@
     },
     {
       "path": "scripts/world.gd",
-      "sha256": "153007b648e13d6d5142f43460bfbad1eda8b4249b70373698a342f4180e157d"
+      "sha256": "20916f7577897c1d2a7006bcaec9f56b070d845a9ad89f1fec3e01611d0056a7"
     },
     {
       "path": "project.godot",

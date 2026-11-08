@@ -1,7 +1,7 @@
-# Optional sealed freight Web preview
+# Optional return-target Web preview
 
 Root remains v0.17, rebuilt from fixed source4122fa416091eb3d89c7825b6d9eabd55d7c273e.
-Optional /preview/ game source194c0e3e6c8e857c489ac26a3de0d096b9f9012f.
+Optional /preview/ game source8ef712df3a1f47df4c356da986fe86c41f3b4a4e.
 
 Native Linux source/final-package gameplay and actual old-checkpoint combat receipts
 are verified, alongside production JavaScript IndexedDB transactions. Cloud Chromium
@@ -17,3 +17,8 @@ tabs before reloading; stale writers cannot overwrite current state.
 Single-thread Web includes scripts/*.js, requires no SharedArrayBuffer/COOP/COEP
 or service worker. Keep root stable while this optional build is playtested.
 Windows remains cross-exported, not Windows runtime certification. Audio unaudited.
+
+This batch adds read-only pinned return targets for existing discoveries, distinct
+B/H/W combat portraits, and keeps cargo visible after the calibration stand is
+removed. No new resources, schema, or forced save reset. Native package J/pin/F2/L
+was actually exercised; full World/profile matches the original actual checkpoint.
