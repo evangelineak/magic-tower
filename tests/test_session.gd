@@ -51,7 +51,7 @@ class FakeStore:
   if record.get("status", "active")!="active":return failure("archived")
   if record.is_empty() or expected_slot!=record.slot or expected_revision!=record.revision or run_id!=record.run_id:return failure("conflict")
   var current=World.from_snapshot(record.snapshot)
-  if current==null or snapshot.get("draft")!=current.draft:return failure("draft_changed")
+  if current==null or snapshot.get("draft")!=current.draft or snapshot.get("talent_draft")!=current.talent_draft:return failure("draft_changed")
   if current.strategy_pending() and snapshot!=current.save_data():return failure("draft_pending")
   record.snapshot=snapshot.duplicate(true);record.revision+=1;op=request;signature=sig;writes+=1
   if lost_ack:lost_ack=false;return failure("ack_lost",true)
@@ -220,6 +220,7 @@ func run():
  await settlement_cases()
  await death_cases()
  await strategy_cases()
+ await talent_draft_cases()
  print("SESSION: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
  quit(0 if failures==0 else 1)
 
@@ -475,3 +476,64 @@ func strategy_cases():
  var unchanged=ack_session.world.save_data().duplicate(true)
  ack_store.response_patch={"revision":0}
  check(not (await ack_session.choose_strategy("none")).ok and ack_session.world.save_data()==unchanged and ack_session.history.is_empty(),"wrong strategy acknowledgement revision cannot publish lock")
+
+func talent_draft_cases():
+ var store=FakeStore.new();store.json_transport=true
+ var session=Session.new(store)
+ check((await session.new_run(42)).ok,"schema16 JSON new run")
+ var born=session.world.save_data().duplicate(true)
+ check(born.version==16 and born.talent_draft==World.Progression.talent_draft(42) and born.last_kill_kind=="","birth has fixed talent draft and no fabricated last kill")
+ check((await session.save()).ok and (await session.open_current()).ok and session.world.talent_draft==born.talent_draft,"JSON save/read never rerolls offers")
+ # A fully valid revision-zero historical offer set is still not this run's set.
+ var graft=born.duplicate(true);graft.talent_draft=World.Progression.talent_draft(0,0)
+ check(World.from_snapshot(graft)!=null,"alternate legacy offer set is structurally valid for regression")
+ session.history.append(graft)
+ var writes=store.writes
+ check(not (await session.undo()).ok and store.writes==writes and session.world.save_data()==born,"Undo cannot swap a valid different immutable talent draft")
+ session.history.clear()
+ # Old v15 journey preserves identity and migrates old fixed offers, no redraw.
+ var legacy=born.duplicate(true);legacy.version=15;legacy.erase("talent_draft");legacy.erase("last_kill_kind")
+ store.record.snapshot=legacy
+ check((await session.open_current()).ok and session.world.run_id==born.run_id and session.world.talent_draft==World.Progression.talent_draft(0,0) and session.world.last_kill_kind=="","v15 migration uses original talent offers and does not invent kill context")
+ check((await session.save()).ok and session.world.talent_draft.version==0,"saving upgraded legacy run does not acquire new offers")
+ # Synthetic valid three-kill fixture checks offered card permission and Undo.
+ await session.new_run(42,2,true)
+ var current=World.from_snapshot(session.world.save_data())
+ current.kills=3
+ store.record.snapshot=current.save_data()
+ check((await session.open_current()).ok,"load unlocked talent tier fixture")
+ var candidates=session.world.talent_options()
+ check(candidates==session.world.talent_draft.offers[0] and candidates.size()==3,"actual birth offer set controls tier choices")
+ var unoffered=""
+ for card in World.Progression.TALENT_POOLS[0]:
+  if not card in candidates:unoffered=card;break
+ check(unoffered!="" and not (await session.action("talent_"+unoffered)).ok,"unoffered otherwise valid talent rejected")
+ var before=session.world.save_data().duplicate(true)
+ check((await session.action("talent_"+candidates[0])).ok and session.world.talents==[candidates[0]],"offered talent accepted through CAS")
+ check((await session.undo()).ok and session.world.save_data()==before and session.world.talent_draft==before.talent_draft,"talent choice Undo restores choice but never redraws candidate set")
+ # last_kill_kind is gameplay state, unlike the immutable draft: real kill/Undo.
+ current=World.from_snapshot(session.world.save_data());current.hp=500;current.atk=50
+ var delta=Vector2i.ZERO
+ for y in range(1,10):
+  for x in range(1,10):
+   var target=Vector2i(x,y)
+   if not World.ENEMIES.has(current.tile(target)):continue
+   for step_dir in [Vector2i.RIGHT,Vector2i.DOWN,Vector2i.LEFT,Vector2i.UP]:
+    if current.tile(target-step_dir)==".":current.pos=target-step_dir;delta=step_dir;break
+   if delta!=Vector2i.ZERO:break
+  if delta!=Vector2i.ZERO:break
+ store.record.snapshot=current.save_data()
+ check((await session.open_current()).ok and delta!=Vector2i.ZERO,"valid adjacent nonlethal battle fixture")
+ before=session.world.save_data().duplicate(true)
+ var enemy=session.world.tile(session.world.pos+delta)
+ check((await session.step(delta)).ok and session.world.last_kill_kind==enemy,"committed kill changes last kind")
+ check((await session.undo()).ok and session.world.last_kill_kind==before.last_kill_kind and session.world.save_data()==before,"Undo legitimately restores previous last-kill context")
+ # Same kill context survives a later fatal battle; no ghost kill on death.
+ await session.new_run(0,2,true,"risk")
+ delta=await lethal_fixture(store,session)
+ current=World.from_snapshot(session.world.save_data());current.kills=1;current.last_kill_kind="g"
+ store.record.snapshot=current.save_data()
+ check((await session.open_current()).ok,"death context fixture restores")
+ before=session.world.save_data().duplicate(true)
+ check((await session.confirm_lethal(delta,before)).ok and session.world.last_kill_kind=="g" and session.world.kills==1,"death preserves last surviving kill and awards no new kill")
+ check((await session.open_current()).ok and session.world.last_kill_kind=="g","JSON death replay preserves last-kill context")

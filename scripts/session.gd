@@ -127,7 +127,7 @@ func _perform(kind:String,value) -> Dictionary:
  if kind=="undo" and history.is_empty(): return _reply(false,"invalid","No move to undo in this session.")
  var before:Dictionary=world.save_data().duplicate(true)
  var candidate=_clone(history.back() if kind=="undo" else before)
- if candidate==null or candidate.run_id!=world.run_id or not _same_json(candidate.draft,world.draft): return _reply(false,"invalid","Journey identity or history is invalid.")
+ if candidate==null or candidate.run_id!=world.run_id or not _same_json(candidate.draft,world.draft) or not _same_json(candidate.talent_draft,world.talent_draft): return _reply(false,"invalid","Journey identity or history is invalid.")
  var accepted=true
  match kind:
   "step": accepted=candidate.step(value)

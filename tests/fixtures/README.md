@@ -197,3 +197,17 @@ SHA256:
 - schema14-active.json: `e4655575d5991084453656e7590fb4cc5285eeba89d789f34faaf748c74e3011`
 - schema14-death-store.json: `58cf150021419ca4e04fc3388646ef41c7984643f47979af9516c730b6f55645`
 - schema14-death.json: `0b5157d69eacd987576e1122a8acc5028d6c4094bb237d54ee6f5555c3a6b3f7`
+
+## Authentic schema 15 storage fixtures
+
+Generated from isolated `git archive cca5b73`, not current-code version edits, by
+`generate_schema15_store.gd` using the old real production adapter. Actual seed 0
+risk main route, expedition and early W approach produce active 302 moves, HP 207;
+actual atomic lethal fight produces defeat 303 moves and milestone ledger [3,5].
+Raw World files are projections of the stored snapshots only. No user data or
+stat/position injections. Import the isolated project before running the generator.
+
+- `schema15-active-store.json`: `7eb4b8fed7dfea278f38396bf02932adb18e063f8e51fbbd1965a0eaef41b96b`
+- `schema15-active.json`: `64bfbecf7b17ae981ea649e2707aa71e84d47efb8d02be60b259cf4fcd2c6804`
+- `schema15-death-store.json`: `1110309ddb44341c1ae9cb2aef99291dcfa6f9ec83960cf074478c4432dbb542`
+- `schema15-death.json`: `f34270ab47714a86bacef460b9f998bef0ac351a5d83cd31ed21c65b03c6daf2`

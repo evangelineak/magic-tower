@@ -42,6 +42,14 @@ function validDraft(seed,draft){
  if(draft.version!==1||!integer(seed,2147483647)||!validStrategyPool(draft.pool)||!same(draft.offers,strategyOffers(seed,draft.pool)))return false;
  return draft.pool.length?draft.choice===''||draft.choice==='none'||draft.offers.includes(draft.choice):draft.choice==='none';
 }
+const TALENT_TIERS=[['iron_skin','keen_edge','clean_finish'],['last_stand','sentinel_lore','trained_focus'],['giant_slayer','battle_medic','unbroken']];
+const TALENT_POOLS=[ [...TALENT_TIERS[0],'tactical_review'], [...TALENT_TIERS[1],'adversity_charge'] ];
+function talentRank(seed,tier,id){let h=2166136261;for(const b of new TextEncoder().encode('talent-draft-v1|'+seed+'|'+tier+'|'+id))h=Math.imul(h^b,16777619)>>>0;return h;}
+function talentDraft(seed,version=1){
+ if(!integer(seed,2147483647)||![0,1].includes(version))return {};
+ return {version,offers:version===0?structuredClone(TALENT_TIERS):[...TALENT_POOLS.map((pool,tier)=>[...pool].sort((a,b)=>talentRank(seed,tier,a)-talentRank(seed,tier,b)||(a<b?-1:a>b?1:0)).slice(0,3)),[...TALENT_TIERS[2]]]};
+}
+function validTalentDraft(seed,draft){return keysExactly(draft,['version','offers'])&&[0,1].includes(draft.version)&&same(draft,talentDraft(seed,draft.version));}
 function snapshotCopy(snapshot, allowEnded=false) {
   const s = structuredClone(snapshot);
   let encoded; try {encoded=JSON.stringify(s);}catch{throw new StorageFault('INVALID_SNAPSHOT');}
@@ -50,7 +58,7 @@ function snapshotCopy(snapshot, allowEnded=false) {
   must(!s.floor_seen.some((seen,i) => seen && s.floor_seen.slice(0,i).includes(false)), 'INVALID_SNAPSHOT');
   must(integer(s.floor) && s.floor < s.floor_seen.length && s.floor_seen[s.floor], 'INVALID_SNAPSHOT');
   must(typeof s.won === 'boolean' && Number.isSafeInteger(s.hp) && s.hp >= 0 && integer(s.moves, 10000000) && integer(s.seed_value, 2147483647), 'INVALID_SNAPSHOT');
-  must([13,14,15].includes(s.version) && validId(s.run_id) && ['safe','risk'].includes(s.mode) && (s.ended_reason==='' || (allowEnded && ['retired','victory','death'].includes(s.ended_reason))), 'INVALID_WORLD');
+  must([13,14,15,16].includes(s.version) && validId(s.run_id) && ['safe','risk'].includes(s.mode) && (s.ended_reason==='' || (allowEnded && ['retired','victory','death'].includes(s.ended_reason))), 'INVALID_WORLD');
   must([1,2].includes(s.layout_revision) && Array.isArray(s.floors) && s.floors.length===s.floor_seen.length, 'INVALID_WORLD');
   must(integer(s.x,9)&&s.x>=1&&integer(s.y,9)&&s.y>=1&&integer(s.atk,1000000)&&s.atk>0&&integer(s.def,1000000), 'INVALID_WORLD');
   must(s.floors.every(grid=>Array.isArray(grid)&&grid.length===11&&grid.every(row=>Array.isArray(row)&&row.length===11&&row.every(t=>typeof t==='string'&&t.length===1))), 'INVALID_WORLD');
@@ -68,10 +76,11 @@ function snapshotCopy(snapshot, allowEnded=false) {
    must(validDraft(s.seed_value,s.draft),'INVALID_DRAFT');
    if(s.draft.choice==='')must(s.moves===0&&s.ended_reason===''&&s.hp>0,'DRAFT_PENDING');
   }
+  if(s.version>=16){must(validTalentDraft(s.seed_value,s.talent_draft),'INVALID_TALENT_DRAFT');must(Array.isArray(s.talents)&&s.talents.every(id=>s.talent_draft.offers.some(tier=>tier.includes(id))),'INVALID_TALENT_CHOICE');must(['','s','g','u','b','w','V','K','W','H','Z','B'].includes(s.last_kill_kind)&&integer(s.kills,10000000)&&(s.kills>0||s.last_kill_kind===''),'INVALID_LAST_KILL');}
   return s;
 }
 function upgradeSnapshot(snapshot){
- const s=structuredClone(snapshot);if(s.version===13){s.version=14;s.death_record={};}if(s.version===14){s.version=15;s.draft={version:0,pool:[],offers:[],choice:'none'};}return s;
+ const s=structuredClone(snapshot);if(s.version===13){s.version=14;s.death_record={};}if(s.version===14){s.version=15;s.draft={version:0,pool:[],offers:[],choice:'none'};}if(s.version===15){s.version=16;s.talent_draft=talentDraft(s.seed_value,0);s.last_kill_kind='';}return s;
 }
 function summaryOf(snapshot, outcome) {
  const s=snapshotCopy(snapshot,true);
@@ -285,7 +294,7 @@ class JourneyStorage extends ProfileStorage {
    const run=await req(s('runs').get(id)),expected=kind==='create'?-1:args.expected;
    if(run && run.last_op.request_id===args.request_id){
     const op=run.last_op;
-    must(op.kind===kind && (op.hash===hash || (run.snapshot?.version<15&&same(upgradeSnapshot(run.snapshot),snapshot))) && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
+    must(op.kind===kind && (op.hash===hash || (run.snapshot?.version<16&&same(upgradeSnapshot(run.snapshot),snapshot))) && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
     must(slot.activeRunId===id && slot.revision===op.result_slot && run.revision===op.result_revision && run.status==='active','SUPERSEDED_OPERATION');
     return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile,duplicate:true};
    }
@@ -295,7 +304,7 @@ class JourneyStorage extends ProfileStorage {
     must(!run&&!Object.hasOwn(profile.receipts,id),'ID_COLLISION');must(await req(s('runs').count())<MAX_RUNS,'RUNS_FULL');
     // Full canonical fresh-World comparison is performed on the Godot side.
     // JS independently rejects partial stub, legacy identity and visibly progressed input.
-    must(snapshot.version===15&&same(snapshot.draft,strategyDraft(snapshot.seed_value,strategyPool(profile))),'INVALID_BIRTH_DRAFT');
+    must(snapshot.version===16&&same(snapshot.talent_draft,talentDraft(snapshot.seed_value))&&snapshot.last_kill_kind===''&&same(snapshot.draft,strategyDraft(snapshot.seed_value,strategyPool(profile))),'INVALID_BIRTH_DRAFT');
     must(snapshot.moves===0 && snapshot.floor===0 && snapshot.floors.length===5 && snapshot.x===1 && snapshot.y===1 && !snapshot.won && snapshot.floor_seen.slice(1).every(v=>!v) && snapshot.inventory.length===1,'NOT_FRESH_RUN');
     const prior=slot.activeRunId?await req(s('runs').get(slot.activeRunId)):null;
     checkRunLedger(prior,profile);
@@ -306,7 +315,7 @@ class JourneyStorage extends ProfileStorage {
     return {ok:true,run:created,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
    }
    must(slot.activeRunId===id && validRun(run)&&run.status==='active','NOT_ACTIVE_RUN');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
-   must(snapshot.mode===run.snapshot.mode,'MODE_IMMUTABLE');const prior=upgradeSnapshot(run.snapshot);must(same(snapshot.draft,prior.draft),'DRAFT_IMMUTABLE');if(prior.draft.choice==='')must(same(snapshot,prior),'DRAFT_PENDING');run.snapshot=snapshot;run.revision=nextCounter(run.revision);
+   must(snapshot.mode===run.snapshot.mode,'MODE_IMMUTABLE');const prior=upgradeSnapshot(run.snapshot);must(same(snapshot.draft,prior.draft),'DRAFT_IMMUTABLE');must(same(snapshot.talent_draft,prior.talent_draft),'TALENT_DRAFT_IMMUTABLE');if(prior.draft.choice==='')must(same(snapshot,prior),'DRAFT_PENDING');run.snapshot=snapshot;run.revision=nextCounter(run.revision);
    run.last_op={request_id:args.request_id,kind,expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
    slot.writer.leaseUntil=Date.now()+60000;await req(s('runs').put(run));await req(s('slots').put(slot));return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
   });
@@ -359,7 +368,7 @@ class JourneyStorage extends ProfileStorage {
    checkRunLedger(run,envelope.profile);
    const last=run.last_op;
    if(last.request_id===args.request_id){
-    must(last.kind===operation&&(last.hash===hash||(run.snapshot.version<15&&same(upgradeSnapshot(run.snapshot),ended)))&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
+    must(last.kind===operation&&(last.hash===hash||(run.snapshot.version<16&&same(upgradeSnapshot(run.snapshot),ended)))&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
     const receipt=envelope.profile.receipts[args.id];
     must(receipt&&same(receipt.summary,expectedSummary),'REQUEST_CONFLICT');
     must(slot.activeRunId===args.id&&slot.revision===last.result_slot&&run.revision===last.result_revision&&run.status==='archived','SUPERSEDED_OPERATION');

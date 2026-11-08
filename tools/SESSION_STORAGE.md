@@ -198,3 +198,29 @@ immutable ordinary save/Undo, superseded requests and a real selected-Study
 `test_strategy_storage_protocol.mjs` passes 473 comparisons of production JS ranks,
 offers and drafts with the pure GDScript vectors. These do not claim that JS
 executes Godot combat. The expanded real-browser draft harness is separate.
+
+The expanded production callback harness was subsequently exercised in real
+Chromium: 74 checks passed in `auto-a6ea663c-b606-4409-8da0-491799cff4d2`.
+A separate manual `strategy-nativeqa` database used the actual chapter-one
+fixture to unlock [3,5], created seed 51 with channel/forager/ambush_hunter,
+locked channel, retried the same nonce without another revision, and retained
+the complete draft and ledger after closing the tab and opening a new one.
+This verifies production JavaScript and real IndexedDB, not the Godot WebGL
+engine or JavaScriptBridge runtime.
+
+## Schema 16 talent candidates and last surviving kill
+
+New registered journeys carry a fixed `talent_draft` (version 1, three offers
+per tier). The first two tiers independently rank their four-card pools with
+FNV1a `talent-draft-v1|seed|tier|id`; the third retains its original three cards.
+The native store validates the complete fresh World; production JS independently
+checks the exact deterministic birth candidates. Ordinary saves and Undo cannot
+change candidate version or offers. `last_kill_kind` is mutable gameplay state,
+not a birth field. Atomic death retains it unchanged, along with the candidates;
+it cannot turn an attempted lethal fight into a surviving kill.
+
+Authentic schema 15 active and defeated containers from isolated commit
+`cca5b73` retain their old three-card policy (version 0) and receive no inferred
+kill history. The adapter continues to normalize and fully restore World before
+publishing a response; it does not synthesize candidates from UI inputs. The
+JS side remains a payload/transaction validator, not a second combat engine.

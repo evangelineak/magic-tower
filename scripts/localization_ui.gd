@@ -1,5 +1,14 @@
 extends RefCounted
 const EXACT = {
+"C: inspect three fixed choices. You can keep exploring and choose later.":"按 C 查看三项固定候选；可以继续探索，稍后再选。",
+"No known living target. Descriptions remain available.":"目前没有已知存活目标，仍可查看天赋说明。",
+"Same current build; remote previews grant no flank barrier.":"均按当前构筑计算；跨层预览不享受侧袭挡板。",
+"Run talents are separate from legacy strategy and equipment attunement.":"局内天赋、轮回策略、装备调校分别生效，不是同一种选择。",
+"1-3: preview / Enter: learn selected talent / Esc: decide later":"1–3：预选 / 回车：学习所选天赋 / Esc：稍后决定",
+"Fixed offers. Viewing does not spend resources or reroll choices.":"候选固定，查看不消耗资源，也不会重抽。",
+" HP loss":" 点损血",
+"LETHAL":"致死",
+
 "No victory rewards: this forecast is lethal or unavailable.":"预计致死或无法战斗：没有胜利奖励。",
 "Same HP, talents, run strategy, oath and armed skill for every row.":"各行使用相同生命、天赋、本局策略、誓约及备战技能。",
 "Records alone grant no stats. Only a strategy explicitly chosen for a new run applies.":"记录本身不加属性，只有新局明确选择的策略才会生效。",
@@ -64,6 +73,10 @@ const EXACT = {
 "F5: retry pending save / L: reload stored journey":"F5：重试待保存内容 / L：重读已存旅程",
 
 "[ PREV":"[ 上一件",
+"Learned talents (read-only)":"已学天赋（只读）",
+"Esc: return to the map. Learned talents remain active.":"Esc：返回地图，已学天赋持续生效。",
+"[ PREV TARGET":"[ 上一目标",
+"NEXT TARGET ]":"下一目标 ]",
 "NEXT ]":"下一件 ]",
 "NOT OWNED / READ ONLY":"尚未拥有 / 仅供预览",
 "NOT OWNED: preview only. Claim this equipment before confirming.":"尚未拥有：只能预览，取得这件装备后才能确认。",
@@ -420,6 +433,12 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["TALENT FOLIO READY / %d kills / C", "天赋册待选 / 已击杀 %d / 按 C"],
+["Next folio: %d / %d kills", "下一册进度：击杀 %d / %d"],
+["All talent folios chosen / %d kills", "全部天赋册已选 / 击杀 %d"],
+["TALENT FOLIO %d UNLOCKED", "获得第 %d 册天赋"],
+["%s / F%d (%d,%d)", "%s / 第 %d 层（%d,%d）"],
+
  ["Victory loot (after strategy tax, before debt): %d gold / +%d HP / +%d focus", "胜利战利（策略扣减后、还债前）：%d 金币 / +%d 生命 / +%d 专注"],
  ["Run strategy: %s", "本局策略：%s"],
  ["Run strategy: %s. %s", "本局策略：%s。%s"],

@@ -27,7 +27,14 @@ const TALENT_TIERS := [
 	{"kills":7, "choices":["last_stand","sentinel_lore","trained_focus"]},
 	{"kills":12, "choices":["giant_slayer","battle_medic","unbroken"]}
 ]
+const TALENT_DRAFT_VERSION := 1
+const TALENT_POOLS := [
+ ["iron_skin","keen_edge","clean_finish","tactical_review"],
+ ["last_stand","sentinel_lore","trained_focus","adversity_charge"],
+ ["giant_slayer","battle_medic","unbroken"]]
 const TALENTS := {
+ "tactical_review": {"name":"Tactical review", "tier":0, "description":"DEF +4 when this enemy has the same kind as your last surviving kill. No bonus before your first kill."},
+ "adversity_charge": {"name":"Adversity charge", "tier":1, "description":"After a surviving kill that actually costs at least 40 HP, restore 1 focus, up to the cap. Recovery cannot rescue a lethal battle."},
 	"iron_skin": {"name":"Iron skin", "tier":0, "description":"+2 effective DEF in every battle."},
 	"keen_edge": {"name":"Keen edge", "tier":0, "description":"+3 effective ATK in every battle."},
 	"clean_finish": {"name":"Clean finish", "tier":0, "description":"After a zero-loss victory, recover 15 HP."},
@@ -42,9 +49,36 @@ const TALENTS := {
 static func valid_talents(chosen: Array) -> bool:
 	if chosen.size()>TALENT_TIERS.size(): return false
 	for i in chosen.size():
-		if not chosen[i] is String or not chosen[i] in TALENT_TIERS[i].choices: return false
+		if not chosen[i] is String or not chosen[i] in TALENT_POOLS[i]: return false
 	return true
 
+static func talent_rank(seed_value:int,tier:int,id:String)->int:
+	var value:int=2166136261
+	for byte in ("talent-draft-v1|%d|%d|%s" % [seed_value,tier,id]).to_utf8_buffer():
+		value=((value ^ byte)*16777619)&0xffffffff
+	return value
+static func talent_draft(seed_value:int,version:int=1)->Dictionary:
+	if seed_value<0 or seed_value>2147483647 or version not in [0,1]: return {}
+	var result:Array=[]
+	for tier in range(3):
+		var cards:Array=TALENT_TIERS[tier].choices.duplicate() if version==0 else TALENT_POOLS[tier].duplicate()
+		if version==1 and tier<2:
+			cards.sort_custom(func(a,b):
+				var ra=talent_rank(seed_value,tier,a);var rb=talent_rank(seed_value,tier,b)
+				return a<b if ra==rb else ra<rb)
+		result.append(cards.slice(0,3))
+	return {"version":version,"offers":result}
+static func valid_talent_draft(seed_value,value)->bool:
+	if not (seed_value is int or seed_value is float) or not is_finite(float(seed_value)) or seed_value!=floor(float(seed_value)) or seed_value<0 or seed_value>2147483647: return false
+	if not value is Dictionary or value.size()!=2 or not value.has("version") or not value.has("offers"): return false
+	var revision=value.version
+	if not (revision is int or revision is float) or not is_finite(float(revision)) or (revision!=0 and revision!=1): return false
+	if not value.offers is Array or value.offers.size()!=3: return false
+	for cards in value.offers:
+		if not cards is Array or cards.size()!=3: return false
+		for card in cards:
+			if not card is String: return false
+	return value.offers==talent_draft(int(seed_value),int(revision)).offers
 static func talent_options(kills: int, chosen: Array) -> Array:
 	if not valid_talents(chosen) or chosen.size()>=TALENT_TIERS.size(): return []
 	var tier: Dictionary = TALENT_TIERS[chosen.size()]
@@ -74,7 +108,7 @@ static func skill_description(hero: String, chosen: Array, attunement: String = 
 		"scholar": return "Spend 1 focus outside battle: recover %d HP." % mend_heal(chosen,attunement,strategy)
 	return "Unknown hero."
 
-static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: String, skill: bool, equipment: String, talents: Array, oath: String = "none", flank: bool = false, attunement: String = "none", strategy: String = "none") -> Dictionary:
+static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: String, skill: bool, equipment: String, talents: Array, oath: String = "none", flank: bool = false, attunement: String = "none", strategy: String = "none", last_kill_kind: String = "") -> Dictionary:
 	var result := {"valid":false, "survivable":false, "damage":-1, "hit":0, "rounds":0, "heal_after":0, "skill_consumed":false, "effective_atk":0, "effective_def":0, "enemy_def":0, "normal_damage":0, "first_strike_damage":0, "thorns_damage":0, "blocked_damage":0, "feint_damage":0, "charged_damage":0, "equipment_blocked":0, "oath_blocked":0, "oath_active":oath=="watch", "first_strike_suppressed":false, "first_strike_suppression":"none", "flank_blocked":0, "flank_active":flank, "attack_multiplier":1, "retaliations_per_hit":1, "retaliations":0, "skill_level":0, "attunement":attunement, "reason":"Invalid battle input."}
 	if not HEROES.has(hero) or not GEAR.has(equipment) or not valid_talents(talents) or not oath in ["none","watch"] or not Attunement.valid_id(attunement) or not Strategy.valid_id(strategy): return result
 	if attack<=0 or defense<0 or hp<=0: return result
@@ -110,6 +144,8 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	var effective_def := maxi(0, defense+int(strategy_mod.def)+int(gear.def)+int(tuning.def)+(2 if "iron_skin" in talents else 0))
 	if "sentinel_lore" in talents and (enemy.get("name","")=="Sentinel" or enemy.get("kind","")=="g"):
 		effective_def+=4
+	result.review_active="tactical_review" in talents and last_kill_kind!="" and enemy.get("kind","") is String and enemy.get("kind","")==last_kill_kind
+	if result.review_active: effective_def+=4
 	var enemy_def := int(enemy.def)
 	if skill and hero=="ranger": enemy_def=maxi(0,enemy_def-int(result.skill_level))
 	if equipment=="duelist": enemy_def=maxi(0,enemy_def-8)
@@ -178,7 +214,7 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	result.skill_consumed=skill and hero in ["warden","ranger"] and result.survivable
 	if result.survivable:
 		result.heal_after+=int(strategy_mod.heal_after)
-		result.focus_after=int(strategy_mod.focus_after)
+		result.focus_after=int(strategy_mod.focus_after)+(1 if "adversity_charge" in talents and loss>=40 else 0)
 		var reward=maxi(0,int(enemy.get("gold",0)))
 		result.gold_tax=ceili(float(reward*int(strategy_mod.gold_tax_percent))/100.0)
 		result.gold_after=reward-int(result.gold_tax)

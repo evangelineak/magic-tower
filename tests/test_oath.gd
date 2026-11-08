@@ -62,7 +62,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema7-"+name+".json"))
   check(w.restore(old) and w.oath_state=="fresh","real old schema7 state upgrades with fresh oath: "+name)
   var now=state(w); now.erase("oath_state"); now.version=7
-  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft"]: now.erase(field)
+  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft","talent_draft","last_kill_kind"]: now.erase(field)
   check(JSON.parse_string(JSON.stringify(now))==old,"migration preserves all old resources, maps, NPC choices, inventory: "+name)
   restore_check(w)
   if name=="supplies": check(w.camp_medicine_left==3 and w.camp_focus_left==3,"old earned camp expansion is not clamped to two")
@@ -131,7 +131,7 @@ func run_tests():
  scene.hover=Vector2i(2,2); key(scene,KEY_V); check(not scene.comparison,"empty tile cannot open fabricated enemy comparison")
  scene.hover=Vector2i(4,3); scene.world.atk=1; key(scene,KEY_V)
  check(scene.comparison_rows()[0].after_hp==-1 and not scene.comparison_rows()[0].preview.valid,"unbreakable armor shows unavailable post HP")
- scene.world.atk=80; scene.world.hp=1; scene.world.oath_state="fresh"; scene.world.skill_armed=false; scene.world.talents=["iron_skin","trained_focus","battle_medic"]
+ scene.world.atk=80; scene.world.hp=1; scene.world.oath_state="fresh"; scene.world.skill_armed=false; scene.world.talent_draft=load("res://scripts/progression.gd").talent_draft(0,0); scene.world.talents=["iron_skin","trained_focus","battle_medic"] # Controlled legacy roster fixture.
  scene.compare_pos=Vector2i(4,3); scene.world.floors[0][3][4]="H"
  check(scene.comparison_rows()[0].preview.valid and not scene.comparison_rows()[0].preview.survivable and scene.comparison_rows()[0].after_hp==-1,"lethal forecast cannot apply post-victory recovery to survive")
  # Legacy files are kept untouched. L reads only the registered active slot.
