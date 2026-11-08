@@ -26,7 +26,6 @@ jobs:
           unzip -jo /tmp/templates.tpz templates/linux_release.x86_64 templates/windows_release_x86_64.exe -d "$HOME/.local/share/godot/export_templates/4.6.3.stable"
       - name: Import and verify all game rules
         run: |
-          "$GODOT_BIN" --headless --path . --editor --import --quit
           bash tools/test_all.sh
       - name: Export both previews and smoke test Linux
         run: bash tools/export_desktop.sh

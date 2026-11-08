@@ -15,59 +15,109 @@ const ENEMIES := {
 	"K": {"hp":450, "atk":65, "def":40}
 }
 const DIRS := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
-# These authored patches exclude stairs, specials, water, the left cage walls,
-# the cage doors, and the third-floor vault. A template may add AND remove
-# walls; ordinary tokens inside a patch are moved onto its new walkable cells.
-const ROOM_REGIONS := [
-	{"id":"lower_left", "origin":Vector2i(2,6), "size":Vector2i(3,2), "templates":[
-		{"id":"arch", "rows":["...","#.."]},
-		{"id":"west_turn", "rows":["..#","..."]},
-		{"id":"east_turn", "rows":["#..","..."]},
-		{"id":"split_entry", "rows":[".#.","..."]}
-	]},
-	{"id":"lower_right", "origin":Vector2i(6,6), "size":Vector2i(3,3), "templates":[
-		{"id":"north_bend", "rows":["..#","#..","..."]},
-		{"id":"south_bend", "rows":["...","..#","#.."]},
-		{"id":"pillar", "rows":["...",".#.","..."]},
-		{"id":"zigzag", "rows":[".#.","...",".#."]}
-	]}
-]
-const GEOMETRY_REVISION := 1
+# Whole-floor authored skeletons, not mirrors and not local wall-removal patches.
+# Every floor keeps its authored stairs, special objects, gates and gate walls.
+# All ordinary items/enemies are then scattered under the original floor budget.
+const SKELETONS := {
+	"ring": [
+		"###########","#.........#","#..##.###.#","#.........#",
+		"#..#......#","#......#..#","#.#####...#","#.........#",
+		"##..#####.#","#.........#","###########"
+	],
+	"courtyards": [
+		"###########","#....#....#","#..##...#.#","#.###.....#",
+		"#...#.###.#","#.........#","####.####.#","#....#....#",
+		"##.#.#.##.#","#....#....#","###########"
+	],
+	"spine": [
+		"###########","#.....#...#","#..####.#.#","#...#...#.#",
+		"#...#.#...#","##..#.....#","#...#####.#","#..#......#",
+		"##..####..#","#.........#","###########"
+	]
+}
+const GEOMETRY_REVISION := 2
 
-static func in_room(p: Vector2i) -> bool:
-	for region in ROOM_REGIONS:
-		if Rect2i(region.origin,region.size).has_point(p): return true
-	return false
+static func protected_walls(base_grid: Array) -> Array:
+	var result: Array=[]
+	if base_grid[9][1] in ["$","A","P"]: result.append(Vector2i(1,8))
+	if base_grid[3][9]=="T": result.append(Vector2i(9,2)); result.append(Vector2i(9,4))
+	for row in base_grid:
+		if "R" in row:
+			result.append(Vector2i(6,1))
+			break
+	return result
 
-static func apply_room(grid: Array, region: Dictionary, template: Dictionary, rng: RandomNumberGenerator) -> bool:
-	var tokens: Array=[]
-	var positions: Array=[]
-	for y in range(region.size.y):
-		for x in range(region.size.x):
-			var p: Vector2i=region.origin+Vector2i(x,y)
-			var token: String=grid[p.y][p.x]
-			# Future authored specials win: skip the entire room atomically.
-			if token not in ["#","."] and token not in LOOT: return false
-			if token in LOOT: tokens.append(token)
-			if template.rows[y][x]==".": positions.append(p)
-	if positions.size()<tokens.size(): return false
-	for y in range(region.size.y):
-		for x in range(region.size.x):
-			var p: Vector2i=region.origin+Vector2i(x,y)
-			grid[p.y][p.x]=template.rows[y][x]
-	for token in tokens:
-		var index := rng.randi_range(0,positions.size()-1)
-		var p: Vector2i=positions.pop_at(index)
-		grid[p.y][p.x]=token
+static func build_skeleton(base_grid: Array, id: String) -> Array:
+	if not SKELETONS.has(id): return []
+	var grid: Array=[]
+	for row in SKELETONS[id]:
+		var cells: Array=[]
+		for c in row: cells.append(c)
+		grid.append(cells)
+	for y in range(11):
+		for x in range(11):
+			var token: String=base_grid[y][x]
+			if token not in ["#","."] and token not in LOOT: grid[y][x]=token
+	for p in protected_walls(base_grid): grid[p.y][p.x]="#"
+	return grid
+
+static func reachable_without(grid: Array, excluded: Vector2i = Vector2i(-1,-1)) -> Dictionary:
+	var work := grid.duplicate(true)
+	if excluded.x>=0 and excluded.y>=0: work[excluded.y][excluded.x]="#"
+	return reachable(work,["#","D","L","~","V"])
+
+# Semantic identity checks after fixed anchors are overlaid. A ring must retain
+# two vertex-disjoint entry/goal routes; courtyards and spine use different
+# mandatory junctions. This prevents protected anchors from erasing the design.
+static func skeleton_valid(grid: Array, id: String, floor_index: int) -> bool:
+	var goal := Vector2i(8,3) if floor_index==4 else Vector2i(9,9)
+	var cells := reachable_without(grid)
+	if not cells.has(goal): return false
+	if id=="courtyards": return not reachable_without(grid,Vector2i(4,5)).has(goal)
+	if id=="spine": return tile(grid,Vector2i(4,5))=="#" and not reachable_without(grid,Vector2i(2,8)).has(goal)
+	if id!="ring": return false
+	for p in cells:
+		if p in [Vector2i(1,1),goal]: continue
+		if not reachable_without(grid,p).has(goal): return false
 	return true
 
-static func authored_rooms(floor_count: int) -> Array:
-	var result: Array=[]
-	for _floor in range(floor_count):
-		var ids := {}
-		for region in ROOM_REGIONS: ids[region.id]="authored"
-		result.append(ids)
-	return result
+static func scatter_loot(grid: Array, baseline: Array, rng: RandomNumberGenerator) -> bool:
+	var dry_tokens: Array=[]
+	var wet_tokens: Array=[]
+	var baseline_closed := reachable(baseline,["#","D","L","~","V","K"])
+	var baseline_drained := reachable(baseline,["#","D","L","V","K"])
+	for y in range(1,10):
+		for x in range(1,10):
+			if baseline[y][x] not in LOOT: continue
+			var p := Vector2i(x,y)
+			if baseline_closed.has(p): dry_tokens.append(baseline[y][x])
+			else:
+				# Preserve exact gated item categories, not merely their count:
+				# the optional flooded ruby cannot become a main-route key or
+				# push that ruby into the free main-route growth budget.
+				if not baseline_drained.has(p): return false
+				wet_tokens.append(baseline[y][x])
+	var closed := reachable(grid,["#","D","L","~","V","K"])
+	var drained := reachable(grid,["#","D","L","V","K"])
+	var dry_slots: Array=[]
+	var wet_slots: Array=[]
+	for y in range(1,10):
+		for x in range(1,10):
+			var p := Vector2i(x,y)
+			if grid[y][x]!="." or p in [Vector2i(1,1),Vector2i(9,9)]: continue
+			if closed.has(p): dry_slots.append(p)
+			elif drained.has(p): wet_slots.append(p)
+	if wet_slots.size()<wet_tokens.size() or dry_slots.size()<dry_tokens.size(): return false
+	for pair in [[wet_tokens,wet_slots],[dry_tokens,dry_slots]]:
+		var tokens: Array=pair[0]
+		var slots: Array=pair[1]
+		for i in range(tokens.size()-1,0,-1):
+			var j := rng.randi_range(0,i)
+			var temp = tokens[i]; tokens[i]=tokens[j]; tokens[j]=temp
+		for token in tokens:
+			var p: Vector2i=slots.pop_at(rng.randi_range(0,slots.size()-1))
+			grid[p.y][p.x]=token
+	return true
 
 static func normalize(base_maps: Array) -> Array:
 	var result: Array = []
@@ -84,37 +134,30 @@ static func normalize(base_maps: Array) -> Array:
 
 static func generate(seed_value: int, base_maps: Array) -> Dictionary:
 	var baseline := normalize(base_maps)
+	var authored: Array=[]
+	for _floor in baseline.size(): authored.append("authored")
 	if seed_value==0:
-		return {"maps":baseline,"attempts":0,"fallback":false,"validation":validate(baseline),"room_templates":authored_rooms(baseline.size()),"geometry_revision":GEOMETRY_REVISION}
+		return {"maps":baseline,"attempts":0,"fallback":false,"validation":validate(baseline),"floor_skeletons":authored,"geometry_revision":GEOMETRY_REVISION}
 	var rng := RandomNumberGenerator.new()
 	rng.seed=seed_value
+	var skeleton_ids: Array=SKELETONS.keys()
 	for attempt in range(1,MAX_ATTEMPTS+1):
-		var candidate := baseline.duplicate(true)
-		var room_templates: Array=[]
-		for floor_index in candidate.size():
-			var grid: Array=candidate[floor_index]
-			var room_ids := {}
-			for region in ROOM_REGIONS:
-				var template: Dictionary=region.templates[rng.randi_range(0,region.templates.size()-1)]
-				room_ids[region.id]=template.id if apply_room(grid,region,template,rng) else "authored"
-			room_templates.append(room_ids)
-			var slots: Array=[]
-			var tokens: Array=[]
-			for y in range(1,10):
-				for x in range(1,10):
-					if grid[y][x] in LOOT:
-						slots.append(Vector2i(x,y)); tokens.append(grid[y][x])
-			# Explicit Fisher-Yates: never use Array.shuffle's global RNG.
-			for i in range(tokens.size()-1,0,-1):
-				var j := rng.randi_range(0,i)
-				var temp = tokens[i]; tokens[i]=tokens[j]; tokens[j]=temp
-			for i in slots.size(): grid[slots[i].y][slots[i].x]=tokens[i]
-		# Authored water is preserved. The proof never needs to cross it.
+		var candidate: Array=[]
+		var selected: Array=[]
+		var valid := true
+		for floor_index in baseline.size():
+			var id: String=skeleton_ids[rng.randi_range(0,skeleton_ids.size()-1)]
+			var grid := build_skeleton(baseline[floor_index],id)
+			if not skeleton_valid(grid,id,floor_index) or not scatter_loot(grid,baseline[floor_index],rng):
+				valid=false
+				break
+			candidate.append(grid); selected.append(id)
+		if not valid: continue
 		var proof := validate(candidate)
 		if proof.solvable:
-			return {"maps":candidate,"attempts":attempt,"fallback":false,"validation":proof,"room_templates":room_templates,"geometry_revision":GEOMETRY_REVISION}
-	# A seed is never silently allowed to create an unverified impossible map.
-	return {"maps":baseline,"attempts":MAX_ATTEMPTS,"fallback":true,"validation":validate(baseline),"room_templates":authored_rooms(baseline.size()),"geometry_revision":GEOMETRY_REVISION}
+			return {"maps":candidate,"attempts":attempt,"fallback":false,"validation":proof,"floor_skeletons":selected,"geometry_revision":GEOMETRY_REVISION}
+	# A failed proof never opens an unverified run. World checks this flag too.
+	return {"maps":baseline,"attempts":MAX_ATTEMPTS,"fallback":true,"validation":validate(baseline),"floor_skeletons":authored,"geometry_revision":GEOMETRY_REVISION}
 
 static func damage(kind: String, stats: Dictionary) -> int:
 	if not ENEMIES.has(kind): return -1
@@ -190,8 +233,11 @@ static func topology(maps: Array) -> Dictionary:
 	for grid in maps:
 		var closed := reachable(grid,["#","D","L","~","V","K"])
 		var opened := reachable(grid,["#","D","~","K"])
-		var guard_closed := reachable(grid,["#","D","~","V","K"])
-		var cages_closed := reachable(grid,["#","D","~","L","K"])
+		# Test each reward gate in isolation: opening an ordinary one-key
+		# door must never bypass its two-key lock, guardian or flooded route.
+		var guard_closed := reachable(grid,["#","~","V","K"])
+		var cages_closed := reachable(grid,["#","~","L","K"])
+		var water_closed := reachable(grid,["#","~","K"])
 		var drained := reachable(grid,["#","D","L","V","K"])
 		for y in range(1,10):
 			for x in range(1,10):
@@ -204,7 +250,7 @@ static func topology(maps: Array) -> Dictionary:
 						return {"valid":false,"reason":"A guarded reward has a bypass"}
 					if not opened.has(p): return {"valid":false,"reason":"A guarded reward is sealed forever"}
 				if token=="R":
-					if closed.has(p): return {"valid":false,"reason":"The flooded reward has a dry bypass"}
+					if water_closed.has(p): return {"valid":false,"reason":"The flooded reward has a dry bypass"}
 					if not drained.has(p): return {"valid":false,"reason":"The flooded reward remains sealed after draining"}
 	return {"valid":true}
 

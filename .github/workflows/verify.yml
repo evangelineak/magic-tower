@@ -24,7 +24,5 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp/godot
           chmod +x /tmp/godot/Godot_v4.6.3-stable_linux.x86_64
           echo 'GODOT_BIN=/tmp/godot/Godot_v4.6.3-stable_linux.x86_64' >> "$GITHUB_ENV"
-      - name: Import assets
-        run: '"$GODOT_BIN" --headless --path . --editor --import --quit'
       - name: Run rules, UI, save and 200-seed replay tests
         run: bash tools/test_all.sh
