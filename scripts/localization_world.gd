@@ -3,6 +3,10 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"No cleared-floor walking path to this position; forecast only.":"已清理区域内没有通往此处的步行路线；仅供试算。",
+"No focus available; this skill forecast is theoretical.":"没有可用专注；此技能试算仅供理论比较。",
+"This journey is not currently accepting actions.":"本局当前无法执行行动。",
+"No visible enemy on this floor.":"本层没有可见的敌人。",
 "The original supply restores 70 HP, once.":"原本的补给可一次性恢复 70 生命。",
 "Spend one key now or inspect the fixed shipping destination.":"现在花一把钥匙领取，或查看固定的发货目的地。",
 "The source door is open; collect the supply locally.":"源房门已打开，可就地领取补给。",

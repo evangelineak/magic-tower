@@ -702,5 +702,33 @@ func run_tests():
 	scene.toggle_target(0)
 	await scene.load_game()
 	check(scene.pinned_target=="","reload clears nonpersistent pin")
+	await Fixture.bind(scene,scene.World.new(0,2))
+	scene.growth=false;scene.journal=false;scene.book=false;scene.interaction=false
+	var enemy_pos=Vector2i(-1,-1)
+	for y in range(11):
+		for x in range(11):
+			if scene.World.ENEMIES.has(scene.world.tile(Vector2i(x,y))): enemy_pos=Vector2i(x,y)
+	scene.hover=enemy_pos
+	var tactical_before=Fixture.snapshot(scene)
+	var tactical_sounds=scene.sound_event_count
+	scene.open_comparison()
+	var tactical_calls=scene.compare_refresh_count
+	var tactical_rows=scene.comparison_rows()
+	check(scene.comparison and not tactical_rows.is_empty(),"V opens explicit current enemy tactical what-if")
+	check(tactical_rows[0].has("unarmed") and tactical_rows[0].has("armed"),"each owned gear provides both skill hypotheses")
+	for key in [KEY_F2,KEY_BRACKETRIGHT,KEY_BRACKETLEFT,KEY_TAB,KEY_1,KEY_RIGHT]:
+		event.keycode=key;scene._unhandled_input(event)
+		scene.comparison_rows()
+	check(scene.compare_refresh_count==tactical_calls,"F2/pages/position navigation reuse one readonly forecast")
+	check(Fixture.snapshot(scene)==tactical_before and scene.sound_event_count==tactical_sounds,"tactical choices never equip/arm/move/write/play sound")
+	check(scene.tactical_result_text({"preview":{"valid":true,"survivable":false,"damage":999},"after_hp":-1}).contains("LETHAL"),"lethal hypothesis does not display post-victory HP")
+	event.keycode=KEY_ESCAPE;scene._unhandled_input(event)
+	check(not scene.comparison and scene.compare_cache.is_empty(),"Esc closes and clears tactical cache")
+	scene.hover=enemy_pos;scene.open_comparison()
+	var refresh_before_load=scene.compare_refresh_count
+	await scene.load_game()
+	check(scene.compare_cache.is_empty(),"successful Session load invalidates readonly tactical cache")
+	scene.hover=enemy_pos;scene.open_comparison()
+	check(scene.compare_refresh_count>refresh_before_load,"reopened forecast uses newly published Session world")
 	print("UI integration: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
 	quit(0 if failures==0 else 1)

@@ -1,4 +1,4 @@
-name: Stable game and opt-in return-target preview on GitHub Pages
+name: Stable game and opt-in tactical forecast preview on GitHub Pages
 on:
   push:
     branches: ['pages/playtest']
@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export opt-in return-target preview
+      - name: Verify and export opt-in tactical forecast preview
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower opt-in return-target preview\nGame source: 8ef712df3a1f47df4c356da986fe86c41f3b4a4e\nWeb deployment source: %s\nDesktop gameplay and production JS storage verified. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves. Existing journeys retain their maps and receive no retroactive cargo. Return targets work on existing Session journeys. Only earlier sealed-freight content needs a new journey; original v0.17 saves remain untouched.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower opt-in tactical forecast preview\nGame source: 7924da1c10fc9bec1c7a8a8572eb9b286dbc3097\nWeb deployment source: %s\nDesktop gameplay and production JS storage verified. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves. Existing journeys retain their maps and receive no retroactive cargo. Return targets work on existing Session journeys. Only earlier sealed-freight content needs a new journey; original v0.17 saves remain untouched.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Check out unchanged stable Web source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:

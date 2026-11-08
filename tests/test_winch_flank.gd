@@ -156,7 +156,9 @@ func run_tests():
  check(scene.comparison_rows()[0].preview.flank_active,"V passes actual hovered position into shared preview")
  # Presentation-only five-row fixture exercises paging without claiming five gear sources are legal.
  var original_inventory=scene.world.inventory.duplicate()
+ scene.close_comparison() # Synthetic inventory changes require a fresh modal, like a Session publish.
  scene.world.inventory=["balanced","buckler","duelist","repeater","maul"]
+ scene.open_comparison()
  key(scene,KEY_BRACKETRIGHT); key(scene,KEY_F2)
  check(scene.compare_page==1 and scene.comparison and scene.comparison_rows().size()==5,"comparison paging and F2 retain the fifth presented equipment row")
  scene.world.inventory=original_inventory

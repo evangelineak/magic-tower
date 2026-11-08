@@ -131,8 +131,9 @@ func run_tests():
  scene.hover=Vector2i(2,2); key(scene,KEY_V); check(not scene.comparison,"empty tile cannot open fabricated enemy comparison")
  scene.hover=Vector2i(4,3); scene.world.atk=1; key(scene,KEY_V)
  check(scene.comparison_rows()[0].after_hp==-1 and not scene.comparison_rows()[0].preview.valid,"unbreakable armor shows unavailable post HP")
+ scene.close_comparison() # Direct fixture mutation must reopen the readonly modal, as real Session commits do.
  scene.world.atk=80; scene.world.hp=1; scene.world.oath_state="fresh"; scene.world.skill_armed=false; scene.world.talent_draft=load("res://scripts/progression.gd").talent_draft(0,0); scene.world.talents=["iron_skin","trained_focus","battle_medic"] # Controlled legacy roster fixture.
- scene.compare_pos=Vector2i(4,3); scene.world.floors[0][3][4]="H"
+ scene.world.floors[0][3][4]="H"; scene.hover=Vector2i(4,3); scene.open_comparison()
  check(scene.comparison_rows()[0].preview.valid and not scene.comparison_rows()[0].preview.survivable and scene.comparison_rows()[0].after_hp==-1,"lethal forecast cannot apply post-victory recovery to survive")
  # Legacy files are kept untouched. L reads only the registered active slot.
  var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema7-supplies.json")
