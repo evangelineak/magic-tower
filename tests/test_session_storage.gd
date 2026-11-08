@@ -1,5 +1,6 @@
 extends SceneTree
 const Store=preload("res://scripts/session_storage.gd")
+const ClockedStore=preload("res://tests/clocked_journey_store.gd")
 const World=preload("res://scripts/world.gd")
 class SilentBridge:
  extends RefCounted
@@ -9,6 +10,12 @@ var failures:=0
 func check(ok:bool,label:String):
  checks+=1
  if not ok:failures+=1;push_error(label)
+func require_ok(result:Dictionary,label:String)->bool:
+ if result.get("ok",false):return true
+ check(false,label+": "+str(result))
+ print("SESSION STORAGE: FAIL (",checks," checks; stopped before dependent fixture access)")
+ quit(1)
+ return false
 func nonce()->String:return Crypto.new().generate_random_bytes(16).hex_encode()
 func _initialize():call_deferred("run")
 func run():
@@ -75,23 +82,45 @@ func run():
   check(not adapter.native._valid(container),"native container rejects tampered active mode/ended metadata")
  loaded=await adapter.read_active()
  check(loaded.ok and loaded.snapshot==newer.snapshot,"all rejected unsupported writes preserve active safe snapshot")
- # Actual short lease passes its original expiry while committed writes extend ownership.
- var live=Store.new("user://journeys-v1-test-lease-"+nonce());var live_run=await live.create_run(0,2,"safe",false,nonce())
- var shortened=live.native.renewWriter(live.auth,80);live.auth=shortened.auth
- var live_world=World.from_snapshot(live_run.snapshot);live_world.step(Vector2i.RIGHT)
+ # Frozen test clock separates lease semantics from CPU/filesystem speed. Real
+ # 60-second production leases and default-clock roundtrips above stay unchanged.
+ var live=Store.new("user://journeys-v1-test-lease-"+nonce())
+ var clocked=ClockedStore.new(live.path)
+ clocked.delay_ms=maxi(0,int(OS.get_environment("TOWER_TEST_STORAGE_DELAY_MS")))
+ live.native=clocked
+ var live_run=await live.create_run(0,2,"safe",false,nonce())
+ if not require_ok(live_run,"clocked run setup"):return
+ var shortened=clocked.renewWriter(live.auth,80)
+ if not require_ok(shortened,"clocked short lease setup"):return
+ live.auth=shortened.auth.duplicate(true)
+ var original_expiry:int=int(live.auth.leaseUntil)
+ OS.delay_msec(150) # Deliberately exceed 80ms wall time; only explicit logical advances expire the lease.
+ var live_world=World.from_snapshot(live_run.snapshot)
+ if live_world==null or not live_world.step(Vector2i.RIGHT):
+  require_ok({"ok":false},"clocked candidate setup");return
+ # Opt-in negative harness proves a rejected prerequisite exits promptly, not nil/hang.
+ if OS.get_environment("TOWER_TEST_EXPIRE_BEFORE_WRITE")=="1":clocked.now_ms=original_expiry
  live_run=await live.commit_run(live_run.slot,live_run.revision,live_run.run_id,live_world.save_data(),nonce())
- check(live_run.ok and int(live.auth.leaseUntil)>int(Time.get_unix_time_from_system()*1000)+50000,"successful write renews lease inside the same transaction")
- OS.delay_msec(120)
- live_world.step(Vector2i.LEFT)
+ if not require_ok(live_run,"first clocked commit"):return
+ check(int(live.auth.leaseUntil)==clocked.now_ms+60000,"successful write renews lease inside the same transaction")
+ clocked.now_ms=original_expiry+1
+ if not live_world.step(Vector2i.LEFT):
+  require_ok({"ok":false},"second clocked candidate setup");return
  live_run=await live.commit_run(live_run.slot,live_run.revision,live_run.run_id,live_world.save_data(),nonce())
+ if not require_ok(live_run,"second clocked commit"):return
  check(live_run.ok,"continuous writes survive the original short lease expiry")
- shortened=live.native.renewWriter(live.auth,60);live.auth=shortened.auth
- OS.delay_msec(100)
- var stale_world=World.from_snapshot(live_run.snapshot);stale_world.step(Vector2i.RIGHT)
+ shortened=clocked.renewWriter(live.auth,60)
+ if not require_ok(shortened,"clocked expiry setup"):return
+ live.auth=shortened.auth.duplicate(true)
+ clocked.now_ms=int(live.auth.leaseUntil) # Boundary is expired at equality, not just after.
+ var stale_world=World.from_snapshot(live_run.snapshot)
+ if stale_world==null or not stale_world.step(Vector2i.RIGHT):
+  require_ok({"ok":false},"expired candidate setup");return
  var expired=await live.commit_run(live_run.slot,live_run.revision,live_run.run_id,stale_world.save_data(),nonce())
  check(not expired.ok and expired.readonly and expired.reason=="STALE_WRITER","expired writer cannot silently reclaim and overwrite")
  var reacquired=await live.reacquire_and_read()
- check(reacquired.ok and reacquired.snapshot==live_run.snapshot,"explicit reacquire reads actual latest state, not stale candidate")
+ if not require_ok(reacquired,"clocked explicit reacquisition"):return
+ check(reacquired.snapshot==live_run.snapshot,"explicit reacquire reads actual latest state, not stale candidate")
  var silent=Store.new("user://journeys-v1-test-timeout-"+nonce());silent.web_bridge=SilentBridge.new();silent.web_timeout_seconds=0.01
  var timeout=await silent._web("read",{})
  check(not timeout.ok and timeout.code=="WEB_TIMEOUT" and silent.web_pending.is_empty(),"missing callback completes with bounded retryable uncertainty")
