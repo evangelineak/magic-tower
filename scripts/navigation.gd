@@ -1,5 +1,6 @@
 class_name TowerNavigation
 extends RefCounted
+const Layout = preload("res://scripts/layout.gd")
 # Pure current-state route proof. No World actions, pickup, combat or mutation.
 const ANCHORS = ["J","N","F","M","U","Y","E"]
 const SAFE = [".","J","F","M","U","Y","E","O","Q","X","v","<",">"]
@@ -46,6 +47,8 @@ static func safe(p:Vector3i,state:Dictionary)->bool:
 	if t=="=": return state.get("expedition_bridge",false)==true
 	return false
 static func valid_maps(state:Dictionary)->bool:
+	var revision=state.get("layout_revision",1)
+	if not integer(revision) or (revision!=1 and revision!=2): return false
 	if not state.get("floors") is Array or state.floors.size() not in [5,8]: return false
 	if not state.get("floor_seen") is Array or state.floor_seen.size()!=state.floors.size() or not state.get("anchors") is Array: return false
 	for seen in state.floor_seen:
@@ -82,8 +85,10 @@ static func route(state:Dictionary,target:Dictionary)->Dictionary:
 			var n:=Vector3i(p.x+d.x,p.y+d.y,p.z)
 			if not safe(n,state): continue
 			var t:String=state.floors[n.z][n.y][n.x]
-			if t==">": n=Vector3i(1,1,n.z+1)
-			elif t=="<": n=Vector3i(9,9,n.z-1)
+			if t in ["<",">"]:
+				var landing:=Layout.stair_destination(state.floors,int(state.get("layout_revision",1)),n.z,Vector2i(n.x,n.y))
+				if not landing.ok: continue
+				n=Vector3i(landing.pos.x,landing.pos.y,int(landing.floor))
 			if safe(n,state): edges.append({"point":n,"kind":"step"})
 		if state.get("core_use","")=="elevator" and p.z in [0,2]:
 			var lift_here:=Vector3i(2,5,0) if p.z==0 else Vector3i(4,1,2)
@@ -94,3 +99,30 @@ static func route(state:Dictionary,target:Dictionary)->Dictionary:
 			if parents.has(n): continue
 			parents[n]=p; kinds[n]=edge.kind; queue.append(n)
 	return fail("No cleared, cost-free route connects these anchors")
+
+# Same-floor click walking is deliberately narrower than landmark fast travel.
+# Only already empty '.' cells may be traversed; no stairs, NPCs or open bridges.
+static func walk_path(grid:Array,start:Vector2i,target:Vector2i)->Array[Vector2i]:
+	var empty:Array[Vector2i]=[]
+	if grid.size()!=11: return empty
+	for row in grid:
+		if not row is Array or row.size()!=11: return empty
+		for token in row:
+			if not token is String or token.length()!=1: return empty
+	if start.x<1 or start.x>9 or start.y<1 or start.y>9 or target.x<1 or target.x>9 or target.y<1 or target.y>9: return empty
+	if start==target or grid[start.y][start.x]=="#" or grid[target.y][target.x]!=".": return empty
+	var queue:Array[Vector2i]=[start]
+	var parents:Dictionary={start:start}
+	var head:=0
+	while head<queue.size():
+		var p:Vector2i=queue[head]; head+=1
+		if p==target:
+			var path:Array[Vector2i]=[]
+			while p!=start:
+				path.push_front(p); p=parents[p]
+			return path
+		for direction in DIRS:
+			var next:Vector2i=p+direction
+			if next.x<1 or next.x>9 or next.y<1 or next.y>9 or parents.has(next) or grid[next.y][next.x]!=".": continue
+			parents[next]=p; queue.append(next)
+	return empty

@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -12,7 +14,7 @@ func reject(w,id:String):
  var before=state(w)
  check(not w.action(id) and state(w)==before,"rejected without mutation: "+id)
 func restore_check(w):
- var copy=World.new(0)
+ var copy=World.new(0,1)
  check(copy.restore(JSON.parse_string(JSON.stringify(state(w)))) and state(copy)==state(w),"legal rescue state JSON roundtrip")
 func replay(w,route:String)->bool:
  for c in route:
@@ -53,32 +55,32 @@ func key(scene,code):
  var event=InputEventKey.new(); event.pressed=true; event.keycode=code; scene._unhandled_input(event)
 func _initialize(): call_deferred("run_tests")
 func run_tests():
- var w=World.new(0)
+ var w=World.new(0,1)
  reject(w,"oath_accept"); reject(w,"oath_renounce")
  for name in ["expedition","repeater","supplies"]:
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema7-"+name+".json"))
   check(w.restore(old) and w.oath_state=="fresh","real old schema7 state upgrades with fresh oath: "+name)
   var now=state(w); now.erase("oath_state"); now.version=7
-  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed"]: now.erase(field)
+  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision"]: now.erase(field)
   check(JSON.parse_string(JSON.stringify(now))==old,"migration preserves all old resources, maps, NPC choices, inventory: "+name)
   restore_check(w)
   if name=="supplies": check(w.camp_medicine_left==3 and w.camp_focus_left==3,"old earned camp expansion is not clamped to two")
- w=World.new(0)
+ w=World.new(0,1)
  for version in [4,5,6,7]:
   var old=state(w); old.version=version; old.erase("oath_state")
-  var copy=World.new(0)
+  var copy=World.new(0,1)
   check(copy.restore(JSON.parse_string(JSON.stringify(old))) and copy.oath_state=="fresh","old schema migration: "+str(version))
  # Controlled combat matrix isolates gear, armed skills and oath from route economics.
  for gear in ["balanced","buckler","duelist","repeater"]:
   for kind in ["H","b","w"]:
-   w=World.new(0); w.inventory=["balanced"] if gear=="balanced" else ["balanced",gear]; w.equipped=gear
+   w=World.new(0,1); w.inventory=["balanced"] if gear=="balanced" else ["balanced",gear]; w.equipped=gear
    w.oath_state="active"; w.hp=1500; w.atk=80; w.defense=30; w.skill_armed=true
    w.floors[0][1][2]=kind
    var before=state(w); var preview=w.battle_preview(kind)
    check(preview.valid and preview.oath_active and w.battle_preview(kind,gear)==preview and state(w)==before,"owned override inherits identical live context: "+gear+kind)
    check(not w.battle_preview(kind,"missing").valid and state(w)==before,"unowned comparison cannot borrow gear")
    check(w.step(Vector2i.RIGHT) and w.hp==1500-int(preview.damage)+int(preview.heal_after) and w.focus==int(before.focus)-1,"oath gear actual loss/focus equals preview: "+gear+kind)
- w=World.new(0); w.enter_floor(3); w.pos=Vector2i(1,3); w.skill_armed=true
+ w=World.new(0,1); w.enter_floor(3); w.pos=Vector2i(1,3); w.skill_armed=true
  var before=state(w)
  check(w.action("oath_accept") and w.oath_state=="active","bind only at inscription")
  restore_check(w); reject(w,"oath_accept")
@@ -94,11 +96,11 @@ func run_tests():
   check(not w.restore(bad) and state(w)==valid,"malformed oath rejects atomically")
  # A real run chooses oath for the expedition's ambushers, then returns to N
  # to give up its protection permanently before the heavily armoured finale.
- w=World.new(0)
- check(replay(w,Generator.validate(w.floors).route) and w.action("expedition"),"fresh real route reaches expedition")
+ w=World.new(0,1)
+ check(replay(w,Generator.validate(w.floors,1).route) and w.action("expedition"),"fresh real route reaches expedition")
  check(travel(w,3) and walk(w,Vector2i(1,3)) and w.action("oath_accept"),"real cross-chapter detour binds oath")
  check(travel(w,5),"real return enters expedition through stairs")
- var proof=Expedition.validate(w.floors.slice(5)); var route_ok=true; var ambushes=0
+ var proof=Expedition.validate(w.floors.slice(5),1); var route_ok=true; var ambushes=0
  for c in proof.route:
   var d:Vector2i={"U":Vector2i.UP,"D":Vector2i.DOWN,"L":Vector2i.LEFT,"R":Vector2i.RIGHT}[c]
   var token=w.tile(w.pos+d)
@@ -113,7 +115,7 @@ func run_tests():
  print("OATH REAL ROUTE: ",w.moves," moves; ",w.hp," HP")
  var scene=load("res://main.tscn").instantiate(); root.add_child(scene); await process_frame
  scene.save_path="user://oath-readonly-test.json"; scene.growth=false
- scene.world=World.new(0); scene.world.inventory=["balanced","buckler"]; scene.world.chest_claimed=true; scene.world.oath_state="active"; scene.world.skill_armed=true
+ scene.world=World.new(0,1); scene.world.inventory=["balanced","buckler"]; scene.world.chest_claimed=true; scene.world.oath_state="active"; scene.world.skill_armed=true
  scene.world.atk=50; scene.world.defense=15; scene.world.hp=500; scene.hover=Vector2i(4,3)
  scene.save_game(); var disk=FileAccess.get_file_as_string(scene.save_path); before=state(scene.world); var events=scene.sound_event_count; var history=scene.history.duplicate(true)
  key(scene,KEY_V)
@@ -135,7 +137,7 @@ func run_tests():
  var backup=scene.save_path.get_basename()+".pre-schema8.json"
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.camp_medicine_left==3 and scene.world.oath_state=="fresh" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==10,"schema7 reward backup preserves exact bytes and finite expanded supplies")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.camp_medicine_left==3 and scene.world.oath_state=="fresh" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==11,"schema7 reward backup preserves exact bytes and finite expanded supplies")
  scene.queue_free(); await process_frame
  print("OATH: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

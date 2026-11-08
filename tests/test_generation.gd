@@ -1,4 +1,5 @@
 extends SceneTree
+const Layout=preload("res://scripts/layout.gd")
 const Generator = preload("res://scripts/generation.gd")
 const World = preload("res://scripts/world.gd")
 var checks := 0
@@ -40,12 +41,15 @@ func wet_loot_budget(grid: Array) -> Dictionary:
 	for y in range(1,10):
 		for x in range(1,10):
 			if grid[y][x] not in Generator.LOOT: continue
+			if grid[2][8]=="D" and x==9 and y==2: continue
 			var p := Vector2i(x,y)
 			if not closed.has(p):
 				check(drained.has(p),"ordinary loot is not lost behind a cage, boss or disconnected wall")
 				var token: String=grid[y][x]
 				budget[token]=budget.get(token,0)+1
 	return budget
+func validate_canonical(maps:Array)->Dictionary:
+	return Generator.validate(Layout.orient_maps(maps,0,2),2)
 func _init():
 	var suite_started := Time.get_ticks_usec()
 	var model = World.new(0)
@@ -59,9 +63,9 @@ func _init():
 	for enemy_id in World.ENEMIES:
 		if enemy_id not in ["B","V","Z","H","W"]: check(Generator.ENEMIES.has(enemy_id),"proof includes each non-optional enemy")
 	check(Generator.damage("w",{"hp":500,"atk":38,"def":8})==288,"proof includes every-third-retaliation heavy damage")
-	var baseline := Generator.normalize(World.MAPS)
+	var baseline := Generator.prepare_baseline(World.MAPS,2)
 	var zero := Generator.generate(0,World.MAPS)
-	check(zero.maps==baseline,"seed zero keeps authored baseline")
+	check(zero.maps==Layout.orient_maps(baseline,0,2),"seed zero preserves authored budget with reserved real door rooms and aligned stairs")
 	check(zero.validation.solvable,"authored baseline has conservative proof")
 	check(zero.attempts==0 and not zero.fallback,"seed zero bypasses random generation")
 	check(zero.floor_skeletons==["authored","authored","authored","authored","authored"],"seed zero labels all floors authored")
@@ -124,21 +128,22 @@ func _init():
 		check(result.validation.hp>0,"witness survives seed %d"%seed_value)
 		check(Generator.validate(result.maps).solvable,"independent validator rerun seed %d"%seed_value)
 		check(Generator.topology(result.maps).valid,"specials reachable and gates not bypassed")
+		var canonical:=Layout.orient_maps(result.maps,0,2)
 		for floor_index in baseline.size():
 			var id: String=result.floor_skeletons[floor_index]
 			check(id=="authored" or Generator.SKELETONS.has(id),"diagnostic names a real full-floor skeleton")
 			var coverage_key := "%d/%s" % [floor_index,id]
 			coverage[coverage_key]=coverage.get(coverage_key,0)+1
 			var expected: Array=baseline[floor_index] if id=="authored" else Generator.build_skeleton(baseline[floor_index],id)
-			check(counts(result.maps[floor_index])==counts(baseline[floor_index]),"per-floor ordinary item/enemy quota preserved")
-			check(wet_loot_budget(result.maps[floor_index])==wet_loot_budget(baseline[floor_index]),"exact flooded item categories stay gated, not shifted to main-route growth")
-			check(counts(result.maps[floor_index]).get("k",0)==1 and wet_loot_budget(result.maps[floor_index]).get("k",0)==0,"one main key per floor stays outside the flooded reward budget")
+			check(counts(canonical[floor_index])==counts(baseline[floor_index]),"per-floor ordinary item/enemy quota preserved")
+			check(wet_loot_budget(canonical[floor_index])==wet_loot_budget(baseline[floor_index]),"exact flooded item categories stay gated, not shifted to main-route growth")
+			check(counts(canonical[floor_index]).get("k",0)==1 and wet_loot_budget(canonical[floor_index]).get("k",0)==0,"one main key per floor stays outside the flooded reward budget")
 			var added_walls := 0
 			var removed_walls := 0
 			for y in range(11):
 				for x in range(11):
 					var was: String=baseline[floor_index][y][x]
-					var now: String=result.maps[floor_index][y][x]
+					var now: String=canonical[floor_index][y][x]
 					if was!="#" and now=="#": added_walls+=1
 					if was=="#" and now!="#": removed_walls+=1
 					check((now=="#")== (expected[y][x]=="#"),"full-floor geometry matches its selected mask")
@@ -146,11 +151,11 @@ func _init():
 					elif was not in ["#","."] and was not in Generator.LOOT: check(now==was,"special object and gate remain at their authored position")
 			check(id=="authored" or (added_walls>=8 and removed_walls>=6),"full-floor identity is not erased by protected anchors")
 			if baseline[floor_index][9][1] in ["$","A","P"]:
-				check(result.maps[floor_index][8][1]=="#","cage northern wall preserved")
-				check(result.maps[floor_index][9][2]=="L","two-key cage lock stays in place")
-		for p in [Vector2i(9,2),Vector2i(9,4),Vector2i(10,3)]: check(result.maps[2][p.y][p.x]=="#","vault wall remains intact")
-		check(result.maps[2][3][8]=="V" and result.maps[2][3][9]=="T","vault guard/reward unmoved")
-		check(result.maps[1][1][6]=="#","flooded alcove has no western dry bypass")
+				check(canonical[floor_index][8][1]=="#","cage northern wall preserved")
+				check(canonical[floor_index][9][2]=="L","two-key cage lock stays in place")
+		for p in [Vector2i(9,2),Vector2i(9,4),Vector2i(10,3)]: check(canonical[2][p.y][p.x]=="#","vault wall remains intact")
+		check(canonical[2][3][8]=="V" and canonical[2][3][9]=="T","vault guard/reward unmoved")
+		check(canonical[1][1][6]=="#","flooded alcove has no western dry bypass")
 		var world = World.new(0)
 		world.floors=result.maps.duplicate(true)
 		var replay_ok := true
@@ -183,29 +188,29 @@ func _init():
 		check(loaded.restore(encoded) and loaded.floors==actual.floors and loaded.seed_value==seed_value,"saved whole-floor maps load without rerolling")
 	var bypass := baseline.duplicate(true)
 	bypass[0][8][1]="."
-	check(not Generator.validate(bypass).solvable,"cage-wall bypass rejected")
+	check(not validate_canonical(bypass).solvable,"cage-wall bypass rejected")
 	bypass=baseline.duplicate(true); bypass[2][4][9]="."
-	check(not Generator.validate(bypass).solvable,"vault-wall bypass rejected")
+	check(not validate_canonical(bypass).solvable,"vault-wall bypass rejected")
 	bypass=baseline.duplicate(true); bypass[1][1][6]="."
-	check(not Generator.validate(bypass).solvable,"dry flooded-reward bypass rejected")
+	check(not validate_canonical(bypass).solvable,"dry flooded-reward bypass rejected")
 	bypass=baseline.duplicate(true); bypass[0][8][1]="D"
-	check(not Generator.validate(bypass).solvable,"one-key door cannot bypass a two-key reward cage")
+	check(not validate_canonical(bypass).solvable,"one-key door cannot bypass a two-key reward cage")
 	bypass=baseline.duplicate(true); bypass[2][4][9]="D"
-	check(not Generator.validate(bypass).solvable,"one-key door cannot bypass the vault guardian")
+	check(not validate_canonical(bypass).solvable,"one-key door cannot bypass the vault guardian")
 	bypass=baseline.duplicate(true); bypass[1][1][6]="D"
-	check(not Generator.validate(bypass).solvable,"one-key door cannot bypass the flooded route")
+	check(not validate_canonical(bypass).solvable,"one-key door cannot bypass the flooded route")
 	bypass=baseline.duplicate(true)
 	bypass[1][3][2]="#"; bypass[1][4][1]="#"; bypass[1][5][2]="#"
-	check(not Generator.validate(bypass).solvable,"disconnected core rejected")
+	check(not validate_canonical(bypass).solvable,"disconnected core rejected")
 	var impossible := baseline.duplicate(true)
 	impossible[4][3][8]="."
-	check(not Generator.validate(impossible).solvable,"missing final goal rejected")
+	check(not validate_canonical(impossible).solvable,"missing final goal rejected")
 	var invalid_fallback := Generator.generate(42,impossible)
 	check(invalid_fallback.fallback and invalid_fallback.attempts==Generator.MAX_ATTEMPTS,"invalid candidates terminate in bounded fallback")
 	check(not invalid_fallback.validation.solvable,"invalid authored fallback is explicitly invalid")
 	impossible=baseline.duplicate(true)
 	impossible[0][1][2]="#"; impossible[0][2][1]="#"
-	check(not Generator.validate(impossible).solvable,"sealed authored spawn rejected")
+	check(not validate_canonical(impossible).solvable,"sealed authored spawn rejected")
 	check(not Generator.validate([]).solvable,"malformed map rejected")
 	print("GENERATION: %s (%d checks, 200 seeds, %d unique arrangements, %d fallback, max attempts %d)" % ["PASS" if failures==0 else "FAIL",checks,unique.size(),fallbacks,max_attempts])
 	print("SKELETONS: %d distinct chapter geometries; coverage %s" % [geometries.size(),JSON.stringify(coverage)])

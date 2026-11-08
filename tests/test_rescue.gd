@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -13,7 +15,7 @@ func reject(w,id:String):
  var before=state(w)
  check(not w.action(id) and state(w)==before,"rejected without mutation: "+id)
 func restore_check(w):
- var copy=World.new(0)
+ var copy=World.new(0,1)
  check(copy.restore(JSON.parse_string(JSON.stringify(state(w)))) and state(copy)==state(w),"legal rescue state JSON roundtrip")
 func replay(w,route:String)->bool:
  for c in route:
@@ -53,27 +55,27 @@ func _initialize(): call_deferred("run_tests")
 func run_tests():
  var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema6-expedition.json")
  var old=JSON.parse_string(old_text)
- var w=World.new(0)
+ var w=World.new(0,1)
  check(old.version==6 and w.restore(old),"genuine pre-change schema6 fixture loads")
  check(w.expedition_revision==1 and w.rescue_state==0 and w.rescue_reward=="" and w.floors==old.floors,"old active expedition preserves maps and grants no quest progress")
  w.enter_floor(0); w.pos=Vector2i(1,2); reject(w,"rescue_accept"); reject(w,"rescue_repeater")
  check(w.npc_offers().is_empty(),"old revision cannot accept impossible new chain")
  restore_check(w)
- w=World.new(0); check(w.step(Vector2i.DOWN),"fresh hero walks to Ilen rather than teleporting")
+ w=World.new(0,1); check(w.step(Vector2i.DOWN),"fresh hero walks to Ilen rather than teleporting")
  check(w.action("rescue_accept") and w.rescue_state==1 and w.quest_state==0,"Ilen rescue and old survey are independent")
  reject(w,"rescue_accept"); restore_check(w)
  # Actual first chapter witness starts at the original entrance after a legal detour.
- check(walk(w,Vector2i(1,1)) and replay(w,Generator.validate(w.floors).route) and w.won,"real accepted quest survives first chapter victory")
+ check(walk(w,Vector2i(1,1)) and replay(w,Generator.validate(w.floors,1).route) and w.won,"real accepted quest survives first chapter victory")
  var victory=state(w)
  for version in [4,5,6]:
   var legacy=victory.duplicate(true); legacy.version=version
-  var copy=World.new(0)
+  var copy=World.new(0,1)
   check(copy.restore(JSON.parse_string(JSON.stringify(legacy))) and copy.rescue_state==0 and copy.expedition_revision==0,"legacy unstarted chapter resets absent quest: "+str(version))
   check(copy.action("expedition") and copy.expedition_revision==3,"legacy unstarted chapter explicitly receives fresh content")
  check(w.action("expedition") and w.expedition_revision==3,"new expedition opts into rescue content")
  var begun=state(w)
  # Follow the guaranteed route until the final boss, then return to optional rescue.
- var proof=Expedition.validate(w.floors.slice(5)); var route_ok=true; var first_guard_loss=-1; var first_guard_hp=-1
+ var proof=Expedition.validate(w.floors.slice(5),1); var route_ok=true; var first_guard_loss=-1; var first_guard_hp=-1
  for c in proof.route:
   var d:Vector2i={"U":Vector2i.UP,"D":Vector2i.DOWN,"L":Vector2i.LEFT,"R":Vector2i.RIGHT}[c]
   if w.tile(w.pos+d)=="Z": break
@@ -168,7 +170,7 @@ func run_tests():
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close()
  scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==1 and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==10,"real old expedition load backs up exact bytes and upgrades without new rewards")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==1 and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==11,"real old expedition load backs up exact bytes and upgrades without new rewards")
  scene.queue_free(); await process_frame
  print("RESCUE: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

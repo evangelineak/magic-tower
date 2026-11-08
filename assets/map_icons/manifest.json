@@ -1,0 +1,87 @@
+[
+  {
+    "path": "assets/map_icons/archivist.png",
+    "bytes": 30143,
+    "sha256": "b1320ae664e8f80766a16307b2440352dab2b9444199f26bfe0cc1d2bfc6bac2"
+  },
+  {
+    "path": "assets/map_icons/briar.png",
+    "bytes": 23909,
+    "sha256": "ee092328a16f955174485ad91ed05fc42f6cbc110fd16a2ac08f4bd9a745af4a"
+  },
+  {
+    "path": "assets/map_icons/colossus.png",
+    "bytes": 25968,
+    "sha256": "94b808e91bb9de658a702cdf3b82275d5a884258578b85168f98b13969e971d8"
+  },
+  {
+    "path": "assets/map_icons/ferryman.png",
+    "bytes": 25307,
+    "sha256": "6ca29ccd42f62346a1d3408a1cc35cb77b233038eeb9a55a34c0415909b14f6a"
+  },
+  {
+    "path": "assets/map_icons/gate_brute.png",
+    "bytes": 23509,
+    "sha256": "f48fcb2bfaf1290593fb952f1bff60e0a9248efaf7bbf6c14efbd34c38f388bd"
+  },
+  {
+    "path": "assets/map_icons/ilen.png",
+    "bytes": 24279,
+    "sha256": "d5e45d23f553c66c9a95beda5cd00360dad8ceb0596d906da474260fddedb99a"
+  },
+  {
+    "path": "assets/map_icons/jailer.png",
+    "bytes": 27975,
+    "sha256": "31d4b9191e182ee1e65e4f25ff35c5a01083a0b06819431b45fcc279ea609b2a"
+  },
+  {
+    "path": "assets/map_icons/juggernaut.png",
+    "bytes": 29011,
+    "sha256": "722765c7fbcfc3c433412c2ae476c3a9d0fa404d8127fb7928a6d5e6ae7f171e"
+  },
+  {
+    "path": "assets/map_icons/mira.png",
+    "bytes": 25065,
+    "sha256": "fd34e12b8d771ccd718c8481d07605fceb5c55d25c9500e8489eaad91483820f"
+  },
+  {
+    "path": "assets/map_icons/mossling.png",
+    "bytes": 26602,
+    "sha256": "0bc4c0d2c4ed050eb27eb9e3efdf34e406fa1258ad4b3bde54e1169d21004adb"
+  },
+  {
+    "path": "assets/map_icons/ranger.png",
+    "bytes": 24286,
+    "sha256": "f68498347517f5aa794ba116905d7b79af50aeee1ff209d7c64dbe430695891c"
+  },
+  {
+    "path": "assets/map_icons/regent.png",
+    "bytes": 24594,
+    "sha256": "9dbfff5a909426fd38131a69bfbd3b2c784bd34352e96dc4379a23fee10efdf4"
+  },
+  {
+    "path": "assets/map_icons/scholar.png",
+    "bytes": 24388,
+    "sha256": "e3ff7d12a5910dfe8423271bb6ab1c9b277f0d9d4c95c2246d539d9fe16e2455"
+  },
+  {
+    "path": "assets/map_icons/sentinel.png",
+    "bytes": 26458,
+    "sha256": "e8edfc2bdfdd178e83cb0c3a3883a442161aa0873adb4aa93b78f91a7f8fb2c6"
+  },
+  {
+    "path": "assets/map_icons/stalker.png",
+    "bytes": 22308,
+    "sha256": "b79b762668078102811f63c409b43beeead50a4dfae7e533ed9076341ca25b17"
+  },
+  {
+    "path": "assets/map_icons/warden.png",
+    "bytes": 26325,
+    "sha256": "08d7d3e4bae46a31976527107fedfb0529302469875f6c9ca4bd2e55d02044a5"
+  },
+  {
+    "path": "assets/map_icons/map_icons.blend",
+    "bytes": 171215,
+    "sha256": "bfc390247beef22bfd32b56536e4d3d4aeaccb506885b00a93f96f977098818d"
+  }
+]

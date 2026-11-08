@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 var checks:=0
 var failures:=0
@@ -6,7 +8,7 @@ func check(ok: bool, message: String):
 	checks+=1
 	if not ok: failures+=1; push_error("FAIL: "+message)
 func at_event(seed_number: int):
-	var w=World.new(seed_number)
+	var w=World.new(seed_number,1)
 	w.enter_floor(3); w.pos=Vector2i(2,4)
 	return w
 func state(w) -> Dictionary:
@@ -15,7 +17,7 @@ func unchanged_rejection(w,id: String):
 	var before: Dictionary=state(w)
 	check(not w.action(id) and state(w)==before,"rejected action remains atomic: "+id)
 func roundtrip(w):
-	var loaded=World.new(0)
+	var loaded=World.new(0,1)
 	check(loaded.restore(JSON.parse_string(JSON.stringify(state(w)))) and state(loaded)==state(w),"event state JSON roundtrip: "+w.event_kind)
 func _init():
 	var action_kinds := {"bargain":["bargain_blood","bargain_gold"],"smuggler":["smuggler_sell","smuggler_buy"],"oath":["oath_power","oath_renew"]}
@@ -31,7 +33,7 @@ func _init():
 		check(w.action("bargain_leave") and w.event_done,"decline consumes event")
 		for id in action_kinds[w.event_kind]: unchanged_rejection(w,id)
 		roundtrip(w)
-		w=World.new(seed_number); w.gold=100; w.keys=10
+		w=World.new(seed_number,1); w.gold=100; w.keys=10
 		for id in action_kinds[w.event_kind]: unchanged_rejection(w,id)
 	var w=at_event(1)
 	unchanged_rejection(w,"smuggler_sell")
@@ -44,7 +46,7 @@ func _init():
 	w.gold=30
 	check(w.action("smuggler_buy") and w.gold==0 and w.keys==2,"key purchase exact exchange")
 	unchanged_rejection(w,"smuggler_sell")
-	w=World.new(1); w.pos=Vector2i(2,1); w.action("borrow"); w.gold=0
+	w=World.new(1,1); w.pos=Vector2i(2,1); w.action("borrow"); w.gold=0
 	w.settle_checkpoint(2); w.enter_floor(3); w.pos=Vector2i(2,4); w.keys=1
 	check(w.action("smuggler_sell") and w.gold==0 and w.keys==0 and w.debt()==5,"sale proceeds repay overdue debt rather than bypassing it")
 	roundtrip(w)

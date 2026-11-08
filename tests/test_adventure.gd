@@ -1,4 +1,5 @@
 extends SceneTree
+# Fixed event/combat fixtures use legacy coordinates; seeded determinism below stays layout 2.
 const World=preload("res://scripts/world.gd")
 var checks:=0
 var failures:=0
@@ -8,7 +9,7 @@ func check(ok: bool, message: String):
 func snapshot(w) -> Dictionary:
 	return w.save_data().duplicate(true)
 func roundtrip(w, description: String):
-	var restored=World.new(0)
+	var restored=World.new(0,1)
 	check(restored.restore(JSON.parse_string(JSON.stringify(snapshot(w)))) and snapshot(restored)==snapshot(w),description)
 func _init():
 	for seed_value in [0,1,42,123456]:
@@ -17,7 +18,7 @@ func _init():
 		check(snapshot(first)==snapshot(second),"same seed reproduces complete start %d" % seed_value)
 		first.step(Vector2i.RIGHT)
 		roundtrip(first,"seeded progress loads without reroll %d" % seed_value)
-	var w=World.new(0)
+	var w=World.new(0,1)
 	check(w.action("hero_ranger") and w.hero_id=="ranger","select ranger before exploring")
 	w.step(Vector2i.RIGHT)
 	check(not w.action("hero_scholar") and w.hero_id=="ranger","hero locked after journey starts")
@@ -31,25 +32,25 @@ func _init():
 	check(not w.step(Vector2i.UP) and w.skill_armed and w.focus==focus_before,"wall does not spend skill")
 	w.enter_floor(2); w.pos=Vector2i(7,3); focus_before=w.focus
 	check(not w.step(Vector2i.RIGHT) and w.skill_armed and w.focus==focus_before,"impossible fight does not spend skill")
-	w=World.new(0); w.action("hero_warden"); w.action("arm"); w.pos=Vector2i(5,3)
+	w=World.new(0,1); w.action("hero_warden"); w.action("arm"); w.pos=Vector2i(5,3)
 	var hp_before: int=w.hp
 	focus_before=w.focus
 	var predicted: int=w.damage("s")
 	check(w.step(Vector2i.LEFT) and w.hp==hp_before-predicted,"actual armed battle exactly matches preview")
 	check(w.focus==focus_before-1 and not w.skill_armed and w.kills==1,"successful battle consumes skill once and counts kill")
 	roundtrip(w,"combat state survives JSON")
-	w=World.new(0); w.action("hero_scholar"); hp_before=w.hp; focus_before=w.focus
+	w=World.new(0,1); w.action("hero_scholar"); hp_before=w.hp; focus_before=w.focus
 	check(w.action("mend") and w.hp==hp_before+80 and w.focus==focus_before-1,"scholar heals at known focus cost")
 	w.focus=0; before=snapshot(w)
 	check(not w.action("mend") and snapshot(w)==before,"empty focus cannot heal")
-	w=World.new(0)
+	w=World.new(0,1)
 	check(not w.action("talent_keen_edge"),"talent cannot unlock before kills")
 	w.kills=3
 	check(w.action("talent_keen_edge") and "keen_edge" in w.talents,"first talent unlocks at three kills")
 	check(not w.action("talent_iron_skin"),"same-tier talent choices exclusive")
 	check(not w.action("equip_duelist"),"unowned equipment unavailable")
 	# Water is a spatial choice, not an elemental damage multiplier.
-	w=World.new(0); w.enter_floor(1); w.pos=Vector2i(7,3)
+	w=World.new(0,1); w.enter_floor(1); w.pos=Vector2i(7,3)
 	check(not w.step(Vector2i.UP),"flooded alcove is blocked")
 	w.pos=Vector2i(1,4)
 	check(w.action("drain"),"valve drains flooded alcove")
@@ -61,13 +62,13 @@ func _init():
 	check(not w.action("relic_buckler"),"relic chest cannot be claimed twice")
 	check(w.action("equip_balanced") and w.action("equip_duelist") and w.equipped=="duelist","owned relic can be equipped")
 	roundtrip(w,"drain and equipment choice persist")
-	w=World.new(0); w.enter_floor(1); w.pos=Vector2i(1,4); hp_before=w.hp
+	w=World.new(0,1); w.enter_floor(1); w.pos=Vector2i(1,4); hp_before=w.hp
 	check(w.action("spring") and w.hp>hp_before,"spring exchanges access for immediate recovery")
 	check(not w.action("drain"),"spring closes drainage choice")
 	w.pos=Vector2i(7,3)
 	check(not w.step(Vector2i.UP),"spring retains flooded treasure cost")
 	# Quest rewards are one-off and mutually exclusive.
-	w=World.new(0)
+	w=World.new(0,1)
 	check(w.action("quest_accept") and w.quest_state==1,"NPC quest accepted")
 	check(not w.action("quest_gold"),"quest reward requires sample")
 	w.enter_floor(2); w.pos=Vector2i(2,7)
@@ -78,18 +79,18 @@ func _init():
 	check(not w.action("quest_scroll") and not w.action("quest_gold"),"quest reward cannot be doubled")
 	roundtrip(w,"completed quest persists")
 	# Bargain has an explicit, survivable cost and cannot be rerolled.
-	w=World.new(0); w.enter_floor(3); w.pos=Vector2i(2,4); w.hp=80; before=snapshot(w)
+	w=World.new(0,1); w.enter_floor(3); w.pos=Vector2i(2,4); w.hp=80; before=snapshot(w)
 	check(not w.action("bargain_blood") and snapshot(w)==before,"blood bargain cannot kill player")
 	w.hp=81
 	var atk_before: int=w.atk
 	check(w.action("bargain_blood") and w.hp==1 and w.atk==atk_before+6,"blood bargain pays exact declared cost")
 	check(not w.action("bargain_gold") and not w.action("bargain_leave"),"bargain selection irreversible within state")
-	w=World.new(0); w.enter_floor(3); w.pos=Vector2i(2,4); w.gold=24
+	w=World.new(0,1); w.enter_floor(3); w.pos=Vector2i(2,4); w.gold=24
 	check(not w.action("bargain_gold"),"gold bargain cannot overdraw")
 	w.gold=25
 	var def_before: int=w.defense
 	check(w.action("bargain_gold") and w.gold==0 and w.defense==def_before+5,"gold bargain cost and reward")
-	w=World.new(0); w.enter_floor(3); w.pos=Vector2i(2,4)
+	w=World.new(0,1); w.enter_floor(3); w.pos=Vector2i(2,4)
 	check(w.action("bargain_leave") and w.event_done,"leaving event is a real completed choice")
 	check(not w.action("bargain_blood"),"cannot return to reverse leaving")
 	roundtrip(w,"event decision persists")

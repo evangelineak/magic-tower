@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -12,7 +14,7 @@ func reject(w,id:String):
  var before=state(w)
  check(not w.action(id) and state(w)==before,"rejected without mutation: "+id)
 func restore_check(w):
- var copy=World.new(0)
+ var copy=World.new(0,1)
  check(copy.restore(JSON.parse_string(JSON.stringify(state(w)))) and state(copy)==state(w),"legal rescue state JSON roundtrip")
 func replay(w,route:String)->bool:
  for c in route:
@@ -57,12 +59,12 @@ func only_navigation(before:Dictionary,after:Dictionary)->bool:
  return a==b and after.moves==before.moves+1
 func _initialize(): call_deferred("run_tests")
 func run_tests():
- var w=World.new(0)
+ var w=World.new(0,1)
  for reward in ["repeater","supplies"]:
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema8-"+reward+".json"))
   check(w.restore(old) and w.travel_anchors.is_empty() and not w.audit_read and not w.audit_solved and w.audit_reward=="","old seen floors do not create anchors or audit rewards")
   var upgraded=state(w)
-  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed"]: upgraded.erase(field)
+  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision"]: upgraded.erase(field)
   upgraded.version=8
   check(JSON.parse_string(JSON.stringify(upgraded))==old,"real old oath/NPC/stock state completely preserved: "+reward)
   reject(w,"fast_travel_3:1:3"); restore_check(w)
@@ -86,7 +88,7 @@ func run_tests():
    var p=w.pos+d; w.floors[w.floor_index][p.y][p.x]=token
   reject(w,"fast_travel_"+anchor_id)
  w.restore(camp); w.won=true; reject(w,"fast_travel_"+anchor_id)
- w=World.new(0); reject(w,"fast_travel_0:1:2")
+ w=World.new(0,1); reject(w,"fast_travel_0:1:2")
  w.restore(camp); var valid=state(w)
  for huge in [4294967296,4294967297,1e100]:
   for field in ["floor","x","y","marker_x","marker_y"]:
@@ -158,7 +160,7 @@ func run_tests():
  var backup=scene.save_path.get_basename()+".pre-schema9.json"
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.oath_state=="active" and scene.world.travel_anchors.is_empty() and scene.world.inventory.has("repeater") and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==10,"real v8 backup and migration preserve active oath/reward but invent no travel visits")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.oath_state=="active" and scene.world.travel_anchors.is_empty() and scene.world.inventory.has("repeater") and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==11,"real v8 backup and migration preserve active oath/reward but invent no travel visits")
  scene.language="en"; scene.world.restore(camp)
  check(not str(scene.journal_lines()).contains("Label A:"),"journal hides unread audit statements")
  scene.world.restore(read_state); scene.interaction=true

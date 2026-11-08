@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -12,7 +14,7 @@ func reject(w,id:String):
  var before=state(w)
  check(not w.action(id) and state(w)==before,"rejected without mutation: "+id)
 func restore_check(w):
- var copy=World.new(0)
+ var copy=World.new(0,1)
  check(copy.restore(JSON.parse_string(JSON.stringify(state(w)))) and state(copy)==state(w),"legal rescue state JSON roundtrip")
 func replay(w,route:String)->bool:
  for c in route:
@@ -53,22 +55,22 @@ func key(scene,code):
  var event=InputEventKey.new(); event.pressed=true; event.keycode=code; scene._unhandled_input(event)
 func _initialize(): call_deferred("run_tests")
 func run_tests():
- var w=World.new(0)
+ var w=World.new(0,1)
  for reward in ["medicine","retrain"]:
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema9-"+reward+".json"))
   check(w.restore(old) and w.expedition_revision==2 and w.winch_choice=="" and not w.maul_claimed,"old begun revision2 gains no new room or reward")
-  var upgraded=state(w); upgraded.erase("winch_choice"); upgraded.erase("maul_claimed"); upgraded.version=9
+  var upgraded=state(w); upgraded.erase("winch_choice"); upgraded.erase("maul_claimed"); upgraded.erase("layout_revision"); upgraded.version=9
   check(JSON.parse_string(JSON.stringify(upgraded))==old,"migration conserves solved audit/anchors/oath/NPC resources: "+reward)
   reject(w,"winch_rescue"); reject(w,"winch_armory"); restore_check(w)
- w=World.new(0)
- check(replay(w,Generator.validate(w.floors).route) and w.won,"actual first chapter wins")
+ w=World.new(0,1)
+ check(replay(w,Generator.validate(w.floors,1).route) and w.won,"actual first chapter wins")
  var victory=state(w)
  var legacy=victory.duplicate(true); legacy.version=9; legacy.erase("winch_choice"); legacy.erase("maul_claimed")
  check(w.restore(legacy) and w.action("expedition") and w.expedition_revision==3,"old unstarted chapter explicitly generates revision3")
  var begun=state(w)
  # Grow naturally through chapter two, stopping before final Z to take branches.
  var route_ok=true
- for c in Expedition.validate(w.floors.slice(5)).route:
+ for c in Expedition.validate(w.floors.slice(5),1).route:
   var d:Vector2i={"U":Vector2i.UP,"D":Vector2i.DOWN,"L":Vector2i.LEFT,"R":Vector2i.RIGHT}[c]
   if w.tile(w.pos+d)=="Z": break
   if not w.step(d): route_ok=false; break
@@ -160,7 +162,7 @@ func run_tests():
  var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema9-retrain.json"); var backup=scene.save_path.get_basename()+".pre-schema10.json"
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==2 and scene.world.audit_reward=="retrain" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==10,"schema9 backup preserves actual old audit/anchor run without spawning new rooms")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==2 and scene.world.audit_reward=="retrain" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==11,"schema9 backup preserves actual old audit/anchor run without spawning new rooms")
  scene.queue_free(); await process_frame
  print("WINCH FLANK: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

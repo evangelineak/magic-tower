@@ -1,5 +1,6 @@
 class_name TowerWorld
 extends RefCounted
+const Layout = preload("res://scripts/layout.gd")
 const Generator = preload("res://scripts/generation.gd")
 const Progression = preload("res://scripts/progression.gd")
 const Expedition = preload("res://scripts/expedition.gd")
@@ -25,6 +26,7 @@ const ENEMIES = {
 "H": {"name":"Ferry Warden", "hp":180, "atk":62, "def":30, "gold":60, "first_strike":true},
 "Z": {"name":"Ashen Castellan", "hp":720, "atk":65, "def":45, "gold":160},
 "B": {"name":"Hollow King", "hp":220, "atk":42, "def":20, "gold":100}}
+var layout_revision := 2
 var seed_value := 0
 var generation_attempts := 0
 var generation_fallback := false
@@ -86,15 +88,16 @@ var camp_focus_left := 2
 var won := false
 var moves := 0
 var message := "Find the keys. Read your enemies. Ascend."
-func _init(run_seed: int = 0):
+func _init(run_seed: int = 0, run_layout: int = 2):
+	layout_revision=run_layout if Layout.valid_revision(run_layout) else Layout.CURRENT
 	seed_value=clampi(run_seed,0,2147483647)
 	audit_puzzle=AuditPuzzle.generate(seed_value)
 	event_kind=["bargain","smuggler","oath"][seed_value%3]
-	var generated: Dictionary = Generator.generate(seed_value, MAPS)
+	var generated: Dictionary = Generator.generate(seed_value, MAPS, layout_revision)
 	floors=generated.maps
 	generation_attempts=generated.attempts
 	generation_fallback=generated.fallback
-	generation_valid=bool(generated.validation.solvable)
+	generation_valid=bool(generated.validation.solvable) and Layout.valid_revision(run_layout)
 	if not generation_valid: message="Map validation failed. This run is blocked; choose another seed."
 func floor_count() -> int:
 	return floors.size()
@@ -105,7 +108,7 @@ func chapter_offers() -> Array:
 		return [["expedition","Continue expedition: 3 more floors / +120 HP once"]]
 	return []
 func _navigation_state() -> Dictionary:
-	return {"floors":floors,"floor_seen":floor_seen,"anchors":travel_anchors,"floor":floor_index,"x":pos.x,"y":pos.y,"water_choice":water_choice,"bridge_built":bridge_built,"expedition_bridge":expedition_bridge,"core_use":core_use,"clue":clue,"seal_clues":seal_clues,"winch_choice":winch_choice,"expedition_revision":expedition_revision}
+	return {"floors":floors,"floor_seen":floor_seen,"anchors":travel_anchors,"floor":floor_index,"x":pos.x,"y":pos.y,"water_choice":water_choice,"bridge_built":bridge_built,"expedition_bridge":expedition_bridge,"core_use":core_use,"clue":clue,"seal_clues":seal_clues,"winch_choice":winch_choice,"expedition_revision":expedition_revision,"layout_revision":layout_revision}
 func _anchor_id(anchor: Dictionary) -> String:
 	return "%d:%d:%d" % [int(anchor.floor),int(anchor.marker_x),int(anchor.marker_y)]
 func _register_anchor(token: String):
@@ -202,13 +205,109 @@ func _count_token(token: String) -> int:
 func tile(p: Vector2i) -> String:
 	if p.x < 0 or p.y < 0 or p.x >= 11 or p.y >= 11: return "#"
 	return floors[floor_index][p.y][p.x]
+func safe_walk_path(target: Vector2i) -> Array[Vector2i]:
+	if not generation_valid or won: return []
+	return Navigation.walk_path(floors[floor_index],pos,target)
+func safe_walk_step(next: Vector2i, expected_floor: int, expected_pos: Vector2i) -> bool:
+	if not generation_valid or won or floor_index!=expected_floor or pos!=expected_pos: return false
+	if absi(next.x-pos.x)+absi(next.y-pos.y)!=1 or tile(next)!=".": return false
+	pos=next; moves+=1
+	message="Safe step. No interaction or resources changed."
+	return true
+func tooltip_data(point: Vector2i) -> Dictionary:
+	var underfoot:=_tile_tooltip_data(point)
+	if point!=pos: return underfoot
+	var lines:Array[String]=[
+		"HP %d / base ATK %d / base DEF %d" % [hp,atk,defense],
+		"Equipment: %s" % str(Progression.GEAR[equipped].name),
+		str(Progression.GEAR[equipped].description),
+		"Focus: %d / %d" % [focus,focus_cap],
+		Progression.skill_description(hero_id,talents)
+	]
+	if hero_id!="scholar": lines.append("Next-battle skill: armed" if skill_armed else "Next-battle skill: off")
+	lines.append("Standing on: %s" % str(underfoot.title))
+	for fact in underfoot.lines: lines.append(str(fact))
+	return {"title":str(Progression.HEROES[hero_id].name),"lines":lines}
+func _tile_tooltip_data(point: Vector2i) -> Dictionary:
+	if point.x<0 or point.x>=11 or point.y<0 or point.y>=11: return {"title":"Outside the tower","lines":[]}
+	var token:=tile(point)
+	var lines:Array[String]=[]
+	if ENEMIES.has(token):
+		var enemy:Dictionary=ENEMIES[token]
+		lines.append("HP %d / ATK %d / DEF %d / Gold %d" % [enemy.hp,enemy.atk,enemy.def,enemy.gold])
+		var forecast:=battle_preview(token,"",point)
+		lines.append("Predicted loss: %d HP" % int(forecast.damage) if forecast.valid else str(forecast.reason))
+		if forecast.valid and not forecast.survivable: lines.append("Lethal battle is blocked. Grow stronger and return.")
+		if enemy.get("first_strike",false): lines.append("First strike: one opening attack, even against a killing hit.")
+		if int(enemy.get("thorns",0))>0: lines.append("Thorns: %d damage per real hit, including the final hit." % int(enemy.thorns))
+		if int(enemy.get("heavy_every",0))>0: lines.append("Every third retaliation adds one extra hit.")
+		if forecast.get("first_strike_suppression","")=="flank": lines.append("Current position cancels this enemy's first strike.")
+		elif forecast.get("first_strike_suppression","")=="oath": lines.append("The active Watch oath cancels this enemy's first strike.")
+		lines.append("Fight only by a deliberate adjacent move. Click walking never fights.")
+		return {"title":str(enemy.name),"lines":lines}
+	var titles={"#":"Wall",".":"Cleared floor","k":"Gold key","h":"Spring water","a":"Ruby of resolve","d":"Sapphire ward","D":"Locked door","L":"Double lock","$":"Sealed treasury","A":"Sealed edge","P":"Sealed provisions","T":"Star vault","C":"Ancient core","M":"Merchant","J":"Ilen's workshop","N":"Watch inscription","E":"The old elevator","F":"Old forge","Q":"Old-tower calibration","I":"Survey sample","O":"Waterworks","R":"Flooded relic chest","X":event_title(),"U":"Expedition camp","Y":"Roadworks","v":"One-use winch","n":"North rescue gate","e":"Armory gate","m":"Siege maul","t":"Mira","~":"Flooded ground","=":"Expedition bridge","<":"Downstairs",">":"Upstairs"}
+	match token:
+		".": lines.append("Click to walk through cleared floor only. Nothing is picked up or activated.")
+		"#": lines.append("Impassable wall.")
+		"k": lines.append("Pick up 1 gold key by a deliberate adjacent move.")
+		"h": lines.append("Recover 70 HP when picked up.")
+		"a": lines.append("Gain 5 ATK when picked up.")
+		"d": lines.append("Gain 4 DEF when picked up.")
+		"D": lines.append("Costs 1 gold key. Open manually; click walking never spends keys.")
+		"L": lines.append("Costs 2 gold keys. Other reward cages compete for the same keys.")
+		"$": lines.append("Reward: 60 gold. Overdue debt is paid before spare gold remains.")
+		"A": lines.append("Reward: 5 ATK.")
+		"P": lines.append("Reward: 140 HP and 1 focus, up to capacity.")
+		"T": lines.append("Reward: 10 ATK and 45 gold. Guarded treasure can be revisited.")
+		"C": lines.append("One core: repair the lift and power calibration, forge +8 DEF, or sell for 35 gold.")
+		"M": lines.append("Piercer costs 60 gold for +12 ATK. Borrowing is a separate explicit choice.")
+		"J": lines.append("Ilen handles the survey and Mira's return. Talk manually; no automatic hand-in.")
+		"N": lines.append("Read a calibration clue here. The optional Watch oath is a separate choice.")
+		"E": lines.append("The lift works only after repairing it with the core. It connects floors 1 and 3.")
+		"F": lines.append("Forge the core for +8 DEF, or use the survey to build the old flood bridge.")
+		"Q": lines.append("Calibration requires three read clues and the repaired lift. Inspect to reason from your clues.")
+		"I": lines.append("Bring the sample to J for gold or focus training, or to F for a flood bridge.")
+		"O": lines.append("Drain the water to reach the relic, or take +120 HP. A survey bridge can preserve both routes.")
+		"R": lines.append("Choose one relic: heavy buckler or duelist gear. The other choice is lost.")
+		"X":
+			for offer in event_offers(): lines.append(str(offer[1]))
+		"U":
+			lines.append("Medicine: 70 gold for +140 HP / %d left." % camp_medicine_left)
+			lines.append("Focus: 55 gold for +1 / %d left. Full focus never consumes stock." % camp_focus_left)
+		"Y": lines.append("80 gold opens expedition bridges once. Supply-label deduction is a separate optional task.")
+		"v": lines.append("Choose one route permanently: a rescue shortcut or the siege maul armory. Inspect before choosing.")
+		"n": lines.append("Open" if winch_choice=="rescue" else "Closed")
+		"e": lines.append("Open" if winch_choice=="armory" else "Closed")
+		"m": lines.append(Progression.GEAR.maul.description)
+		"t": lines.append("Step onto Mira to rescue her. Choose her future at J or U before defeating Z.")
+		"~": lines.append("Passable only after draining at O or building the survey bridge at F. Click walking does not cross water.")
+		"=": lines.append("Passable after paying for roadworks at Y. Click walking does not cross bridges.")
+		"<",">":
+			lines.append("Use a deliberate adjacent move to change floors. Click walking never uses stairs.")
+			var landing:=Layout.stair_destination(floors,layout_revision,floor_index,point)
+			if landing.ok: lines.append("Destination: floor %d, tile (%d,%d)." % [int(landing.floor)+1,landing.pos.x,landing.pos.y])
+			else: lines.append("No valid stair connection.")
+	if token in ["D","L"]:
+		var room:=Layout.door_info(floor_index,point,layout_revision)
+		if not room.is_empty():
+			var contents:=tile(room.reward_pos)
+			if contents==room.reward_token: lines.append("Sealed room reward: %s." % str(room.label))
+			elif contents==".": lines.append("The room's reward has already been collected.")
+			else: lines.append("The room's contents have changed. Inspect before opening.")
+		elif token=="D" and layout_revision==1:
+			lines.append("Legacy shortcut: this old layout may have another way around.")
+	return {"title":str(titles.get(token,"Unknown tile")),"lines":lines}
+func flank_position(target: Vector2i) -> Vector2i:
+	if expedition_revision!=3 or floor_index<5 or floor_index>7 or tile(target)!="H": return Vector2i(-1,-1)
+	var candidate:=target+Layout.direction(floor_index,Vector2i.RIGHT,layout_revision)
+	return candidate if Expedition.flanking_position(floors.slice(5),floor_index-5,target,candidate,layout_revision) else Vector2i(-1,-1)
 func battle_preview(kind: String, equipment_override: String = "", target: Vector2i = Vector2i(-1,-1)) -> Dictionary:
 	var gear := equipped if equipment_override=="" else equipment_override
 	# Comparisons share live context; only a real, adjacent target earns flanking.
 	if not gear in inventory: gear="invalid_unowned"
 	var flank := false
 	if expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H":
-		flank=Expedition.flanking_position(floors.slice(5),floor_index-5,target,pos)
+		flank=flank_position(target)==pos
 	return Progression.battle(atk,defense,hp,ENEMIES.get(kind,{}),hero_id,skill_armed and focus>0,gear,talents,"watch" if oath_state=="active" else "none",flank)
 func damage(kind: String, target: Vector2i = Vector2i(-1,-1)) -> int:
 	var preview := battle_preview(kind,"",target)
@@ -232,7 +331,10 @@ func step(direction: Vector2i) -> bool:
 	if t == "~" and water_choice!="drain" and not bridge_built:
 		message="Flooded. Drain at O, or bring the survey to F to preserve the spring."
 		return false
-	if (t == ">" and floor_index >= floors.size()-1) or (t == "<" and floor_index == 0): return false
+	var stair_landing: Dictionary={}
+	if t in ["<",">"]:
+		stair_landing=Layout.stair_destination(floors,layout_revision,floor_index,target)
+		if not stair_landing.ok: return false
 	if t in ["D","L"] and keys < (2 if t=="L" else 1):
 		message = "Double lock: 2 gold keys required. Reward cages compete for keys." if t=="L" else "Locked. A gold key is needed."
 		return false
@@ -305,13 +407,13 @@ func step(direction: Vector2i) -> bool:
 	pos = target
 	moves += 1
 	if t == ">":
-		enter_floor(floor_index+1)
+		enter_floor(int(stair_landing.floor))
 		if floor_index in [3,4]: settle_checkpoint(floor_index - 2)
-		pos = Vector2i(1,1)
+		pos = stair_landing.pos
 		message = "Floor %d. Debt %d. Interest settles only on first entry to floors 4 / 5." % [floor_index + 1, debt()]
 	elif t == "<":
-		floor_index -= 1
-		pos = Vector2i(9,9)
+		floor_index = int(stair_landing.floor)
+		pos = stair_landing.pos
 		message = "Backtracking is wisdom, not defeat."
 	elif not t in [".","M","E","F","N","Q","J","O","R","X","U","Y","~","=","v","n","e"]: floors[floor_index][target.y][target.x] = "."
 	_register_anchor(t)
@@ -394,19 +496,20 @@ func action(id: String) -> bool:
 		return false
 	if id=="expedition":
 		if not generation_valid or chapter_offers().is_empty(): return false
-		var generated: Dictionary=Expedition.generate(seed_value)
+		var generated: Dictionary=Expedition.generate(seed_value,layout_revision)
 		if not generated.get("solvable",false) or generated.get("maps",[]).size()!=3:
 			message="Expedition validation failed. Your first-chapter victory is preserved."
 			return false
 		floors.append_array(generated.maps.duplicate(true))
 		floor_seen.append_array([false,false,false])
-		floors[4][9][9]=">"
+		var chapter_exit:=Layout.exit_point(4,layout_revision)
+		floors[4][chapter_exit.y][chapter_exit.x]=">"
 		expedition_started=true
 		expedition_revision=int(generated.get("content_revision",1))
 		won=false
 		hp+=120
 		enter_floor(5)
-		pos=Vector2i(1,1)
+		pos=Layout.entry(5,layout_revision)
 		moves+=1
 		message="Expedition begun: +120 HP once. Old floors and all earlier choices remain."
 		return true
@@ -656,7 +759,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":10,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":11,"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -664,7 +767,12 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11): return false
+	var saved_layout := 1
+	if save_version>=11:
+		var revision=d.get("layout_revision")
+		if not (revision is int or revision is float) or not is_finite(float(revision)) or (revision!=1 and revision!=2): return false
+		saved_layout=int(revision)
 	var old_seal: bool = save_version==4
 	var saved_winch := ""
 	var saved_maul := false
@@ -806,13 +914,18 @@ func restore(d: Dictionary) -> bool:
 		if d.floors[6][3][9]!="#" or d.floors[6][5][9]!="#" or d.floors[6][6][8]!=".": return false
 	if saved_expedition:
 		if first_boss_remaining!=0 or last_boss_remaining!=(0 if d.won else 1): return false
-		if not d.floor_seen[5] or d.floors[4][9][9]!=">": return false
-		if d.floors[5][2][2]!="U" or d.floors[5][3][2]!="Y": return false
-		if d.floors[7][3][8]!=("." if d.won else "Z"): return false
+		if not d.floor_seen[5] or Layout.tile(d.floors,4,Layout.exit_point(4,saved_layout))!=">": return false
+		if Layout.tile(d.floors,5,Layout.point(5,Vector2i(2,2),saved_layout))!="U" or Layout.tile(d.floors,5,Layout.point(5,Vector2i(2,3),saved_layout))!="Y": return false
+		if Layout.tile(d.floors,7,Layout.point(7,Vector2i(8,3),saved_layout))!=("." if d.won else "Z"): return false
 		for f in range(5,8):
-			if d.floors[f][1][1]!="<" or d.floors[f][3][5]!="=": return false
-			if f<7 and d.floors[f][9][9]!=">": return false
+			if Layout.tile(d.floors,f,Layout.entry(f,saved_layout))!="<" or Layout.tile(d.floors,f,Layout.point(f,Vector2i(5,3),saved_layout))!="=": return false
+			if f<7 and Layout.tile(d.floors,f,Layout.exit_point(f,saved_layout))!=">": return false
 	elif last_boss_remaining!=0: return false
+	if saved_layout==2:
+		for f in range(d.floors.size()):
+			for y in range(11):
+				for x in range(11):
+					if d.floors[f][y][x] in ["<",">"] and not Layout.stair_destination(d.floors,saved_layout,f,Vector2i(x,y)).ok: return false
 	var saved_puzzle: Dictionary=AuditPuzzle.generate(int(d.seed_value))
 	var saved_audit_read := false
 	var saved_audit_solved := false
@@ -845,6 +958,7 @@ func restore(d: Dictionary) -> bool:
 	if position_token=="n" and saved_winch!="rescue": return false
 	if position_token=="e" and saved_winch!="armory": return false
 	if not d.floor_seen[int(d.floor)]: return false
+	layout_revision=saved_layout
 	seed_value=int(d.seed_value); generation_attempts=int(d.generation_attempts); generation_fallback=d.generation_fallback
 	hero_id=d.hero_id; focus=int(d.focus); focus_cap=int(d.focus_cap); skill_armed=d.skill_armed
 	equipped=d.equipped; inventory=d.inventory.duplicate(); talents=d.talents.duplicate(); kills=int(d.kills); floor_seen=d.floor_seen.duplicate()

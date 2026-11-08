@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 var checks:=0
 var failures:=0
@@ -8,7 +10,7 @@ func check(ok: bool, label: String):
 func state(w) -> Dictionary:
 	return w.save_data().duplicate(true)
 func sample_at_forge():
-	var w=World.new(0)
+	var w=World.new(0,1)
 	w.enter_floor(1); w.pos=Vector2i(1,4); w.step(Vector2i.RIGHT)
 	w.enter_floor(2); w.pos=Vector2i(2,7); w.step(Vector2i.DOWN)
 	w.enter_floor(3); w.pos=Vector2i(3,5)
@@ -34,7 +36,7 @@ func _init():
 	check(w.action("quest_bridge") and w.water_choice=="spring","bridge remains possible after spring")
 	w.enter_floor(1); w.pos=Vector2i(8,3)
 	check(w.step(Vector2i.UP),"bridge allows real movement over retained water")
-	var loaded=World.new(0)
+	var loaded=World.new(0,1)
 	check(loaded.restore(JSON.parse_string(JSON.stringify(state(w)))) and state(loaded)==state(w),"standing on bridged water survives save/load")
 	w=sample_at_forge(); w.action("quest_bridge"); w.enter_floor(1); w.pos=Vector2i(1,4); hp_before=w.hp
 	check(w.action("spring") and w.hp==hp_before+120 and w.bridge_built,"bridge first preserves later spring choice")
@@ -45,9 +47,9 @@ func _init():
 		w=sample_at_forge(); w.enter_floor(0); w.pos=Vector2i(1,1)
 		check(w.action(reward) and w.quest_state==3,"researcher reward remains available: "+reward)
 		w.enter_floor(3); w.pos=Vector2i(3,5); rejected(w,"quest_bridge")
-	w=World.new(0); w.enter_floor(3); w.pos=Vector2i(3,5); rejected(w,"quest_bridge")
+	w=World.new(0,1); w.enter_floor(3); w.pos=Vector2i(3,5); rejected(w,"quest_bridge")
 	# Old version-four saves must remain loadable without the newly added field.
-	w=World.new(0)
+	w=World.new(0,1)
 	var old: Dictionary=state(w); old.version=4; old.erase("bridge_built")
 	check(w.restore(old) and not w.bridge_built and w.quest_state==0,"old v4 save without bridge field defaults false")
 	var valid: Dictionary=state(w)
@@ -56,7 +58,7 @@ func _init():
 		bad.merge(invalid,true)
 		check(not w.restore(bad) and state(w)==valid,"invalid branch state rejected atomically")
 	# Full movement journey: no teleports or injected resources in this portion.
-	w=World.new(0)
+	w=World.new(0,1)
 	check(w.action("quest_accept"),"start real research quest")
 	for floor_number in range(4):
 		if floor_number==1:

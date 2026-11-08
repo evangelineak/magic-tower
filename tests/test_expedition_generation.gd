@@ -1,4 +1,5 @@
 extends SceneTree
+const Layout=preload("res://scripts/layout.gd")
 const Expedition=preload("res://scripts/expedition.gd")
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
@@ -46,8 +47,9 @@ func _init():
 		check(world.won and world.floor_index==7,"chapter two actually won")
 		check(world.hp==start_hp+run.validation.hp-121,"real HP matches witness delta")
 		check(not world.expedition_bridge and not world.loan_used and world.camp_medicine_left==2,"no purchases or loan proof")
+		var canonical:=Layout.orient_maps(run.maps,5,2)
 		for f in range(3):
-			var grid:Array=run.maps[f]
+			var grid:Array=canonical[f]
 			check(grid[1][1]=="<","entry")
 			check(grid[9][1]==["$","A","P"][f] and grid[9][2]=="L" and grid[8][1]=="#","cage gate")
 			var closed:=Generator.reachable(grid,["#","=","L","Z"])
@@ -60,7 +62,7 @@ func _init():
 			check(grid[3][8]=="Z" if f==2 else grid[9][9]==">","goal")
 			for i in range(11): check(grid[0][i]=="#" and grid[10][i]=="#" and grid[i][0]=="#" and grid[i][10]=="#","boundary")
 	check(geometries.size()>=24,"chapter geometry diversity")
-	var invalid:Array=Expedition.generate(0).maps.duplicate(true); invalid[2][3][8]="."
+	var invalid:Array=Expedition.generate(0).maps.duplicate(true); invalid[2][7][2]="."
 	check(not Expedition.validate(invalid).solvable,"missing boss rejected")
 	for variant in range(3):
 		var fixture:Array=[Expedition.build(0,variant),Expedition.build(1,variant),Expedition.build(2,variant)]
@@ -75,17 +77,17 @@ func _init():
 		for bypass in [".","D","="]:
 			var broken:=maps.duplicate(true); broken[1][1][8]=bypass
 			check(not Expedition.rescue_topology(broken).valid,"rescue rejects wall, door and bridge bypass")
-			check(not Expedition.validate(broken).solvable,"proof rejects rescue bypass")
+			check(not Expedition.validate(Layout.orient_maps(broken,5,2)).solvable,"proof rejects rescue bypass")
 		for hole in [Vector2i(9,3),Vector2i(9,5)]:
 			for bypass in [".","D","="]:
 				var broken:=maps.duplicate(true); broken[1][hole.y][hole.x]=bypass
-				check(not Expedition.validate(broken).solvable,"armory wall/door/bridge bypass rejected")
+				check(not Expedition.validate(Layout.orient_maps(broken,5,2)).solvable,"armory wall/door/bridge bypass rejected")
 		var removed:=maps.duplicate(true); removed[1][2][9]="."
-		check(not Expedition.validate(removed).solvable,"missing optional guardian rejected")
+		check(not Expedition.validate(Layout.orient_maps(removed,5,2)).solvable,"missing optional guardian rejected")
 		var missing:=maps.duplicate(true); missing[1][1][9]="."
-		check(not Expedition.validate(missing).solvable,"missing apprentice rejected")
+		check(not Expedition.validate(Layout.orient_maps(missing,5,2)).solvable,"missing apprentice rejected")
 		var sealed:=maps.duplicate(true); sealed[1][2][8]="#"; sealed[1][3][9]="#"
-		check(not Expedition.validate(sealed).solvable,"sealed rescue rejected")
+		check(not Expedition.validate(Layout.orient_maps(sealed,5,2)).solvable,"sealed rescue rejected")
 	print("Expedition generation: %d checks; 200 seeds; %d geometries; HP %d..%d"%[checks,geometries.size(),min_hp,max_hp])
 	quit(1 if failures else 0)
 
@@ -107,13 +109,13 @@ func check_rescue_return():
 	req(w.damage("W")>=w.hp and not w.step(Vector2i.RIGHT))
 	travel(w,Vector2i(1,1))
 	req(w.floor_index==5)
-	req(w.step(Vector2i.LEFT)); req(w.step(Vector2i.RIGHT)); req(w.floor_index==6)
+	req(w.step(Vector2i.RIGHT)); req(w.step(Vector2i.LEFT)); req(w.floor_index==6)
 	while index<route.length():
 		var d:Vector2i=DIRECTIONS[route[index]]
 		if w.tile(w.pos+d)=="Z": break
 		req(w.step(d)); index+=1
 	req(w.floor_index==7)
-	travel(w,Vector2i(1,1)); req(w.floor_index==6)
+	travel(w,Layout.entry(w.floor_index,w.layout_revision)); req(w.floor_index==6)
 	travel(w,Vector2i(8,2))
 	print("Return guard: HP ",w.hp," ATK ",w.atk," DEF ",w.defense," cost ",w.damage("W"))
 	req(w.damage("W")<w.hp)

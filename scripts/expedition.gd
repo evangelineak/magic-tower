@@ -1,5 +1,6 @@
 class_name TowerExpedition
 extends RefCounted
+const Layout = preload("res://scripts/layout.gd")
 const Generator = preload("res://scripts/generation.gd")
 const Progression = preload("res://scripts/progression.gd")
 const ENEMIES = {"Z":{"name":"Ashen Castellan","hp":720,"atk":65,"def":45,"gold":160},"H":{"name":"Ferry Warden","hp":180,"atk":62,"def":30,"gold":60,"first_strike":true},"W":{"name":"Archive Gaoler","hp":260,"atk":68,"def":48,"gold":40,"thorns":6,"heavy_every":3}}
@@ -47,15 +48,16 @@ static func build(floor_index:int, variant:int) -> Array:
 	if floor_index==2: grid[3][8]="Z"
 	return grid
 
-static func generate(seed_value:int) -> Dictionary:
+static func generate(seed_value:int,layout_revision:int=2) -> Dictionary:
 	var rng:=RandomNumberGenerator.new()
 	rng.seed=seed_value ^ 0x51A72
 	var maps:Array=[]; var ids:Array=[]
 	for f in range(3):
 		var variant:=f if seed_value==0 else rng.randi_range(0,2)
 		maps.append(build(f,variant)); ids.append(IDS[variant])
-	var proof:=validate(maps)
-	return {"maps":maps,"validation":proof,"witness":proof.get("route",""),"solvable":proof.solvable,"attempts":1,"fallback":false,"floor_skeletons":ids,"content_revision":CONTENT_REVISION,"quest_supported":true}
+	maps=Layout.orient_maps(maps,5,layout_revision)
+	var proof:=validate(maps,layout_revision)
+	return {"maps":maps,"validation":proof,"witness":proof.get("route",""),"solvable":proof.solvable,"attempts":1,"fallback":false,"floor_skeletons":ids,"content_revision":CONTENT_REVISION,"quest_supported":true,"layout_revision":layout_revision}
 
 static func damage(token:String,stats:Dictionary)->int:
 	var enemy:Dictionary=ENEMIES.get(token,Generator.ENEMIES.get(token,{}))
@@ -63,7 +65,7 @@ static func damage(token:String,stats:Dictionary)->int:
 	var p:=Progression.battle(stats.atk,stats.def,stats.hp,enemy,"warden",false,"balanced",[])
 	return int(p.damage) if p.valid else -1
 
-static func path_to(grid:Array,start:Vector2i,goal:Vector2i,stats:Dictionary)->Array:
+static func path_to(grid:Array,start:Vector2i,goal:Vector2i,stats:Dictionary,directions:Array=DIRS)->Array:
 	var queue:Array=[start]; var parents:Dictionary={start:Vector2i(-1,-1)}; var head:=0
 	while head<queue.size():
 		var p:Vector2i=queue[head]; head+=1
@@ -72,7 +74,7 @@ static func path_to(grid:Array,start:Vector2i,goal:Vector2i,stats:Dictionary)->A
 			while p!=start:
 				var previous:Vector2i=parents[p]; path.push_front(p-previous); p=previous
 			return path
-		for d in DIRS:
+		for d in directions:
 			var n:Vector2i=p+d
 			if parents.has(n): continue
 			var token:=Generator.tile(grid,n)
@@ -138,32 +140,38 @@ static func rescue_topology(maps:Array)->Dictionary:
 
 # World additionally requires expedition_revision == 3. This is a local
 # positional test, never a global buff attached to every enemy of kind H.
-static func flanking_position(maps:Array,local_floor:int,target:Vector2i,pos:Vector2i)->bool:
-	if maps.size()!=3 or local_floor<0 or local_floor>=3: return false
-	if target.x!=5 or target.y not in [6,7,8] or pos!=target+Vector2i.RIGHT: return false
+static func flanking_position(maps:Array,local_floor:int,target:Vector2i,pos:Vector2i,layout_revision:int=2)->bool:
+	if not Layout.valid_revision(layout_revision) or maps.size()!=3 or local_floor<0 or local_floor>=3: return false
+	var canonical_target:=Layout.point(local_floor+5,target,layout_revision)
+	var canonical_pos:=Layout.point(local_floor+5,pos,layout_revision)
+	if canonical_target.x!=5 or canonical_target.y not in [6,7,8] or canonical_pos!=canonical_target+Vector2i.RIGHT: return false
 	var grid=maps[local_floor]
 	if not grid is Array or grid.size()!=11: return false
 	if not grid[target.y] is Array or grid[target.y].size()!=11: return false
 	return grid[target.y][target.x]=="H"
 
-static func validate(maps:Array)->Dictionary:
+static func validate(maps:Array,layout_revision:int=2)->Dictionary:
+	if not Layout.valid_revision(layout_revision): return {"solvable":false,"reason":"Invalid layout revision"}
 	if maps.size()!=3: return {"solvable":false,"reason":"Expected three expedition floors"}
 	for grid in maps:
 		if not grid is Array or grid.size()!=11: return {"solvable":false,"reason":"Invalid expedition grid"}
 		for row in grid:
 			if not row is Array or row.size()!=11: return {"solvable":false,"reason":"Invalid expedition row"}
-	var rescue:=rescue_topology(maps)
+	var rescue:=rescue_topology(Layout.orient_maps(maps,5,layout_revision))
 	if not rescue.valid: return {"solvable":false,"reason":rescue.reason}
 	var work:=maps.duplicate(true); var stats:=INITIAL.duplicate(); var route:=""
 	for f in range(3):
-		var grid:Array=work[f]; var pos:=Vector2i(1,1)
+		var grid:Array=work[f]; var pos:=Layout.entry(f+5,layout_revision)
+		var directions:Array=[]
+		for d in DIRS: directions.append(Layout.direction(f+5,d,layout_revision))
 		for _pass in range(81):
 			var best:Array=[]; var score:=100000
 			for y in range(1,10):
 				for x in range(1,10):
-					var t:String=grid[y][x]
+					var location:=Layout.point(f+5,Vector2i(x,y),layout_revision)
+					var t:String=grid[location.y][location.x]
 					if t not in Generator.LOOT and t!="H": continue
-					var path:=path_to(grid,pos,Vector2i(x,y),stats)
+					var path:=path_to(grid,pos,location,stats,directions)
 					if path.is_empty(): continue
 					var rank:int=path.size()+(30 if t in Generator.ENEMIES or t=="H" else 0)
 					if rank>=score: continue
@@ -172,9 +180,9 @@ static func validate(maps:Array)->Dictionary:
 			var result:=execute(grid,pos,best,stats)
 			if not result.ok: return {"solvable":false,"reason":"Expedition path lethal"}
 			pos=result.pos; route+=result.route
-		var goal:=Vector2i(8,3) if f==2 else Vector2i(9,9)
+		var goal:=Layout.point(f+5,Vector2i(8,3) if f==2 else Vector2i(9,9),layout_revision)
 		if Generator.tile(grid,goal)!=("Z" if f==2 else ">"): return {"solvable":false,"reason":"Missing expedition goal"}
-		var path:=path_to(grid,pos,goal,stats)
+		var path:=path_to(grid,pos,goal,stats,directions)
 		if path.is_empty(): return {"solvable":false,"reason":"No expedition path"}
 		var end:=execute(grid,pos,path,stats)
 		if not end.ok: return {"solvable":false,"reason":"Expedition boss lethal"}

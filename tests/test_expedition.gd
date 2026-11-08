@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -11,7 +13,7 @@ func check(ok: bool, label: String):
 func state(w) -> Dictionary:
 	return w.save_data().duplicate(true)
 func from_victory():
-	var w=World.new(0)
+	var w=World.new(0,1)
 	w.restore(victory)
 	return w
 func begun():
@@ -34,13 +36,13 @@ func run_tests():
 	for kind in ["Z","H"]:
 		for field in ["hp","atk","def","gold"]:
 			check(World.ENEMIES[kind][field]==Expedition.ENEMIES[kind][field],"new enemy integration matches expedition definition: "+kind+"."+field)
-	var w=World.new(0)
+	var w=World.new(0,1)
 	rejected(w,"expedition")
 	w.won=true
 	rejected(w,"expedition")
 	check(w.chapter_offers().is_empty(),"forged won flag cannot continue while first boss remains")
-	w=World.new(0)
-	var first_proof: Dictionary=Generator.validate(w.floors)
+	w=World.new(0,1)
+	var first_proof: Dictionary=Generator.validate(w.floors,1)
 	check(first_proof.solvable and replay(w,first_proof.route) and w.won and w.floors.size()==5,"actual fresh first chapter wins and stops at five floors")
 	victory=state(w)
 	check(w.chapter_offers().size()==1 and not w.expedition_started,"victory offers continuation without automatically starting it")
@@ -52,7 +54,7 @@ func run_tests():
 	check(w.restore(victory) and state(w)==victory,"undo chapter start removes appended floors and bonus together")
 	w.action("expedition")
 	check(state(w)==started,"retry after full rollback reproduces maps and grants bonus only once in state")
-	var loaded=World.new(0)
+	var loaded=World.new(0,1)
 	check(loaded.restore(JSON.parse_string(JSON.stringify(started))) and state(loaded)==started,"eight-floor JSON state roundtrip")
 	var before_hp: int=w.hp; var before_focus: int=w.focus; var before_interest: int=w.interest
 	check(w.step(Vector2i.RIGHT) and w.step(Vector2i.LEFT) and w.floor_index==4,"expedition entrance walks back into original tower")
@@ -92,7 +94,7 @@ func run_tests():
 		for key in ["expedition_started","expedition_bridge","camp_medicine_left","camp_focus_left"]: legacy.erase(key)
 		if version==4:
 			for key in ["seal_version","seal_clues","seal_input","seal_solved","seal_reward"]: legacy.erase(key)
-		loaded=World.new(0)
+		loaded=World.new(0,1)
 		check(loaded.restore(JSON.parse_string(JSON.stringify(legacy))) and loaded.won and loaded.floors.size()==5 and not loaded.expedition_started and loaded.hp==int(victory.hp),"legacy successful JSON remains at first ending: "+str(version))
 		check(loaded.action("expedition") and loaded.floors.size()==8,"legacy victory can explicitly continue: "+str(version))
 	w=begun(); var valid: Dictionary=state(w)
@@ -107,7 +109,7 @@ func run_tests():
 	check(not w.restore(bad) and state(w)==valid,"unfinished expedition requires one final boss")
 	# Real two-chapter run: no shopping, injected stats, skill or engineering.
 	w=from_victory(); check(w.action("expedition"),"actual victorious character enters chapter two")
-	var second_proof: Dictionary=Expedition.validate(w.floors.slice(5))
+	var second_proof: Dictionary=Expedition.validate(w.floors.slice(5),1)
 	var chapter_maps: Array=w.floors.slice(5).duplicate(true)
 	var route_points: Array=[]; var crossing_stats: Array=[]
 	var actual_ok:=true
@@ -203,7 +205,7 @@ func run_tests():
 		var original: String=JSON.stringify(legacy,"\t")
 		write_file(scene.save_path,original); scene.load_game()
 		var upgraded=JSON.parse_string(FileAccess.get_file_as_string(scene.save_path))
-		check(FileAccess.file_exists(backup_path) and FileAccess.get_file_as_string(backup_path)==original and upgraded.version==10,"legacy JSON upgraded with byte-preserving matching backup: "+str(version))
+		check(FileAccess.file_exists(backup_path) and FileAccess.get_file_as_string(backup_path)==original and upgraded.version==11,"legacy JSON upgraded with byte-preserving matching backup: "+str(version))
 		check(scene.world.won and scene.world.floors.size()==5 and not scene.world.expedition_started,"UI load preserves legacy first ending until explicit continuation")
 		legacy.gold+=1; write_file(scene.save_path,JSON.stringify(legacy)); scene.load_game()
 		check(FileAccess.get_file_as_string(backup_path)==original,"legacy backup is never overwritten: "+str(version))

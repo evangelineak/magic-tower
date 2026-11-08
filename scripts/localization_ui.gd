@@ -1,5 +1,12 @@
 extends RefCounted
 const EXACT = {
+"SAVE (CLICK)":"点击保存",
+"DEBT":"欠款",
+"C: hero, equipment and skills":"C：英雄、装备与技能",
+"Walking safely... Any key or click stops.":"正在安全步行；任意按键或点击立即停止。",
+"Click clear floor to walk. Other objects: inspect only.":"点击空地安全步行；其他对象只查看，不触发。",
+"WASD / arrows: manual actions. R / N twice: restart.":"WASD / 方向键：手动操作；连按 R / N 重开。",
+
 "Flank barrier active":"侧袭挡板生效",
 "East-adjacent attack only":"须在东侧相邻格向左攻击",
 "Current position: flank barrier active":"当前位置：侧袭挡板生效",
@@ -225,7 +232,7 @@ const EXACT = {
   "SPEND KEYS?": "花费钥匙吗？",
   "Double lock": "双锁门",
   "Gold door": "金门",
-  "Keys are limited. Each reward cage needs TWO keys.": "钥匙有限，每个奖励笼房都需要两把。",
+  "Keys are limited. Double-lock rooms need TWO keys.": "钥匙有限，双锁奖励房需要两把。",
   "A shortcut now can cost a treasure later. You can cancel or return.": "眼前的捷径可能让你错过宝物。可以取消，之后再来。",
   "U restores the opened door, your keys and your position together.": "U 会同时恢复门、钥匙和你的位置。",
   "Nothing is spent until you confirm.": "确认前不会花费任何东西。",
@@ -335,6 +342,7 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["SEED %d","种子 %d"],
 ["Shield %d / oath %d / flank %d / total reduction %d","盾挡%d / 誓约%d / 侧袭%d / 总减伤%d"],
 ["Travel to floor %d: %s?","前往第%d层：%s？"],
 ["Safe route: skip %d walking / lift operations","安全通路：省去%d次行走或电梯操作"],

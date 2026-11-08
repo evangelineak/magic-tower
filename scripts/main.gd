@@ -4,8 +4,8 @@ const World = preload("res://scripts/world.gd")
 const Localization = preload("res://scripts/localization.gd")
 var language := "zh"
 const Progression = preload("res://scripts/progression.gd")
-const CELL := 49.0
-const ORIGIN := Vector2(350,142)
+const CELL := 64.0
+const ORIGIN := Vector2(24,72)
 const INK := Color("e5ebee")
 const MUTED := Color("7e96a4")
 const GOLD := Color("e9bd6d")
@@ -56,6 +56,12 @@ var reset_armed := false
 var hover := Vector2i(-1,-1)
 var tick := 0.0
 var buttons: Array = []
+var walk_route: Array = []
+var walk_floor := -1
+var walk_origin := Vector2i(-1,-1)
+var walk_timer := 0.0
+var map_art: Dictionary = {}
+const MAP_ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"gate_brute","Z":"archivist","H":"ferryman","W":"jailer"}
 func initial_world():
 	var seed_number := randi_range(1,2147483646)
 	for arg in OS.get_cmdline_user_args():
@@ -88,10 +94,14 @@ func _ready():
 	for id in ["winch","maul"]:
 		var path := "res://assets/props/%s.png" % id
 		if ResourceLoader.exists(path): combat_art[id]=load(path)
-	buttons = [Rect2(350,720,120,38),Rect2(482,720,120,38),Rect2(614,720,120,38),Rect2(746,720,143,38),Rect2(938,745,300,35),Rect2(36,710,272,38),Rect2(36,66,272,30),Rect2(675,66,272,30)]
+	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent","gate_brute","archivist","ferryman","jailer","ilen","mira"]:
+		var path := "res://assets/map_icons/%s.png" % id
+		if ResourceLoader.exists(path): map_art[id]=load(path)
+	buttons = [Rect2(768,636,148,40),Rect2(932,636,148,40),Rect2(1096,636,148,40),Rect2(1014,536,230,40),Rect2(768,586,230,40),Rect2(768,536,230,40),Rect2(1014,586,230,40),Rect2(768,686,476,40)]
 	queue_redraw()
 func _process(delta):
 	tick += delta
+	advance_walk(delta)
 	battle_time = maxf(0.0, battle_time-delta)
 	queue_redraw()
 func display(source: String) -> String:
@@ -107,86 +117,60 @@ func style(color: Color) -> StyleBoxFlat:
 	return s
 func _draw():
 	draw_rect(Rect2(0,0,1280,800),Color("080f1b"))
-	label_at(Vector2(36,45),"F2: 中文 / English",14,MUTED)
-	label_at(Vector2(350,52),"MAGIC TOWER",32,INK)
-	label_at(Vector2(350,83),"SEED %d  /  THE KEY OF THE SKY" % world.seed_value,14,TEAL)
-	label_at(Vector2(1030,83),"M: SOUND OFF" if muted else "M: SOUND ON (LOW)",13,MUTED)
-	label_at(Vector2(1040,48),"FLOOR %d / %d" % [world.floor_index+1,world.floor_count()],16,GOLD)
-	draw_line(Vector2(36,108),Vector2(1244,108),Color("243342"))
-	if art:
-		draw_texture_rect(art,Rect2(15,147,300,450),false)
-	else:
-		for i in range(7):
-			panel(Rect2(100+i*4,560-i*49,120-i*8,44),Color(0.1,0.2+i*0.025,0.25+i*0.035))
-	label_at(Vector2(36,620),Progression.HEROES[world.hero_id].name.to_upper(),22,INK)
-	label_at(Vector2(36,648),"FOCUS %d / %d  |  %s" % [world.focus,world.focus_cap,"SKILL ARMED" if world.skill_armed else ("SKILL READY" if world.focus>0 else "NO FOCUS")],14,TEAL)
-	label_at(Vector2(36,674),"Choose your hero with C" if world.moves==0 else "Kills %d  /  Talents %d" % [world.kills,world.talents.size()],16,GOLD)
-	if not Progression.talent_options(world.kills,world.talents).is_empty():
-		label_at(Vector2(36,698),"NEW TALENT AVAILABLE  [C]",14,GOLD)
-	label_at(Vector2(36,775),"R twice: replay  /  N twice: new seed",13,MUTED)
-	panel(Rect2(338,130,563,563),Color("121e2c"))
+	label_at(Vector2(24,42),"MAGIC TOWER",27,INK)
+	label_at(Vector2(310,42),world.floor_title(),22,GOLD)
+	label_at(Vector2(752,30),"FLOOR %d / %d" % [world.floor_index+1,world.floor_count()],18,GOLD)
+	label_at(Vector2(930,30),"SEED %d" % world.seed_value,15,TEAL)
+	label_at(Vector2(752,54),"F2: 中文 / English",13,MUTED)
+	label_at(Vector2(1030,54),"M: SOUND OFF" if muted else "M: SOUND ON (LOW)",13,MUTED)
+	panel(Rect2(20,68,712,712),Color("121e2c"))
 	for y in range(11):
 		for x in range(11):
 			var p := ORIGIN + Vector2(x,y)*CELL
 			var t: String = world.tile(Vector2i(x,y))
 			draw_rect(Rect2(p+Vector2(1,1),Vector2(CELL-2,CELL-2)),Color("172535") if (x+y)%2==0 else Color("142130"))
 			if t == "#":
-				draw_rect(Rect2(p+Vector2(3,3),Vector2(43,43)),Color("283748"))
-				draw_line(p+Vector2(5,5),p+Vector2(43,5),Color("3c5061"),2)
-			else: draw_token(p+Vector2(24.5,24.5),t)
+				draw_rect(Rect2(p+Vector2(3,3),Vector2(58,58)),Color("283748"))
+				draw_line(p+Vector2(5,5),p+Vector2(58,5),Color("3c5061"),2)
+			else: draw_token(p+Vector2(CELL/2,CELL/2),t)
 			if hover == Vector2i(x,y): draw_rect(Rect2(p,Vector2(CELL,CELL)),Color(0.4,0.85,0.76,0.35),false,2)
 	if world.expedition_revision>=3:
 		for y in range(1,10):
-			for x in range(1,9):
-				if world.tile(Vector2i(x,y))!="H": continue
-				var east: Vector2=ORIGIN+Vector2(x+1,y)*CELL+Vector2(24.5,24.5)
-				draw_line(east+Vector2(12,-16),east+Vector2(12,16),TEAL,3)
-				draw_line(east+Vector2(7,0),east+Vector2(-9,0),TEAL,2)
-				draw_line(east+Vector2(-9,0),east+Vector2(-3,-6),TEAL,2)
-				draw_line(east+Vector2(-9,0),east+Vector2(-3,6),TEAL,2)
-	var hero := ORIGIN+Vector2(world.pos)*CELL+Vector2(24.5,24.5)
+			for x in range(1,10):
+				var target:=Vector2i(x,y)
+				if world.tile(target)!="H": continue
+				var side: Vector2i=world.flank_position(target)
+				if side.x<0: continue
+				var center: Vector2=ORIGIN+Vector2(side)*CELL+Vector2(CELL/2,CELL/2)
+				var toward: float=signf(float(target.x-side.x))
+				draw_line(center+Vector2(-toward*20,-22),center+Vector2(-toward*20,22),TEAL,4)
+				draw_line(center+Vector2(-toward*12,0),center+Vector2(toward*12,0),TEAL,3)
+				draw_line(center+Vector2(toward*12,0),center+Vector2(toward*5,-7),TEAL,3)
+				draw_line(center+Vector2(toward*12,0),center+Vector2(toward*5,7),TEAL,3)
+	var hero := ORIGIN+Vector2(world.pos)*CELL+Vector2(CELL/2,CELL/2)
 	draw_circle(hero,19+sin(tick*3)*1.5,Color(0.4,0.85,0.76,0.15))
-	if combat_art.has(world.hero_id):
-		draw_texture_rect(combat_art[world.hero_id],Rect2(hero-Vector2(25,25),Vector2(50,50)),false)
+	if map_art.has(world.hero_id):
+		draw_texture_rect(map_art[world.hero_id],Rect2(hero-Vector2(30,30),Vector2(60,60)),false)
+		draw_rect(Rect2(hero-Vector2(29,29),Vector2(58,58)),TEAL,false,2)
+	elif combat_art.has(world.hero_id):
+		draw_texture_rect(combat_art[world.hero_id],Rect2(hero-Vector2(29,29),Vector2(58,58)),false)
 	else:
 		draw_colored_polygon(PackedVector2Array([hero+Vector2(0,-17),hero+Vector2(13,13),hero+Vector2(0,9),hero+Vector2(-13,13)]),TEAL)
 		draw_circle(hero+Vector2(0,-3),4,INK)
-	label_at(Vector2(938,153),world.floor_title(),21,GOLD)
-	label_at(Vector2(938,179),"FLOOR 0%d" % (world.floor_index+1),13,MUTED)
-	var values := [["VITALITY",str(world.hp),Color("ef928f")],["BASE ATTACK",str(world.atk),INK],["BASE DEFENSE",str(world.defense),INK],["GOLD KEYS",str(world.keys),GOLD],["GOLD",str(world.gold),GOLD]]
-	for i in values.size():
-		panel(Rect2(932,202+i*64,310,54),Color("142130"))
-		label_at(Vector2(949,235+i*64),values[i][0],14,MUTED)
-		label_at(Vector2(1147,239+i*64),values[i][1],25,values[i][2])
-	label_at(Vector2(938,548),"DEBT %d  /  CORE: %s" % [world.debt(), "HELD" if world.core else (world.core_use.to_upper() if world.core_use!="" else "NONE")],13,GOLD)
-	var target: String = world.tile(hover)
-	if World.ENEMIES.has(target):
-		var hover_preview: Dictionary=world.battle_preview(target,"",hover)
-		var cost: int = int(hover_preview.damage) if hover_preview.get("valid",false) else -1
-		label_at(Vector2(938,589),World.ENEMIES[target].name,20)
-		label_at(Vector2(938,619),"Predicted loss: %s" % (str(cost)+" HP" if cost>=0 else "IMPOSSIBLE"),16,GOLD)
-		var traits: Array=enemy_traits(World.ENEMIES[target],true)
-		var translated: Array=[]
-		for trait_line in traits: translated.append(display(trait_line))
-		if target=="H" and world.expedition_revision>=3: translated.append(display("Flank barrier active" if hover_preview.get("flank_active",false) else "East-adjacent attack only"))
-		label_at(Vector2(938,637)," / ".join(translated),11,Color("ef928f"))
-		label_at(Vector2(938,660),"V: compare owned equipment",12,GOLD)
-	else:
-		var tooltip := display(token_name(target))
-		var split_at := tooltip.length()
-		while split_at>1 and font.get_string_size(tooltip.left(split_at),HORIZONTAL_ALIGNMENT_LEFT,-1,16).x>298: split_at-=1
-		label_at(Vector2(938,589),tooltip.left(split_at),16,TEAL)
-		label_at(Vector2(938,614),tooltip.substr(split_at) if split_at<tooltip.length() else "E: interact / inspect ledger",14,MUTED)
-	if not World.ENEMIES.has(target): label_at(Vector2(938,652),quest_hint(),13,GOLD)
-	label_at(Vector2(938,674),"Move   WASD / Arrow keys",15)
-	label_at(Vector2(938,699),"Click an adjacent tile to move",14,MUTED)
-	label_at(Vector2(938,734),"U  undo     L  load     H  guide",14,MUTED)
-	label_at(Vector2(350,711),display(world.message) if display(world.message).length()<=68 else display(world.message).left(65)+"...",13,TEAL)
-	var titles := ["UNDO  U","SAVE  S*","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J","SAFE TRAVEL  T"]
-	for i in buttons.size():
-		panel(buttons[i],Color("253748"))
-		label_at(buttons[i].position+Vector2(13,25),titles[i],14)
-	label_at(Vector2(350,787),"* Click SAVE. S moves down.  |  R twice: restart  |  Autosaves after every move",12,MUTED)
+	# Keep staircase destinations visible when the hero stands on their landing.
+	for y in range(11):
+		for x in range(11):
+			var t: String=world.tile(Vector2i(x,y))
+			if t not in ["<",">"]: continue
+			var p:=ORIGIN+Vector2(x,y)*CELL
+			draw_rect(Rect2(p+Vector2(3,3),Vector2(58,58)),TEAL,false,2)
+			panel(Rect2(p+Vector2(3,3),Vector2(34,20)),Color("083b3b"))
+			label_at(p+Vector2(6,18),("F%d" % (world.floor_index+(2 if t==">" else 0))) if (t==">" and world.floor_index+1<world.floor_count()) or (t=="<" and world.floor_index>0) else "--",13,INK)
+	for point in walk_route:
+		draw_circle(ORIGIN+Vector2(point)*CELL+Vector2(CELL/2,CELL/2),4,TEAL)
+	if not walk_route.is_empty():
+		draw_circle(ORIGIN+Vector2(walk_route.back())*CELL+Vector2(CELL/2,CELL/2),23,TEAL,false,2)
+	draw_sidebar()
 	if battle_time > 0.0: draw_battle()
 	if book: draw_book()
 	if growth: draw_growth()
@@ -195,6 +179,88 @@ func _draw():
 	if journal: draw_journal()
 	if comparison: draw_comparison()
 	if travel_menu: draw_travel()
+	if not modal_open(): draw_tooltip()
+func draw_sidebar():
+	panel(Rect2(752,72,504,704),Color("101c2a"))
+	if combat_art.has(world.hero_id): draw_texture_rect(combat_art[world.hero_id],Rect2(766,82,72,72),false)
+	label_at(Vector2(850,106),Progression.HEROES[world.hero_id].name,22,INK)
+	label_at(Vector2(850,134),"FOCUS %d / %d  |  %s" % [world.focus,world.focus_cap,"SKILL ARMED" if world.skill_armed else ("SKILL READY" if world.focus>0 else "NO FOCUS")],15,TEAL)
+	var values := [["VITALITY",str(world.hp),Color("ef928f")],["BASE ATTACK",str(world.atk),INK],["BASE DEFENSE",str(world.defense),INK],["GOLD KEYS",str(world.keys),GOLD],["GOLD",str(world.gold),GOLD],["DEBT",str(world.debt()),GOLD]]
+	for i in values.size():
+		var p:=Vector2(768+(i%3)*164,164+(i/3)*70)
+		panel(Rect2(p,Vector2(148,60)),Color("203343"))
+		label_at(p+Vector2(10,21),values[i][0],13,MUTED)
+		label_at(p+Vector2(10,48),values[i][1],23,values[i][2])
+	label_at(Vector2(768,326),"Kills %d  /  Talents %d" % [world.kills,world.talents.size()],16,GOLD)
+	label_at(Vector2(768,354),"NEW TALENT AVAILABLE  [C]" if not Progression.talent_options(world.kills,world.talents).is_empty() else "C: hero, equipment and skills",15,TEAL)
+	draw_wrapped(Vector2(768,388),quest_hint(),460,16,GOLD,2)
+	draw_wrapped(Vector2(768,441),world.message,460,15,TEAL,3)
+	label_at(Vector2(768,512),"Walking safely... Any key or click stops." if not walk_route.is_empty() else "Click clear floor to walk. Other objects: inspect only.",14,MUTED)
+	var titles := ["UNDO  U","SAVE (CLICK)","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J","SAFE TRAVEL  T"]
+	for i in buttons.size():
+		panel(buttons[i],Color("253748")); label_at(buttons[i].position+Vector2(12,26),titles[i],15)
+	label_at(Vector2(768,750),"WASD / arrows: manual actions. R / N twice: restart.",13,MUTED)
+func modal_open() -> bool:
+	return book or growth or interaction or journal or comparison or travel_menu or battle_time>0.0 or world.won
+func wrapped_lines(source: String, width: float, size: int) -> Array[String]:
+	var result: Array[String]=[]
+	var remaining: String=display(source)
+	while not remaining.is_empty():
+		var count: int=remaining.length()
+		while count>1 and font.get_string_size(remaining.left(count),HORIZONTAL_ALIGNMENT_LEFT,-1,size).x>width: count-=1
+		if count<remaining.length() and language=="en":
+			var space: int=remaining.rfind(" ",count)
+			if space>0: count=space
+		result.append(remaining.left(count)); remaining=remaining.substr(count).strip_edges()
+	return result
+func draw_wrapped(p: Vector2, source: String, width: float, size: int, color: Color, limit:=99):
+	var lines:=wrapped_lines(source,width,size)
+	for i in mini(limit,lines.size()): label_at(p+Vector2(0,i*(size+5)),lines[i],size,color)
+func tooltip_lines() -> Array[String]:
+	var lines: Array[String]=[]
+	if hover.x<0 or hover.y<0 or hover.x>=11 or hover.y>=11: return lines
+	var data: Dictionary=world.tooltip_data(hover)
+	if data.get("title","")!="": lines.append_array(wrapped_lines(str(data.title),298,15))
+	for source in data.get("lines",[]): lines.append_array(wrapped_lines(str(source),298,15))
+	if World.ENEMIES.has(world.tile(hover)): lines.append_array(wrapped_lines("V: compare owned equipment",298,15))
+	return lines
+func tooltip_rect(lines: Array[String]) -> Rect2:
+	var target:=Rect2(ORIGIN+Vector2(hover)*CELL,Vector2(CELL,CELL))
+	var size:=Vector2(326,24+lines.size()*20)
+	var candidates: Array[Vector2]=[target.end+Vector2(8,8),Vector2(target.position.x-size.x-8,target.end.y+8),Vector2(target.end.x+8,target.position.y-size.y-8),target.position-size-Vector2(8,8)]
+	for p in candidates:
+		var r:=Rect2(p,size)
+		if Rect2(8,8,1264,784).encloses(r): return r
+	# A horizontal side always avoids the target even near the top/bottom.
+	var x: float=target.end.x+8 if target.end.x+8+size.x<=1272 else target.position.x-size.x-8
+	return Rect2(Vector2(x,clampf(target.position.y,8,maxf(8,792-size.y))),size)
+func draw_tooltip():
+	var lines:=tooltip_lines()
+	if lines.is_empty(): return
+	var rect:=tooltip_rect(lines)
+	panel(rect,Color("07111f")); draw_rect(rect,TEAL,false,1.5)
+	for i in lines.size(): label_at(rect.position+Vector2(14,22+i*20),lines[i],15,GOLD if i==0 else INK)
+func cancel_walk():
+	walk_route.clear(); walk_floor=-1; walk_origin=Vector2i(-1,-1); walk_timer=0.0
+func start_walk(target: Vector2i):
+	cancel_walk()
+	if modal_open() or world.tile(target)!=".": return
+	walk_route=world.safe_walk_path(target)
+	walk_floor=world.floor_index; walk_origin=world.pos; walk_timer=0.0
+func advance_walk(delta: float):
+	if walk_route.is_empty(): return
+	if modal_open() or world.floor_index!=walk_floor or world.pos!=walk_origin:
+		cancel_walk(); return
+	walk_timer+=delta
+	if walk_timer<0.12: return
+	walk_timer=0.0
+	var before: Dictionary=world.save_data().duplicate(true)
+	var next: Vector2i=walk_route[0]
+	if not world.safe_walk_step(next,walk_floor,walk_origin): cancel_walk(); return
+	walk_route.pop_front(); walk_origin=world.pos
+	history.append(before)
+	if history.size()>100: history.pop_front()
+	play_sound("move"); save_game(false)
 func close_travel():
 	travel_menu=false
 	travel_pending=""
@@ -203,6 +269,7 @@ func refresh_travel():
 	travel_rows=world.travel_options()
 	travel_refresh_count+=1
 func open_travel():
+	cancel_walk()
 	if travel_menu: close_travel(); return
 	if battle_time>0.0 or comparison or book or journal or growth or interaction: return
 	travel_menu=true; travel_page=0; travel_pending=""
@@ -265,6 +332,7 @@ func draw_travel():
 	label_at(Vector2(225,662),"T: close / Esc: back. Viewing and selecting cost nothing.",15,MUTED)
 
 func open_comparison():
+	cancel_walk()
 	if comparison: comparison=false; return
 	if battle_time>0.0 or book or journal or growth or interaction or travel_menu: return
 	if not World.ENEMIES.has(world.tile(hover)): return
@@ -325,17 +393,31 @@ func draw_victory():
 	else: label_at(Vector2(395,480),"Both chapters are complete. Your journey is saved.",16,TEAL)
 	label_at(Vector2(395,582),"R twice: replay / J: journal / U: undo",15,MUTED)
 func draw_token(c: Vector2, t: String):
+	if MAP_ENEMY_ART.has(t) and map_art.has(MAP_ENEMY_ART[t]):
+		draw_texture_rect(map_art[MAP_ENEMY_ART[t]],Rect2(c-Vector2(30,30),Vector2(60,60)),false)
+		draw_rect(Rect2(c-Vector2(29,29),Vector2(58,58)),Color("ce7971"),false,1)
+		var enemy: Dictionary=World.ENEMIES[t]
+		var markers: String=("!" if enemy.get("first_strike",false) else "")+("*" if enemy.get("thorns",0)>0 else "")+("3" if enemy.get("heavy_every",0)>0 else "")
+		if markers!="":
+			draw_rect(Rect2(c+Vector2(-29,13),Vector2(10+markers.length()*12,18)),Color("351a25"))
+			label_at(c+Vector2(-25,27),markers,14,GOLD)
+		return
+
 	var npc_art: String={"J":"ilen","t":"mira"}.get(t,"")
+	if map_art.has(npc_art):
+		draw_texture_rect(map_art[npc_art],Rect2(c-Vector2(30,30),Vector2(60,60)),false)
+		draw_rect(Rect2(c-Vector2(29,29),Vector2(58,58)),TEAL,false,1)
+		return
 	if combat_art.has(npc_art):
-		draw_texture_rect(combat_art[npc_art],Rect2(c-Vector2(25,25),Vector2(50,50)),false)
+		draw_texture_rect(combat_art[npc_art],Rect2(c-Vector2(28,28),Vector2(56,56)),false)
 		return
 	if ENEMY_ART.has(t) and combat_art.has(ENEMY_ART[t]):
-		draw_texture_rect(combat_art[ENEMY_ART[t]],Rect2(c-Vector2(24,24),Vector2(48,48)),false)
+		draw_texture_rect(combat_art[ENEMY_ART[t]],Rect2(c-Vector2(28,28),Vector2(56,56)),false)
 		if t in ["u","b"]:
 			label_at(c+Vector2(11,-10),"!" if t=="u" else "*",16,GOLD)
 		return
 	if t in ["v","m"] and combat_art.has("winch" if t=="v" else "maul"):
-		draw_texture_rect(combat_art["winch" if t=="v" else "maul"],Rect2(c-Vector2(22,22),Vector2(44,44)),false)
+		draw_texture_rect(combat_art["winch" if t=="v" else "maul"],Rect2(c-Vector2(28,28),Vector2(56,56)),false)
 		return
 	match t:
 		"n","e":
@@ -349,6 +431,7 @@ func draw_token(c: Vector2, t: String):
 			draw_circle(c+Vector2(-6,0),6,GOLD,false,3); draw_line(c,c+Vector2(13,0),GOLD,3); draw_line(c+Vector2(10,0),c+Vector2(10,6),GOLD,3)
 		"D","L":
 			draw_rect(Rect2(c-Vector2(15,19),Vector2(30,38)),Color("725735")); draw_rect(Rect2(c-Vector2(11,15),Vector2(22,30)),GOLD,false,2); draw_circle(c,3,Color("171d27"))
+			label_at(c+Vector2(-22,25),"2" if t=="L" else "1",18,GOLD)
 			if t=="L":
 				draw_circle(c+Vector2(-6,0),3,Color("171d27")); draw_circle(c+Vector2(6,0),3,Color("171d27"))
 				label_at(c+Vector2(10,-12),"2",12,GOLD)
@@ -390,8 +473,12 @@ func draw_token(c: Vector2, t: String):
 				draw_line(c+Vector2(18,-20),c+Vector2(18,20),GOLD,3)
 				for plank in range(5): draw_line(c+Vector2(-18,-16+plank*8),c+Vector2(18,-16+plank*8),Color("ba9563"),5)
 		"<",">":
-			for i in range(4): draw_line(c+Vector2(-15,12-i*7),c+Vector2(15-i*6,12-i*7),TEAL,3)
-			label_at(c+Vector2(8,-8),"+" if t==">" else "-",16,TEAL)
+			for i in range(4):
+				draw_rect(Rect2(c+Vector2(-23,16-i*9),Vector2(30-i*5,6)),TEAL)
+			var d: float=-1.0 if t==">" else 1.0
+			draw_line(c+Vector2(17,-d*14),c+Vector2(17,d*17),GOLD,4)
+			draw_line(c+Vector2(17,d*17),c+Vector2(9,d*9),GOLD,4)
+			draw_line(c+Vector2(17,d*17),c+Vector2(25,d*9),GOLD,4)
 func enemy_traits(enemy: Dictionary, compact:=false) -> Array:
 	var traits: Array=[]
 	if enemy.get("first_strike",false): traits.append("First strike" if compact else "Strikes first, even if you one-shot it.")
@@ -575,7 +662,7 @@ func draw_key_confirmation():
 	label_at(Vector2(290,158),"SPEND KEYS?",25,GOLD)
 	label_at(Vector2(290,205),"%s: costs %d gold keys" % ["Double lock" if cost==2 else "Gold door",cost],22,INK)
 	label_at(Vector2(290,248),"Held: %d   /   Remaining after opening: %d" % [world.keys,world.keys-cost],20,TEAL)
-	label_at(Vector2(290,292),"Keys are limited. Each reward cage needs TWO keys.",17,GOLD)
+	label_at(Vector2(290,292),"Keys are limited. Double-lock rooms need TWO keys.",17,GOLD)
 	label_at(Vector2(290,325),"A shortcut now can cost a treasure later. You can cancel or return.",16,MUTED)
 	var rows := available_actions()
 	for i in rows.size():
@@ -600,6 +687,7 @@ func draw_winch_confirmation():
 		panel(rect,Color("253748")); action_label(rect,"%d  %s" % [i+1,action_rows[i][1]])
 	label_at(Vector2(290,672),"Click a choice / press 1-2. E / Esc cancels.",14,MUTED)
 func perform_action(id: String, confirmed:=false):
+	cancel_walk()
 	if id=="winch_cancel": winch_pending=""; return
 	if id=="winch_confirm":
 		var choice: String=winch_pending
@@ -655,6 +743,7 @@ func visible_growth_actions() -> Array:
 	gear_page=clampi(gear_page,0,maxi(0,ceili(rows.size()/3.0)-1))
 	return rows.slice(gear_page*3,gear_page*3+3)
 func open_growth():
+	cancel_walk()
 	comparison=false
 	growth=not growth; journal=false; interaction=false; winch_pending=""; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if growth: growth_tab=2 if not Progression.talent_options(world.kills,world.talents).is_empty() else 0
@@ -703,6 +792,7 @@ func draw_growth():
 	label_at(Vector2(225,646),display(world.message).left(105),14,TEAL)
 	label_at(Vector2(225,697),"Choose 1-3. Tab changes section. Esc: keep default Warden." if world.moves==0 else "Click a card / press 1-3. Tab changes section. C / Esc closes.",15,MUTED)
 func open_journal():
+	cancel_walk()
 	comparison=false
 	journal=not journal
 	journal_page=0
@@ -846,6 +936,7 @@ func draw_ellipse_shadow(center: Vector2):
 	draw_circle(Vector2.ZERO,49,Color(0,0,0,0.35))
 	draw_set_transform(Vector2.ZERO)
 func _unhandled_input(event):
+	if (event is InputEventKey and event.pressed and not event.echo) or (event is InputEventMouseButton and event.pressed): cancel_walk()
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode==KEY_F2:
 		language="en" if language=="zh" else "zh"
 		queue_redraw()
@@ -854,7 +945,7 @@ func _unhandled_input(event):
 		toggle_mute()
 		return
 	if event is InputEventMouseMotion:
-		hover = Vector2i((get_global_mouse_position()-ORIGIN)/CELL)
+		hover = Vector2i(((get_global_mouse_position()-ORIGIN)/CELL).floor())
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 		if battle_time>0.0: battle_time=0.0; return
 		if travel_menu:
@@ -916,8 +1007,8 @@ func _unhandled_input(event):
 					6: open_journal()
 					7: open_travel()
 				return
-		var diff: Vector2i = hover-world.pos
-		if absi(diff.x)+absi(diff.y)==1: move(diff)
+		hover=Vector2i(((get_global_mouse_position()-ORIGIN)/CELL).floor())
+		start_walk(hover)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if battle_time>0.0: battle_time=0.0; return
 		if event.keycode==KEY_T: open_travel(); return
@@ -978,6 +1069,7 @@ func _unhandled_input(event):
 			KEY_R: request_restart("replay")
 			KEY_N: request_restart("new")
 func request_restart(mode: String):
+	cancel_walk()
 	close_travel()
 	comparison=false
 	if reset_armed and reset_mode==mode:
@@ -988,6 +1080,7 @@ func request_restart(mode: String):
 		reset_armed=true; reset_mode=mode
 		world.message="Press %s again: %s. Autosave will be replaced." % ["R" if mode=="replay" else "N","replay this seed" if mode=="replay" else "start a new seed"]
 func move(direction: Vector2i, confirmed:=false):
+	cancel_walk()
 	reset_armed=false
 	var target_token: String=world.tile(world.pos+direction)
 	var key_cost := 2 if target_token=="L" else 1
@@ -1019,6 +1112,7 @@ func move(direction: Vector2i, confirmed:=false):
 		if history.size()>100: history.pop_front()
 		save_game(false)
 func undo():
+	cancel_walk()
 	close_travel()
 	if history.is_empty(): world.message="No move to undo in this session."; return
 	world.restore(history.pop_back())
@@ -1031,16 +1125,17 @@ func save_game(announce:=true):
 	f.store_string(JSON.stringify(world.save_data()))
 	if announce: world.message="Journey saved locally."
 func load_game():
+	cancel_walk()
 	close_travel()
 	comparison=false
 	if not FileAccess.file_exists(save_path): world.message="No saved journey yet."; return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
 	if not parsed is Dictionary: world.message="Save is invalid. Current journey is unchanged."; return
-	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6 or parsed.get("version")==7 or parsed.get("version")==8 or parsed.get("version")==9
+	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6 or parsed.get("version")==7 or parsed.get("version")==8 or parsed.get("version")==9 or parsed.get("version")==10
 	if upgrading:
 		var probe=World.new(0)
 		if not probe.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
-		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else (".pre-schema7.json" if parsed.get("version")==6 else (".pre-schema8.json" if parsed.get("version")==7 else (".pre-schema9.json" if parsed.get("version")==8 else ".pre-schema10.json")))))
+		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else (".pre-schema7.json" if parsed.get("version")==6 else (".pre-schema8.json" if parsed.get("version")==7 else (".pre-schema9.json" if parsed.get("version")==8 else (".pre-schema10.json" if parsed.get("version")==9 else ".pre-schema11.json"))))))
 		if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(backup_path)):
 			world.message="Could not back up the old save. Current journey is unchanged."
 			return

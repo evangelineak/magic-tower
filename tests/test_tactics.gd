@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 var checks:=0
 var failures:=0
@@ -6,7 +8,7 @@ func check(ok: bool, label: String):
 	checks+=1
 	if not ok: failures+=1; push_error(label)
 func fixture(gear: String="balanced", hero: String="warden", armed: bool=false):
-	var w=World.new(0)
+	var w=World.new(0,1)
 	w.enter_floor(3); w.pos=Vector2i(7,9)
 	w.atk=50; w.defense=10; w.hp=500; w.hero_id=hero; w.skill_armed=armed
 	if gear!="balanced": w.inventory.append(gear); w.chest_claimed=true
@@ -32,7 +34,7 @@ func run_tests():
 		w.step(Vector2i.DOWN); w.step(Vector2i.UP)
 		check(w.hp==after.hp and w.gold==after.gold and w.kills==after.kills,"revisiting cleared monster cannot retrigger damage, shield heal or loot")
 		check(w.restore(original) and state(w)==original,"whole-state combat rollback restores monster, focus, health and gear")
-		var loaded=World.new(0)
+		var loaded=World.new(0,1)
 		check(loaded.restore(JSON.parse_string(JSON.stringify(after))) and state(loaded)==after,"new tactical result persists without serializing transient battle counters")
 	var w=fixture("duelist","ranger",true); w.hp=125
 	var before: Dictionary=state(w)
@@ -53,7 +55,7 @@ func run_tests():
 	# in the new heavy enemy's slot. Loading it must preserve its actual map.
 	w=fixture("duelist"); var legacy: Dictionary=state(w)
 	legacy.version=4; legacy.erase("bridge_built"); legacy.floors[3][8][7]="g"
-	var loaded=World.new(0)
+	var loaded=World.new(0,1)
 	check(loaded.restore(legacy) and loaded.equipped=="duelist" and loaded.inventory.has("duelist") and loaded.tile(Vector2i(7,8))=="g","legacy v4 gear save loads without silently replacing old map enemy")
 	check(loaded.battle_preview("g").feint_damage>0,"loaded legacy gear receives current documented combat rule")
 	# Controller presentation must expose the same decomposition, without

@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 var failures := 0
 var checks := 0
 func check(ok: bool, message: String):
@@ -11,7 +13,7 @@ func run_tests():
 	root.add_child(scene)
 	scene.save_path="user://integration-test.json"
 	scene.language="en" # Preserve English-contract UI assertions; default Chinese has its own suite.
-	scene.world=load("res://scripts/world.gd").new(0)
+	scene.world=load("res://scripts/world.gd").new(0,1)
 	var event := InputEventKey.new()
 	event.pressed=true
 	await process_frame
@@ -76,13 +78,14 @@ func run_tests():
 	scene.undo()
 	check(scene.world.floor_index==2 and scene.world.debt()==20 and scene.world.checkpoints==0,"undo crossing restores interest node and debt together")
 	scene.move(Vector2i.RIGHT); scene.perform_action("continue")
-	scene.move(Vector2i.RIGHT); scene.move(Vector2i.LEFT)
+	# Restart uses the new layout; fourth-floor stairs now stay at (9,9).
+	scene.move(Vector2i.LEFT); scene.move(Vector2i.RIGHT)
 	check(scene.world.floor_index==2 and scene.world.checkpoints==1,"descend retains settled milestone")
 	scene.move(Vector2i.LEFT); scene.move(Vector2i.RIGHT)
 	check(scene.world.floor_index==3 and not scene.interaction and scene.world.interest==2,"revisit ascent does not charge or prompt twice")
 	scene.load_game()
 	check(scene.world.floor_index==3 and scene.world.debt()==22 and scene.history.is_empty(),"UI autosave preserves ledger and milestones")
-	scene.world=load("res://scripts/world.gd").new(0); scene.history.clear()
+	scene.world=load("res://scripts/world.gd").new(0,1); scene.history.clear()
 	event.keycode=KEY_C; scene._unhandled_input(event)
 	check(scene.growth and scene.growth_actions().size()==3,"C offers three heroes before first move")
 	event.keycode=KEY_D; scene._unhandled_input(event)
@@ -124,7 +127,7 @@ func run_tests():
 	check(scene.world.moves==1 and scene.world.seed_value==seed_before,"movement cancels armed new-run confirmation")
 	scene._unhandled_input(event)
 	check(scene.growth and scene.growth_tab==0 and scene.world.moves==0 and scene.world.seed_value>0,"confirmed new seed presents hero choices")
-	scene.world=load("res://scripts/world.gd").new(0); scene.history.clear()
+	scene.world=load("res://scripts/world.gd").new(0,1); scene.history.clear()
 	scene.growth=true; scene.growth_tab=0
 	scene.save_game(false)
 	var readonly_before: Dictionary=scene.world.save_data().duplicate(true)
@@ -170,7 +173,7 @@ func run_tests():
 	check(not scene.journal,"Escape dismisses journal")
 	event.keycode=KEY_R; scene._unhandled_input(event); scene._unhandled_input(event)
 	check(not scene.journal and scene.growth and scene.journal_page==0,"replay leaves journal closed and opens hero selection")
-	scene.world=load("res://scripts/world.gd").new(0); scene.history.clear(); scene.growth=false
+	scene.world=load("res://scripts/world.gd").new(0,1); scene.history.clear(); scene.growth=false
 	scene.world.pos=Vector2i(3,9); scene.world.keys=2
 	var gate_before: Dictionary=scene.world.save_data().duplicate(true)
 	check("2 keys" in scene.token_name("L") and "70" in scene.token_name("h") and "140" in scene.token_name("P"),"updated gate and recovery hover descriptions")

@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 const Riddle=preload("res://scripts/riddle.gd")
 var checks:=0
@@ -11,7 +13,7 @@ func state(w) -> Dictionary:
 func resources(w) -> Array:
 	return [w.hp,w.atk,w.defense,w.keys,w.gold,w.focus,w.principal,w.fees,w.interest,w.checkpoints,w.loan_used]
 func at_seal():
-	var w=World.new(0)
+	var w=World.new(0,1)
 	w.pos=Vector2i(2,1); w.action("seal_contract")
 	w.enter_floor(1); w.pos=Vector2i(1,4); w.action("seal_water"); w.step(Vector2i.RIGHT)
 	w.enter_floor(2); w.pos=Vector2i(4,1); w.action("elevator")
@@ -44,7 +46,7 @@ func run_tests():
 	rejected(w,"secret_ring_"+solution[0])
 	check(w.action("secret_ring_"+solution[1]),"second unique symbol enters sequence")
 	var partial: Dictionary=state(w)
-	var loaded=World.new(0)
+	var loaded=World.new(0,1)
 	check(loaded.restore(JSON.parse_string(JSON.stringify(partial))) and state(loaded)==partial,"partial input and discovered clues survive JSON")
 	check(w.action("secret_backspace") and w.seal_input.size()==1,"backspace removes only last symbol")
 	check(w.action("secret_reset") and w.seal_input.is_empty(),"reset clears partial input")
@@ -61,7 +63,7 @@ func run_tests():
 			check(sequence==Riddle.solution(w.seed_value),"only independently resolved ordering solves seal")
 		else: check(w.seal_input.is_empty(),"wrong four-symbol ordering resets only its input")
 	check(solutions==1,"24 permutations contain exactly one world-level success")
-	w=World.new(0); w.enter_floor(4); w.pos=Vector2i(1,3)
+	w=World.new(0,1); w.enter_floor(4); w.pos=Vector2i(1,3)
 	rejected(w,"secret_ring_sun"); rejected(w,"secret_provisions"); rejected(w,"secret_voucher")
 	w=at_seal(); w.pos=Vector2i(9,9)
 	rejected(w,"secret_ring_sun")
@@ -91,7 +93,7 @@ func run_tests():
 	w=at_seal(); var legacy_resources:=resources(w); var old: Dictionary=state(w); old.version=4
 	for key in ["seal_clues","seal_input","seal_solved","seal_reward"]: old.erase(key)
 	old.secret=true
-	loaded=World.new(0)
+	loaded=World.new(0,1)
 	check(loaded.restore(old) and loaded.secret and loaded.seal_solved and loaded.seal_reward=="legacy" and loaded.tile(Vector2i(1,3))==".","paid legacy secret migrates closed without paying again")
 	check(resources(loaded)==legacy_resources,"legacy already-paid secret migration grants no extra reward")
 	rejected(loaded,"secret_provisions"); rejected(loaded,"secret_voucher")
@@ -138,14 +140,14 @@ func run_tests():
 	# Loading legacy JSON creates a byte-preserving, one-time backup before upgrade.
 	var backup_path: String=scene.save_path.get_basename()+".pre-schema5.json"
 	if FileAccess.file_exists(backup_path): DirAccess.remove_absolute(backup_path)
-	var legacy_save: Dictionary=state(World.new(0)); legacy_save.version=4
+	var legacy_save: Dictionary=state(World.new(0,1)); legacy_save.version=4
 	for key in ["seal_version","seal_clues","seal_input","seal_solved","seal_reward"]: legacy_save.erase(key)
 	var original_bytes: String=JSON.stringify(legacy_save,"\t")
 	write_file(scene.save_path,original_bytes)
 	scene.load_game()
 	check(FileAccess.file_exists(backup_path) and FileAccess.get_file_as_string(backup_path)==original_bytes,"legacy JSON backup preserves original bytes")
 	var upgraded=JSON.parse_string(FileAccess.get_file_as_string(scene.save_path))
-	check(upgraded is Dictionary and upgraded.version==10 and scene.world.seal_clues==0,"successful legacy load atomically writes current schema ten")
+	check(upgraded is Dictionary and upgraded.version==11 and scene.world.seal_clues==0,"successful legacy load atomically writes current schema eleven")
 	legacy_save.gold=1; write_file(scene.save_path,JSON.stringify(legacy_save))
 	scene.load_game()
 	check(scene.world.gold==1 and FileAccess.get_file_as_string(backup_path)==original_bytes,"second legacy load never overwrites first backup")
@@ -166,7 +168,7 @@ func run_tests():
 	check(state(scene.world)==before and FileAccess.get_file_as_string(scene.save_path)==original_bytes,"backup failure preserves current world and original legacy file")
 	DirAccess.remove_absolute(backup_path); DirAccess.remove_absolute(scene.save_path)
 	# Actual no-teleport route with an early missed cage and late return.
-	w=World.new(0)
+	w=World.new(0,1)
 	check(walk(w,Vector2i(2,1)) and w.action("seal_contract"),"real route reads merchant clue")
 	for floor_number in range(5):
 		if floor_number==1:

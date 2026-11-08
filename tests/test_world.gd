@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World = preload("res://scripts/world.gd")
 var checks := 0
 var failures := 0
@@ -8,26 +10,26 @@ func check(ok: bool, message: String):
 		push_error("FAIL: "+message)
 		failures += 1
 func _init():
-	var w = World.new(0)
+	var w = World.new(0,1)
 	check(not w.step(Vector2i.LEFT),"wall blocks")
 	check(w.pos==Vector2i(1,1),"wall preserves position")
 	check(w.damage("s")==12,"first-strike damage formula")
 	w.atk=3
 	check(w.damage("s")==-1,"zero damage impossible")
-	w=World.new(0)
+	w=World.new(0,1)
 	w.pos=Vector2i(5,3)
 	check(not w.step(Vector2i.RIGHT),"keyless door blocks")
 	w.keys=1
 	check(w.step(Vector2i.RIGHT) and w.keys==0,"door consumes one key")
-	w=World.new(0); w.hp=12; w.pos=Vector2i(5,3)
+	w=World.new(0,1); w.hp=12; w.pos=Vector2i(5,3)
 	check(not w.step(Vector2i.LEFT) and w.hp==12,"lethal combat blocked")
-	w=World.new(0)
+	w=World.new(0,1)
 	var data: Dictionary = JSON.parse_string(JSON.stringify(w.save_data()))
 	check(w.restore(data),"JSON save roundtrip")
 	data.x=99
 	check(not w.restore(data) and w.pos==Vector2i(1,1),"invalid save rejected atomically")
 	check(not w.restore({"version":1}),"incomplete save rejected")
-	w=World.new(0)
+	w=World.new(0,1)
 	var route := ""
 	var before_boss: Dictionary = {}
 	for floor_num in range(World.MAPS.size()):
@@ -64,7 +66,7 @@ func _init():
 	check(w.won,"all five floors can be won")
 	check(w.hp>0,"winning route survives")
 	check(not w.loan_used and w.debt()==0,"baseline wins with no borrowing")
-	var return_world = World.new(0)
+	var return_world = World.new(0,1)
 	check(return_world.restore(before_boss),"restore later-growth state")
 	# A late optional boss requires a build, not merely vacuuming floor loot.
 	# Walk all the way back to the real merchant and pay with earned gold.

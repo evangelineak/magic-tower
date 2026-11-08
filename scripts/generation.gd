@@ -1,5 +1,6 @@
 class_name TowerGenerator
 extends RefCounted
+const Layout = preload("res://scripts/layout.gd")
 const Progression = preload("res://scripts/progression.gd")
 
 # Bounded, reproducible variation of an authored tower, not unconstrained rooms.
@@ -39,6 +40,7 @@ const GEOMETRY_REVISION := 2
 
 static func protected_walls(base_grid: Array) -> Array:
 	var result: Array=[]
+	if base_grid[2][8]=="D": result.append(Vector2i(9,1)); result.append(Vector2i(9,3))
 	if base_grid[9][1] in ["$","A","P"]: result.append(Vector2i(1,8))
 	if base_grid[3][9]=="T": result.append(Vector2i(9,2)); result.append(Vector2i(9,4))
 	for row in base_grid:
@@ -59,6 +61,7 @@ static func build_skeleton(base_grid: Array, id: String) -> Array:
 			var token: String=base_grid[y][x]
 			if token not in ["#","."] and token not in LOOT: grid[y][x]=token
 	for p in protected_walls(base_grid): grid[p.y][p.x]="#"
+	if base_grid[2][8]=="D": grid[2][9]=base_grid[2][9]
 	return grid
 
 static func reachable_without(grid: Array, excluded: Vector2i = Vector2i(-1,-1)) -> Dictionary:
@@ -89,6 +92,7 @@ static func scatter_loot(grid: Array, baseline: Array, rng: RandomNumberGenerato
 	for y in range(1,10):
 		for x in range(1,10):
 			if baseline[y][x] not in LOOT: continue
+			if baseline[2][8]=="D" and x==9 and y==2: continue
 			var p := Vector2i(x,y)
 			if baseline_closed.has(p): dry_tokens.append(baseline[y][x])
 			else:
@@ -132,32 +136,52 @@ static func normalize(base_maps: Array) -> Array:
 		result[0][5][2]="E"
 	return result
 
-static func generate(seed_value: int, base_maps: Array) -> Dictionary:
-	var baseline := normalize(base_maps)
-	var authored: Array=[]
+# Reserve a true optional room before allocating any ordinary growth budget.
+# The authored ruby at (9,1) is moved, not deleted or placed behind the lock.
+static func prepare_baseline(base_maps:Array,layout_revision:int=2)->Array:
+	var result:=normalize(base_maps)
+	if layout_revision==1: return result
+	for f in range(result.size()):
+		var grid:Array=result[f]
+		var already_reserved:bool=grid[2][8]=="D" and grid[2][9] in ["h","d"]
+		for row in grid:
+			for x in range(row.size()):
+				if row[x]=="D": row[x]="."
+		if f not in [0,3,4]: continue
+		var displaced:Array=[]
+		for p in [Vector2i(8,2),Vector2i(9,1),Vector2i(9,2),Vector2i(9,3)]:
+			if already_reserved and p==Vector2i(9,2): continue
+			if grid[p.y][p.x] in LOOT: displaced.append(grid[p.y][p.x])
+		grid[2][8]="D"; grid[1][9]="#"; grid[3][9]="#"
+		grid[2][9]="d" if f==3 else "h"
+		var dry:=reachable(grid,["#","D","L","~","V","K"])
+		for y in range(1,10):
+			for x in range(1,10):
+				if displaced.is_empty(): break
+				if grid[y][x]=="." and Vector2i(x,y) not in [Vector2i(1,1),Vector2i(9,9)] and dry.has(Vector2i(x,y)): grid[y][x]=displaced.pop_front()
+		assert(displaced.is_empty(),"Authored room reservation has no free relocation cell")
+	return result
+static func generate(seed_value:int,base_maps:Array,layout_revision:int=2)->Dictionary:
+	var baseline:=prepare_baseline(base_maps,layout_revision)
+	var authored:Array=[]
 	for _floor in baseline.size(): authored.append("authored")
+	var physical:=Layout.orient_maps(baseline,0,layout_revision)
 	if seed_value==0:
-		return {"maps":baseline,"attempts":0,"fallback":false,"validation":validate(baseline),"floor_skeletons":authored,"geometry_revision":GEOMETRY_REVISION}
-	var rng := RandomNumberGenerator.new()
-	rng.seed=seed_value
-	var skeleton_ids: Array=SKELETONS.keys()
+		return {"maps":physical,"attempts":0,"fallback":false,"validation":validate(physical,layout_revision),"floor_skeletons":authored,"geometry_revision":GEOMETRY_REVISION,"layout_revision":layout_revision}
+	var rng:=RandomNumberGenerator.new(); rng.seed=seed_value
+	var skeleton_ids:Array=SKELETONS.keys()
 	for attempt in range(1,MAX_ATTEMPTS+1):
-		var candidate: Array=[]
-		var selected: Array=[]
-		var valid := true
+		var candidate:Array=[]; var selected:Array=[]; var valid:=true
 		for floor_index in baseline.size():
-			var id: String=skeleton_ids[rng.randi_range(0,skeleton_ids.size()-1)]
-			var grid := build_skeleton(baseline[floor_index],id)
-			if not skeleton_valid(grid,id,floor_index) or not scatter_loot(grid,baseline[floor_index],rng):
-				valid=false
-				break
+			var id:String=skeleton_ids[rng.randi_range(0,skeleton_ids.size()-1)]
+			var grid:=build_skeleton(baseline[floor_index],id)
+			if not skeleton_valid(grid,id,floor_index) or not scatter_loot(grid,baseline[floor_index],rng): valid=false; break
 			candidate.append(grid); selected.append(id)
 		if not valid: continue
-		var proof := validate(candidate)
-		if proof.solvable:
-			return {"maps":candidate,"attempts":attempt,"fallback":false,"validation":proof,"floor_skeletons":selected,"geometry_revision":GEOMETRY_REVISION}
-	# A failed proof never opens an unverified run. World checks this flag too.
-	return {"maps":baseline,"attempts":MAX_ATTEMPTS,"fallback":true,"validation":validate(baseline),"floor_skeletons":authored,"geometry_revision":GEOMETRY_REVISION}
+		candidate=Layout.orient_maps(candidate,0,layout_revision)
+		var proof:=validate(candidate,layout_revision)
+		if proof.solvable: return {"maps":candidate,"attempts":attempt,"fallback":false,"validation":proof,"floor_skeletons":selected,"geometry_revision":GEOMETRY_REVISION,"layout_revision":layout_revision}
+	return {"maps":physical,"attempts":MAX_ATTEMPTS,"fallback":true,"validation":validate(physical,layout_revision),"floor_skeletons":authored,"geometry_revision":GEOMETRY_REVISION,"layout_revision":layout_revision}
 
 static func damage(kind: String, stats: Dictionary) -> int:
 	if not ENEMIES.has(kind): return -1
@@ -170,7 +194,7 @@ static func tile(grid: Array, p: Vector2i) -> String:
 
 # Return a shortest geometric path that never crosses a special obstruction.
 # HP may change along it; execute() rechecks the exact cumulative cost.
-static func path_to(grid: Array, start: Vector2i, goal: Vector2i, stats: Dictionary) -> Array:
+static func path_to(grid: Array, start: Vector2i, goal: Vector2i, stats: Dictionary, directions:Array=DIRS) -> Array:
 	var queue: Array=[start]
 	var parents := {start:Vector2i(-99,-99)}
 	var head := 0
@@ -182,7 +206,7 @@ static func path_to(grid: Array, start: Vector2i, goal: Vector2i, stats: Diction
 				var previous: Vector2i=parents[p]
 				path.push_front(p-previous); p=previous
 			return path
-		for d in DIRS:
+		for d in directions:
 			var next: Vector2i=p+d
 			if parents.has(next): continue
 			var token := tile(grid,next)
@@ -229,8 +253,28 @@ static func reachable(grid: Array, blocked: Array) -> Dictionary:
 			seen[next]=true; queue.append(next)
 	return seen
 
-static func topology(maps: Array) -> Dictionary:
+static func topology(maps:Array,layout_revision:int=2)->Dictionary:
+	return _topology_canonical(Layout.orient_maps(maps,0,layout_revision),layout_revision==2)
+static func door_isolation(grid:Array,door:Vector2i,reward:Vector2i)->Dictionary:
+	var closed_grid:=grid.duplicate(true); closed_grid[door.y][door.x]="#"
+	var closed:=reachable(closed_grid,["#"])
+	var opened:=reachable(grid,["#"])
+	var exclusive:Array=[]
+	for p in opened:
+		if p!=door and not closed.has(p): exclusive.append(p)
+	return {"valid":not closed.has(reward) and opened.has(reward) and not exclusive.is_empty(),"exclusive":exclusive}
+static func _topology_canonical(maps:Array,strict_doors:bool=true)->Dictionary:
+	if strict_doors and maps.size()==5:
+		for f in range(5):
+			if f in [0,3,4] and (maps[f][2][8]!="D" or maps[f][2][9]!=("d" if f==3 else "h")): return {"valid":false,"reason":"Missing one-key room or reward"}
 	for grid in maps:
+		for y in range(1,10):
+			for x in range(1,10):
+				var lock:String=grid[y][x]
+				if lock!="L" and not (strict_doors and lock=="D"): continue
+				var reward:=Vector2i(1,9) if lock=="L" else Vector2i(9,2)
+				var expected:=Vector2i(2,9) if lock=="L" else Vector2i(8,2)
+				if Vector2i(x,y)!=expected or not door_isolation(grid,expected,reward).valid: return {"valid":false,"reason":"A paid door has no exclusive reward region"}
 		var closed := reachable(grid,["#","D","L","~","V","K"])
 		var opened := reachable(grid,["#","D","~","K"])
 		# Test each reward gate in isolation: opening an ordinary one-key
@@ -254,29 +298,33 @@ static func topology(maps: Array) -> Dictionary:
 					if not drained.has(p): return {"valid":false,"reason":"The flooded reward remains sealed after draining"}
 	return {"valid":true}
 
-static func validate(maps: Array) -> Dictionary:
+static func validate(maps:Array,layout_revision:int=2)->Dictionary:
+	if not Layout.valid_revision(layout_revision): return {"solvable":false,"reason":"Invalid layout revision"}
 	if maps.size()!=5: return {"solvable":false,"reason":"Expected five authored floors"}
 	for grid in maps:
 		if not grid is Array or grid.size()!=11: return {"solvable":false,"reason":"Invalid grid"}
 		for row in grid:
 			if not row is Array or row.size()!=11: return {"solvable":false,"reason":"Invalid row"}
-	var connectivity := topology(maps)
+	var connectivity := topology(maps,layout_revision)
 	if not connectivity.valid: return {"solvable":false,"reason":connectivity.reason}
 	var work := maps.duplicate(true)
 	var stats := {"hp":280,"atk":18,"def":8}
 	var route := ""
 	for floor_index in work.size():
 		var grid: Array=work[floor_index]
-		var pos := Vector2i(1,1)
+		var pos := Layout.entry(floor_index,layout_revision)
+		var directions:Array=[]
+		for d in DIRS: directions.append(Layout.direction(floor_index,d,layout_revision))
 		# At most one successful collection per pass; 81 is a hard bound.
 		for _pass in range(81):
 			var best: Array=[]
 			var best_score := 100000
 			for y in range(1,10):
 				for x in range(1,10):
-					var token: String=grid[y][x]
+					var location:=Layout.point(floor_index,Vector2i(x,y),layout_revision)
+					var token: String=grid[location.y][location.x]
 					if not token in LOOT: continue
-					var path := path_to(grid,pos,Vector2i(x,y),stats)
+					var path := path_to(grid,pos,location,stats,directions)
 					if path.is_empty(): continue
 					var score: int=path.size()+(30 if token in ["s","g","u","b","w"] else 0)
 					if score>=best_score: continue
@@ -288,10 +336,10 @@ static func validate(maps: Array) -> Dictionary:
 			var moved := execute(grid,pos,best,stats)
 			if not moved.ok: return {"solvable":false,"reason":"HP exhausted"}
 			pos=moved.pos; route+=moved.route
-		var goal := Vector2i(9,9) if floor_index<work.size()-1 else Vector2i(8,3)
+		var goal := Layout.point(floor_index,Vector2i(9,9) if floor_index<work.size()-1 else Vector2i(8,3),layout_revision)
 		if tile(grid,goal)!=(">" if floor_index<work.size()-1 else "K"):
 			return {"solvable":false,"reason":"Missing goal"}
-		var finish := path_to(grid,pos,goal,stats)
+		var finish := path_to(grid,pos,goal,stats,directions)
 		if finish.is_empty(): return {"solvable":false,"reason":"No conservative route"}
 		var final_moved := execute(grid,pos,finish,stats)
 		if not final_moved.ok: return {"solvable":false,"reason":"Final path lethal"}

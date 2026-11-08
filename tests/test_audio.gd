@@ -1,4 +1,6 @@
 extends SceneTree
+# Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
+# New layout-2 behavior is covered by test_usability and both generator suites.
 const World=preload("res://scripts/world.gd")
 var checks:=0
 var failures:=0
@@ -11,7 +13,7 @@ func run_tests():
 	var scene=load("res://main.tscn").instantiate()
 	root.add_child(scene)
 	scene.save_path="user://audio-integration-test.json"
-	scene.world=World.new(0)
+	scene.world=World.new(0,1)
 	await process_frame
 	check(DisplayServer.get_name()=="headless","audio regression explicitly runs without a display or sound device")
 	check(scene.sound_bank.size()==6 and scene.sound_player!=null,"six original audio resources load without hardware playback")
@@ -53,7 +55,7 @@ func run_tests():
 	scene.undo()
 	check(scene.sound_event_count==count_before,"undoing door does not replay its sound")
 	# Combat resolution emits once; skipping presentation cannot emit again.
-	scene.world=World.new(0); scene.history.clear(); scene.world.pos=Vector2i(5,3)
+	scene.world=World.new(0,1); scene.history.clear(); scene.world.pos=Vector2i(5,3)
 	scene.muted=false
 	scene.move(Vector2i.LEFT)
 	check(scene.sound_event_count==count_before+1 and scene.last_sound_event=="impact","resolved battle emits one impact")
@@ -65,7 +67,7 @@ func run_tests():
 	scene.move(Vector2i.LEFT)
 	check(scene.sound_event_count==count_before,"rejected lethal battle remains silent")
 	# Water choice, actual crossing and bridge each have their own committed event.
-	scene.world=World.new(0); scene.history.clear(); scene.world.enter_floor(1); scene.world.pos=Vector2i(1,4)
+	scene.world=World.new(0,1); scene.history.clear(); scene.world.enter_floor(1); scene.world.pos=Vector2i(1,4)
 	scene.perform_action("spring")
 	check(scene.sound_event_count==count_before+1 and scene.last_sound_event=="water","spring choice emits one water event")
 	count_before=scene.sound_event_count
@@ -85,7 +87,7 @@ func run_tests():
 	scene.move(Vector2i.UP)
 	check(scene.sound_event_count==count_before+1 and scene.last_sound_event=="water","actual bridge-water crossing emits once")
 	# Controlled endgame fixture isolates final event selection, not balance.
-	scene.world=World.new(0); scene.world.enter_floor(4); scene.world.pos=Vector2i(7,3); scene.world.atk=500
+	scene.world=World.new(0,1); scene.world.enter_floor(4); scene.world.pos=Vector2i(7,3); scene.world.atk=500
 	count_before=scene.sound_event_count
 	scene.move(Vector2i.RIGHT)
 	check(scene.world.won and scene.sound_event_count==count_before+1 and scene.last_sound_event=="victory","final boss chooses victory instead of double-counting impact")
