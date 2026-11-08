@@ -110,5 +110,13 @@ func _init():
 			check(not proof(s,s.anchors[0]).ok,"raw origin range rejects "+field)
 		s=corridor(); s.seal_clues=enormous
 		check(not proof(s,s.anchors[0]).ok,"raw clue mask range rejects overflow")
+	for choice in ["","rescue","armory"]:
+		for token in ["n","e","m","v"]:
+			s=corridor(); s.floors[0][1][4]=token; s.expedition_revision=3; s.winch_choice=choice
+			var allowed:bool=token=="v" or (token=="n" and choice=="rescue") or (token=="e" and choice=="armory")
+			check(proof(s,s.anchors[0]).ok==allowed,"winch branch is exact; unclaimed maul blocks navigation")
+			if token in ["n","e"]:
+				s.expedition_revision=2
+				check(not proof(s,s.anchors[0]).ok,"legacy content does not acquire winch passages")
 	print("Navigation: %d checks, failures=%d"%[checks,failures])
 	quit(1 if failures else 0)

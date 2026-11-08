@@ -33,6 +33,9 @@ func walk(w,goal:Vector2i)->bool:
    if seen.has(n): continue
    var token:String=w.tile(n)
    if token in ["#","L","D"]: continue
+   if token=="n" and w.winch_choice!="rescue": continue
+   if token=="e" and w.winch_choice!="armory": continue
+   if token=="m" and n!=goal: continue
    if token=="=" and not w.expedition_bridge: continue
    if token=="~" and not w.bridge_built and w.water_choice!="drain": continue
    if token in ["<",">","W","Z","K","V","t"] and n!=goal: continue
@@ -66,8 +69,8 @@ func run_tests():
   var legacy=victory.duplicate(true); legacy.version=version
   var copy=World.new(0)
   check(copy.restore(JSON.parse_string(JSON.stringify(legacy))) and copy.rescue_state==0 and copy.expedition_revision==0,"legacy unstarted chapter resets absent quest: "+str(version))
-  check(copy.action("expedition") and copy.expedition_revision==2,"legacy unstarted chapter explicitly receives fresh content")
- check(w.action("expedition") and w.expedition_revision==2,"new expedition opts into rescue content")
+  check(copy.action("expedition") and copy.expedition_revision==3,"legacy unstarted chapter explicitly receives fresh content")
+ check(w.action("expedition") and w.expedition_revision==3,"new expedition opts into rescue content")
  var begun=state(w)
  # Follow the guaranteed route until the final boss, then return to optional rescue.
  var proof=Expedition.validate(w.floors.slice(5)); var route_ok=true; var first_guard_loss=-1; var first_guard_hp=-1
@@ -165,7 +168,7 @@ func run_tests():
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close()
  scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==1 and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==9,"real old expedition load backs up exact bytes and upgrades without new rewards")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==1 and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==10,"real old expedition load backs up exact bytes and upgrades without new rewards")
  scene.queue_free(); await process_frame
  print("RESCUE: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

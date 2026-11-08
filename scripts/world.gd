@@ -73,6 +73,8 @@ var audit_read := false
 var audit_solved := false
 var audit_reward := ""
 var travel_anchors: Array = []
+var winch_choice := ""
+var maul_claimed := false
 var oath_state := "fresh"
 var expedition_revision := 0
 var rescue_state := 0
@@ -103,7 +105,7 @@ func chapter_offers() -> Array:
 		return [["expedition","Continue expedition: 3 more floors / +120 HP once"]]
 	return []
 func _navigation_state() -> Dictionary:
-	return {"floors":floors,"floor_seen":floor_seen,"anchors":travel_anchors,"floor":floor_index,"x":pos.x,"y":pos.y,"water_choice":water_choice,"bridge_built":bridge_built,"expedition_bridge":expedition_bridge,"core_use":core_use,"clue":clue,"seal_clues":seal_clues}
+	return {"floors":floors,"floor_seen":floor_seen,"anchors":travel_anchors,"floor":floor_index,"x":pos.x,"y":pos.y,"water_choice":water_choice,"bridge_built":bridge_built,"expedition_bridge":expedition_bridge,"core_use":core_use,"clue":clue,"seal_clues":seal_clues,"winch_choice":winch_choice,"expedition_revision":expedition_revision}
 func _anchor_id(anchor: Dictionary) -> String:
 	return "%d:%d:%d" % [int(anchor.floor),int(anchor.marker_x),int(anchor.marker_y)]
 func _register_anchor(token: String):
@@ -128,6 +130,17 @@ func travel_options() -> Array:
 		var available: bool=proof.ok and int(proof.steps)>0
 		options.append({"id":_anchor_id(anchor),"name":names.get(anchor.token,anchor.token),"floor":int(anchor.floor),"reachable":available,"steps":int(proof.steps),"reason":"Already at this anchor" if proof.ok and int(proof.steps)==0 else str(proof.reason)})
 	return options
+func winch_offers() -> Array:
+	if won or expedition_revision!=3 or not nearby("v") or winch_choice!="": return []
+	var offers: Array=[]
+	if rescue_state<2 and floors[6][2][9]=="W":
+		offers.append(["winch_rescue","Open north gate: rescue Mira without fighting W / siege maul permanently lost"])
+	offers.append(["winch_armory","Open armory: claim siege maul / rescue Mira by fighting W later" if floors[6][2][9]=="W" and rescue_state<2 else "Open the siege maul armory."])
+	return offers
+func winch_journal() -> Array:
+	if winch_choice=="rescue": return ["The north gate is open. Mira can leave without fighting W; the siege maul is sealed away forever."]
+	if winch_choice=="armory": return ["The armory gate is open. The north shortcut is sealed; defeat W to rescue Mira." if floors[6][2][9]=="W" and rescue_state<2 else "Siege maul armory: open"]
+	return []
 func audit_lines() -> Array:
 	if not audit_read: return []
 	var lines:=AuditPuzzle.lines(audit_puzzle)
@@ -189,13 +202,16 @@ func _count_token(token: String) -> int:
 func tile(p: Vector2i) -> String:
 	if p.x < 0 or p.y < 0 or p.x >= 11 or p.y >= 11: return "#"
 	return floors[floor_index][p.y][p.x]
-func battle_preview(kind: String, equipment_override: String = "") -> Dictionary:
+func battle_preview(kind: String, equipment_override: String = "", target: Vector2i = Vector2i(-1,-1)) -> Dictionary:
 	var gear := equipped if equipment_override=="" else equipment_override
-	# Comparisons share all live battle context and cannot borrow unowned gear.
+	# Comparisons share live context; only a real, adjacent target earns flanking.
 	if not gear in inventory: gear="invalid_unowned"
-	return Progression.battle(atk,defense,hp,ENEMIES.get(kind,{}),hero_id,skill_armed and focus>0,gear,talents,"watch" if oath_state=="active" else "none")
-func damage(kind: String) -> int:
-	var preview := battle_preview(kind)
+	var flank := false
+	if expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H":
+		flank=Expedition.flanking_position(floors.slice(5),floor_index-5,target,pos)
+	return Progression.battle(atk,defense,hp,ENEMIES.get(kind,{}),hero_id,skill_armed and focus>0,gear,talents,"watch" if oath_state=="active" else "none",flank)
+func damage(kind: String, target: Vector2i = Vector2i(-1,-1)) -> int:
+	var preview := battle_preview(kind,"",target)
 	return int(preview.damage) if preview.valid else -1
 func enter_floor(number: int):
 	floor_index=number
@@ -207,6 +223,9 @@ func step(direction: Vector2i) -> bool:
 	var target := pos + direction
 	var t := tile(target)
 	if t == "#": return false
+	if t in ["n","e"] and (expedition_revision!=3 or winch_choice!=("rescue" if t=="n" else "armory")):
+		message="This winch gate is locked. One mechanism can open only one route."
+		return false
 	if t == "=" and not expedition_bridge:
 		message="Bridge closed. Pay for roadworks at Y, or take the guarded road."
 		return false
@@ -218,11 +237,12 @@ func step(direction: Vector2i) -> bool:
 		message = "Double lock: 2 gold keys required. Reward cages compete for keys." if t=="L" else "Locked. A gold key is needed."
 		return false
 	if ENEMIES.has(t):
-		var cost := damage(t)
-		if cost < 0 or cost >= hp:
+		var forecast := battle_preview(t,"",target)
+		var cost := int(forecast.damage)
+		if not forecast.valid or cost < 0 or cost >= hp:
 			message = "Too dangerous. Find more crystals first."
 			return false
-		last_battle=battle_preview(t).duplicate(true)
+		last_battle=forecast.duplicate(true)
 		last_battle["enemy"]=t
 		hp -= cost
 		hp += int(last_battle.heal_after)
@@ -233,8 +253,12 @@ func step(direction: Vector2i) -> bool:
 		gain_gold(ENEMIES[t].gold)
 		message = "%s defeated. -%d HP" % [ENEMIES[t].name, cost]
 		if t in ["K","Z"]: won = true
+	elif t == "m":
+		if expedition_revision!=3 or winch_choice!="armory" or maul_claimed: return false
+		maul_claimed=true; inventory.append("maul"); equipped="maul"
+		message="Siege maul recovered. Double strikes, double counters, -4 DEF. Compare before fighting."
 	elif t == "t":
-		if expedition_revision!=2 or rescue_state>=2: return false
+		if expedition_revision<2 or rescue_state>=2: return false
 		rescue_state=2
 		message="Mira rescued. Before defeating Z, return to Ilen at J or take her to U. Choose her future once."
 	elif t == "$":
@@ -261,7 +285,7 @@ func step(direction: Vector2i) -> bool:
 		clue = true
 		seal_clues |= 4
 		message = Riddle.clues(seed_value)[2]
-	elif t in ["M","E","F","Q","J","O","R","X","U","Y"]:
+	elif t in ["M","E","F","Q","J","O","R","X","U","Y","v","n","e"]:
 		message = "Press E to inspect choices. Nothing is spent until you choose."
 	elif t == "k":
 		keys += 1
@@ -289,7 +313,7 @@ func step(direction: Vector2i) -> bool:
 		floor_index -= 1
 		pos = Vector2i(9,9)
 		message = "Backtracking is wisdom, not defeat."
-	elif not t in [".","M","E","F","N","Q","J","O","R","X","U","Y","~","="]: floors[floor_index][target.y][target.x] = "."
+	elif not t in [".","M","E","F","N","Q","J","O","R","X","U","Y","~","=","v","n","e"]: floors[floor_index][target.y][target.x] = "."
 	_register_anchor(t)
 	return true
 func debt() -> int:
@@ -441,6 +465,12 @@ func action(id: String) -> bool:
 		moves+=1
 		return true
 	match id:
+		"winch_rescue","winch_armory":
+			if expedition_revision!=3 or not nearby("v") or winch_choice!="": return false
+			if id=="winch_rescue" and (rescue_state>=2 or floors[6][2][9]!="W"): return false
+			winch_choice="rescue" if id=="winch_rescue" else "armory"
+			message="North gate opened. Mira can be rescued without W; the siege maul is permanently forgone." if winch_choice=="rescue" else "Armory opened. Claim the siege maul; defeating W remains the way to rescue Mira."
+			if winch_choice=="armory" and (rescue_state>=2 or floors[6][2][9]!="W"): message="Siege maul armory: open"
 		"audit_read":
 			if not expedition_started or not nearby("Y") or audit_read: return false
 			audit_read=true
@@ -469,7 +499,7 @@ func action(id: String) -> bool:
 			rescue_state=1
 			message="Ilen asks you to find Mira on the seventh floor. The survey remains a separate choice."
 		"rescue_repeater","rescue_supplies":
-			if rescue_state!=2 or expedition_revision!=2: return false
+			if rescue_state!=2 or expedition_revision<2: return false
 			if id=="rescue_repeater":
 				if not nearby("J"): return false
 				rescue_reward="repeater"; inventory.append("repeater"); equipped="repeater"
@@ -626,7 +656,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":9,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":10,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -634,8 +664,14 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10): return false
 	var old_seal: bool = save_version==4
+	var saved_winch := ""
+	var saved_maul := false
+	if save_version>=10:
+		if not d.get("winch_choice") in ["","rescue","armory"] or not d.get("maul_claimed") is bool: return false
+		saved_winch=d.winch_choice; saved_maul=d.maul_claimed
+		if saved_maul and saved_winch!="armory": return false
 	var saved_oath := "fresh"
 	if save_version>=8:
 		if not d.get("oath_state") in ["fresh","active","spent"]: return false
@@ -660,13 +696,14 @@ func restore(d: Dictionary) -> bool:
 			if not (d.get(key) is int or d.get(key) is float): return false
 			if not is_finite(float(d[key])) or d[key]!=floor(d[key]): return false
 		saved_revision=int(d.expedition_revision); saved_rescue=int(d.rescue_state)
-		if saved_revision<0 or saved_revision>2 or saved_rescue<0 or saved_rescue>3: return false
+		if saved_revision<0 or saved_revision>(3 if save_version>=10 else 2) or saved_rescue<0 or saved_rescue>3: return false
 		if not d.get("rescue_reward") in ["","repeater","supplies"]: return false
 		saved_reward=d.rescue_reward
 		if saved_expedition!=(saved_revision>0): return false
 		if saved_revision==1 and saved_rescue!=0: return false
-		if saved_rescue>=2 and saved_revision!=2: return false
+		if saved_rescue>=2 and saved_revision<2: return false
 		if (saved_rescue==3)!=(saved_reward!=""): return false
+	if saved_revision!=3 and (saved_winch!="" or saved_maul): return false
 	var expected_floors := 8 if saved_expedition else 5
 	if not d.get("bridge_built",false) is bool: return false
 	if d.get("bridge_built",false)!=(d.get("quest_state")==4): return false
@@ -681,7 +718,7 @@ func restore(d: Dictionary) -> bool:
 	if d.get("event_kind") != ["bargain","smuggler","oath"][int(d.seed_value)%3]: return false
 	if not d.get("hero_id") is String or not Progression.HEROES.has(d.hero_id): return false
 	if not d.get("equipped") is String or not Progression.GEAR.has(d.equipped): return false
-	if not d.get("inventory") is Array or d.inventory.size()<1 or d.inventory.size()>3: return false
+	if not d.get("inventory") is Array or d.inventory.size()<1 or d.inventory.size()>4: return false
 	var unique_gear: Dictionary={}
 	for gear in d.inventory:
 		if not gear is String or not Progression.GEAR.has(gear) or unique_gear.has(gear): return false
@@ -690,6 +727,7 @@ func restore(d: Dictionary) -> bool:
 	var relic_count := int("buckler" in d.inventory)+int("duelist" in d.inventory)
 	if relic_count>1 or d.chest_claimed!=(relic_count==1): return false
 	if ("repeater" in d.inventory)!=(saved_reward=="repeater"): return false
+	if ("maul" in d.inventory)!=saved_maul: return false
 	if not d.get("talents") is Array or not Progression.valid_talents(d.talents): return false
 	if d.talents.size()>0 and d.kills<3: return false
 	if d.talents.size()>1 and d.kills<7: return false
@@ -735,6 +773,7 @@ func restore(d: Dictionary) -> bool:
 	var last_boss_remaining := 0
 	var apprentices := 0
 	var gaolers := 0
+	var machinery: Dictionary={"v":0,"n":0,"e":0,"m":0}
 	for grid in d.floors:
 		if not grid is Array or grid.size()!=11: return false
 		for row in grid:
@@ -746,18 +785,25 @@ func restore(d: Dictionary) -> bool:
 				if c=="Z": last_boss_remaining+=1
 				if c=="t": apprentices+=1
 				if c=="W": gaolers+=1
-				if not saved_expedition and c in ["U","Y","=","Z","H","t","W"]: return false
-				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","w","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">","U","Y","=","Z","H","t","W"]: return false
+				if c in machinery:
+					if saved_revision!=3: return false
+					machinery[c]+=1
+				if not saved_expedition and c in ["U","Y","=","Z","H","t","W","v","n","e","m"]: return false
+				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","w","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">","U","Y","=","Z","H","t","W","v","n","e","m"]: return false
 	if cores_remaining>1 or (cores_remaining>0 and (d.core or d.core_use!="")): return false
 	if old_seal and d.secret:
 		if seals_remaining>1: return false
 	elif seals_remaining!=(0 if d.secret else 1): return false
-	if saved_revision==2:
+	if saved_revision>=2:
 		if apprentices!=(1 if saved_rescue<2 else 0) or gaolers>1: return false
-		if saved_rescue>=2 and gaolers!=0: return false
-		if d.floors[6][1][8]!="#" or d.floors[6][1][9]!=("t" if saved_rescue<2 else "."): return false
+		if saved_rescue>=2 and gaolers!=0 and not (saved_revision==3 and saved_winch=="rescue"): return false
+		if d.floors[6][1][8]!=("n" if saved_revision==3 else "#") or d.floors[6][1][9]!=("t" if saved_rescue<2 else "."): return false
 		if not d.floors[6][2][9] in ["W","."]: return false
 	elif apprentices!=0 or gaolers!=0: return false
+	if saved_revision==3:
+		if machinery.v!=1 or machinery.n!=1 or machinery.e!=1 or machinery.m!=(0 if saved_maul else 1): return false
+		if d.floors[6][4][7]!="v" or d.floors[6][4][8]!="e" or d.floors[6][4][9]!=("." if saved_maul else "m"): return false
+		if d.floors[6][3][9]!="#" or d.floors[6][5][9]!="#" or d.floors[6][6][8]!=".": return false
 	if saved_expedition:
 		if first_boss_remaining!=0 or last_boss_remaining!=(0 if d.won else 1): return false
 		if not d.floor_seen[5] or d.floors[4][9][9]!=">": return false
@@ -794,7 +840,10 @@ func restore(d: Dictionary) -> bool:
 			anchor_ids[stable_id]=true
 			saved_anchors.append({"floor":int(anchor.floor),"x":int(anchor.x),"y":int(anchor.y),"marker_x":int(anchor.marker_x),"marker_y":int(anchor.marker_y),"token":anchor.token})
 	if d.floor >= expected_floors or d.x < 1 or d.x > 9 or d.y < 1 or d.y > 9 or d.hp <= 0 or d.atk <= 0: return false
-	if d.floors[int(d.floor)][int(d.y)][int(d.x)] == "#": return false
+	var position_token: String=d.floors[int(d.floor)][int(d.y)][int(d.x)]
+	if position_token=="#" or position_token=="m": return false
+	if position_token=="n" and saved_winch!="rescue": return false
+	if position_token=="e" and saved_winch!="armory": return false
 	if not d.floor_seen[int(d.floor)]: return false
 	seed_value=int(d.seed_value); generation_attempts=int(d.generation_attempts); generation_fallback=d.generation_fallback
 	hero_id=d.hero_id; focus=int(d.focus); focus_cap=int(d.focus_cap); skill_armed=d.skill_armed
@@ -815,6 +864,7 @@ func restore(d: Dictionary) -> bool:
 	hp=int(d.hp); atk=int(d.atk); defense=int(d.def); keys=int(d.keys); gold=int(d.gold); moves=int(d.moves)
 	core=d.core; core_use=d.core_use; weapon=d.weapon; secret=d.secret; clue=d.clue
 	principal=int(d.principal); fees=int(d.fees); interest=int(d.interest); loan_used=d.loan_used; overdue=d.overdue; checkpoints=int(d.checkpoints)
+	winch_choice=saved_winch; maul_claimed=saved_maul
 	audit_puzzle=saved_puzzle; audit_read=saved_audit_read; audit_solved=saved_audit_solved; audit_reward=saved_audit_reward
 	travel_anchors=saved_anchors
 	oath_state=saved_oath

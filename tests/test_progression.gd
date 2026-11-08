@@ -8,7 +8,7 @@ func check(ok: bool, message: String):
 func fight(attack:=18, defense:=8, hp:=360, hero:="warden", skill:=false, gear:="balanced", talents: Array=[], enemy: Dictionary={"name":"Mossling","hp":35,"atk":14,"def":3}) -> Dictionary:
 	return P.battle(attack,defense,hp,enemy,hero,skill,gear,talents)
 func _init():
-	check(P.HEROES.size()==3 and P.GEAR.size()==4,"three archetypes and exclusive gear loadouts")
+	check(P.HEROES.size()==3 and P.GEAR.size()==5 and P.GEAR.has_all(["balanced","buckler","duelist","repeater","maul"]),"three archetypes and exact five equipment catalog entries")
 	check(P.FOCUS_START==2 and P.FOCUS_MAX==3,"finite focus defaults")
 	var b=fight()
 	check(b.valid and b.survivable and b.damage==12 and b.hit==15 and b.rounds==3,"baseline equals original deterministic formula")

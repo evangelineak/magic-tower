@@ -3,7 +3,7 @@ extends RefCounted
 const Generator = preload("res://scripts/generation.gd")
 const Progression = preload("res://scripts/progression.gd")
 const ENEMIES = {"Z":{"name":"Ashen Castellan","hp":720,"atk":65,"def":45,"gold":160},"H":{"name":"Ferry Warden","hp":180,"atk":62,"def":30,"gold":60,"first_strike":true},"W":{"name":"Archive Gaoler","hp":260,"atk":68,"def":48,"gold":40,"thorns":6,"heavy_every":3}}
-const CONTENT_REVISION := 2
+const CONTENT_REVISION := 3
 const INITIAL = {"hp":121,"atk":73,"def":24}
 const DIRS = [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]
 const IDS = ["low_causeway","split_court","high_gallery"]
@@ -41,7 +41,9 @@ static func build(floor_index:int, variant:int) -> Array:
 	grid[1][7]="h"; grid[2][8]="a"
 	grid[8][8]="w"; grid[9][7]="k"
 	if floor_index==1:
-		grid[1][8]="#"; grid[1][9]="t"; grid[2][9]="W"
+		grid[1][8]="n"; grid[1][9]="t"; grid[2][9]="W"
+		grid[4][7]="v"; grid[4][8]="e"; grid[4][9]="m"
+		grid[3][9]="#"; grid[5][9]="#"; grid[6][8]="."
 	if floor_index==2: grid[3][8]="Z"
 	return grid
 
@@ -74,7 +76,7 @@ static func path_to(grid:Array,start:Vector2i,goal:Vector2i,stats:Dictionary)->A
 			var n:Vector2i=p+d
 			if parents.has(n): continue
 			var token:=Generator.tile(grid,n)
-			if token in ["#","=","L","D","W","t"]: continue
+			if token in ["#","=","L","D","W","t","n","e","m"]: continue
 			if token in ["<",">","Z"] and n!=goal: continue
 			if token in Generator.ENEMIES or token in ENEMIES:
 				var cost:=damage(token,stats)
@@ -87,7 +89,7 @@ static func execute(grid:Array,start:Vector2i,path:Array,stats:Dictionary)->Dict
 	for d in path:
 		pos+=d
 		var token:=Generator.tile(grid,pos)
-		if token in ["#","=","L","D","W","t"]: return {"ok":false}
+		if token in ["#","=","L","D","W","t","n","e","m"]: return {"ok":false}
 		if token in Generator.ENEMIES or token in ENEMIES:
 			var cost:=damage(token,stats)
 			if cost<0 or cost>=stats.hp: return {"ok":false}
@@ -101,8 +103,8 @@ static func execute(grid:Array,start:Vector2i,path:Array,stats:Dictionary)->Dict
 
 # Check the optional rescue independently of combat: even paid bridges and
 # opened ordinary doors cannot provide an entrance behind the guardian.
-# This validates fresh revision-2 maps only; save restoration never regenerates
-# or passes old revision-1 maps through this new-content requirement.
+# This validates fresh revision-3 maps only; save restoration never regenerates
+# or passes old revision-1/2 maps through this new-content requirement.
 static func rescue_topology(maps:Array)->Dictionary:
 	var guards:=0; var apprentices:=0
 	for grid in maps:
@@ -112,13 +114,37 @@ static func rescue_topology(maps:Array)->Dictionary:
 				if token=="t": apprentices+=1
 	if guards!=1 or apprentices!=1 or maps[1][1][9]!="t" or maps[1][2][9]!="W":
 		return {"valid":false,"reason":"Missing rescue guardian or apprentice"}
-	var closed:=Generator.reachable(maps[1],["#","W"])
+	var closed:=Generator.reachable(maps[1],["#","W","n"])
 	if closed.has(Vector2i(9,1)):
 		return {"valid":false,"reason":"The apprentice has an unguarded entrance"}
-	var opened:=Generator.reachable(maps[1],["#"])
+	var opened:=Generator.reachable(maps[1],["#","n","e"])
 	if not opened.has(Vector2i(9,1)) or not closed.has(Vector2i(8,2)):
 		return {"valid":false,"reason":"The rescue chamber is unreachable"}
+	var expected:Dictionary={Vector2i(7,4):"v",Vector2i(8,1):"n",Vector2i(8,4):"e",Vector2i(9,4):"m"}
+	for p in expected:
+		if maps[1][p.y][p.x]!=expected[p]: return {"valid":false,"reason":"Missing winch or branch gate"}
+	for token in ["v","n","e","m"]:
+		var count:=0
+		for grid in maps:
+			for row in grid: count+=row.count(token)
+		if count!=1: return {"valid":false,"reason":"Duplicate winch branch content"}
+	var armory_closed:=Generator.reachable(maps[1],["#","e"])
+	if armory_closed.has(Vector2i(9,4)): return {"valid":false,"reason":"The armory has a gate bypass"}
+	var rescue_open:=Generator.reachable(maps[1],["#","W","e"])
+	if not rescue_open.has(Vector2i(9,1)) or rescue_open.has(Vector2i(9,4)): return {"valid":false,"reason":"Rescue branch does not isolate the armory"}
+	var armory_open:=Generator.reachable(maps[1],["#","W","n"])
+	if not armory_open.has(Vector2i(9,4)) or armory_open.has(Vector2i(9,1)): return {"valid":false,"reason":"Armory branch bypasses the rescue guardian"}
 	return {"valid":true}
+
+# World additionally requires expedition_revision == 3. This is a local
+# positional test, never a global buff attached to every enemy of kind H.
+static func flanking_position(maps:Array,local_floor:int,target:Vector2i,pos:Vector2i)->bool:
+	if maps.size()!=3 or local_floor<0 or local_floor>=3: return false
+	if target.x!=5 or target.y not in [6,7,8] or pos!=target+Vector2i.RIGHT: return false
+	var grid=maps[local_floor]
+	if not grid is Array or grid.size()!=11: return false
+	if not grid[target.y] is Array or grid[target.y].size()!=11: return false
+	return grid[target.y][target.x]=="H"
 
 static func validate(maps:Array)->Dictionary:
 	if maps.size()!=3: return {"solvable":false,"reason":"Expected three expedition floors"}

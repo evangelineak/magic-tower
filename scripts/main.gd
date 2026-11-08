@@ -30,6 +30,7 @@ var travel_pending := ""
 var comparison := false
 var compare_pos := Vector2i(-1,-1)
 var compare_floor := -1
+var compare_page := 0
 var book := false
 var book_page := 0
 var journal := false
@@ -44,6 +45,7 @@ var battle_hero := "warden"
 var battle_skill := false
 var interaction_page := 0
 var interaction := false
+var winch_pending := ""
 var battle_time := 0.0
 var battle_name := ""
 var battle_loss := 0
@@ -82,6 +84,9 @@ func _ready():
 	if ResourceLoader.exists("res://assets/tower.png"): art = load("res://assets/tower.png")
 	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent","archivist","ilen","mira"]:
 		var path := "res://assets/combat/%s.png" % id
+		if ResourceLoader.exists(path): combat_art[id]=load(path)
+	for id in ["winch","maul"]:
+		var path := "res://assets/props/%s.png" % id
 		if ResourceLoader.exists(path): combat_art[id]=load(path)
 	buttons = [Rect2(350,720,120,38),Rect2(482,720,120,38),Rect2(614,720,120,38),Rect2(746,720,143,38),Rect2(938,745,300,35),Rect2(36,710,272,38),Rect2(36,66,272,30),Rect2(675,66,272,30)]
 	queue_redraw()
@@ -130,6 +135,15 @@ func _draw():
 				draw_line(p+Vector2(5,5),p+Vector2(43,5),Color("3c5061"),2)
 			else: draw_token(p+Vector2(24.5,24.5),t)
 			if hover == Vector2i(x,y): draw_rect(Rect2(p,Vector2(CELL,CELL)),Color(0.4,0.85,0.76,0.35),false,2)
+	if world.expedition_revision>=3:
+		for y in range(1,10):
+			for x in range(1,9):
+				if world.tile(Vector2i(x,y))!="H": continue
+				var east: Vector2=ORIGIN+Vector2(x+1,y)*CELL+Vector2(24.5,24.5)
+				draw_line(east+Vector2(12,-16),east+Vector2(12,16),TEAL,3)
+				draw_line(east+Vector2(7,0),east+Vector2(-9,0),TEAL,2)
+				draw_line(east+Vector2(-9,0),east+Vector2(-3,-6),TEAL,2)
+				draw_line(east+Vector2(-9,0),east+Vector2(-3,6),TEAL,2)
 	var hero := ORIGIN+Vector2(world.pos)*CELL+Vector2(24.5,24.5)
 	draw_circle(hero,19+sin(tick*3)*1.5,Color(0.4,0.85,0.76,0.15))
 	if combat_art.has(world.hero_id):
@@ -147,12 +161,14 @@ func _draw():
 	label_at(Vector2(938,548),"DEBT %d  /  CORE: %s" % [world.debt(), "HELD" if world.core else (world.core_use.to_upper() if world.core_use!="" else "NONE")],13,GOLD)
 	var target: String = world.tile(hover)
 	if World.ENEMIES.has(target):
-		var cost: int = world.damage(target)
+		var hover_preview: Dictionary=world.battle_preview(target,"",hover)
+		var cost: int = int(hover_preview.damage) if hover_preview.get("valid",false) else -1
 		label_at(Vector2(938,589),World.ENEMIES[target].name,20)
 		label_at(Vector2(938,619),"Predicted loss: %s" % (str(cost)+" HP" if cost>=0 else "IMPOSSIBLE"),16,GOLD)
 		var traits: Array=enemy_traits(World.ENEMIES[target],true)
 		var translated: Array=[]
 		for trait_line in traits: translated.append(display(trait_line))
+		if target=="H" and world.expedition_revision>=3: translated.append(display("Flank barrier active" if hover_preview.get("flank_active",false) else "East-adjacent attack only"))
 		label_at(Vector2(938,637)," / ".join(translated),11,Color("ef928f"))
 		label_at(Vector2(938,660),"V: compare owned equipment",12,GOLD)
 	else:
@@ -252,14 +268,14 @@ func open_comparison():
 	if comparison: comparison=false; return
 	if battle_time>0.0 or book or journal or growth or interaction or travel_menu: return
 	if not World.ENEMIES.has(world.tile(hover)): return
-	compare_pos=hover; compare_floor=world.floor_index; comparison=true
+	compare_pos=hover; compare_floor=world.floor_index; compare_page=0; comparison=true
 func comparison_rows() -> Array:
 	var rows: Array=[]
 	if compare_floor!=world.floor_index: return rows
 	var kind: String=world.tile(compare_pos)
 	if not World.ENEMIES.has(kind): return rows
 	for id in world.inventory:
-		var preview: Dictionary=world.battle_preview(kind,id)
+		var preview: Dictionary=world.battle_preview(kind,id,compare_pos)
 		var alive: bool=preview.get("valid",false) and preview.get("survivable",false)
 		rows.append({"id":id,"preview":preview,"after_hp":world.hp-int(preview.damage)+int(preview.get("heal_after",0)) if alive else -1})
 	return rows
@@ -271,14 +287,21 @@ func draw_comparison():
 	if rows.is_empty():
 		label_at(Vector2(225,210),"This enemy is no longer on the current floor.",18)
 		return
+	compare_page=clampi(compare_page,0,maxi(0,ceili(rows.size()/4.0)-1))
+	if rows.size()>4:
+		panel(Rect2(800,170,110,35),Color("253748")); label_at(Vector2(812,194),"PREV",14)
+		panel(Rect2(920,170,110,35),Color("253748")); label_at(Vector2(932,194),"NEXT",14)
+		label_at(Vector2(650,194),"Page %d   [ / ]" % (compare_page+1),13,GOLD)
+	rows=rows.slice(compare_page*4,compare_page*4+4)
 	label_at(Vector2(225,193),World.ENEMIES[world.tile(compare_pos)].name,21,TEAL)
 	label_at(Vector2(225,225),"Same current HP, talents, oath and armed skill for every row.",16,MUTED)
 	label_at(Vector2(225,252),"Armed skill included" if world.skill_armed and world.focus>0 else "No armed skill included",15,GOLD)
 	label_at(Vector2(600,252),"Watch oath ACTIVE" if world.oath_state=="active" else ("Oath released permanently" if world.oath_state=="spent" else "No watch oath"),15,GOLD)
+	label_at(Vector2(225,277),"Current position: flank barrier active" if rows[0].preview.get("flank_active",false) else "Current position: no flank barrier",14,TEAL)
 	for i in rows.size():
 		var row: Dictionary=rows[i]
 		var preview: Dictionary=row.preview
-		var y: int=292+i*73
+		var y: int=316+i*73
 		panel(Rect2(220,y-24,840,66),Color("203343"))
 		label_at(Vector2(235,y),Progression.GEAR[row.id].name+(" [EQUIPPED]" if world.equipped==row.id else ""),18,GOLD)
 		var status: String="Cannot penetrate defense" if not preview.get("valid",false) else ("LETHAL: no after-battle recovery" if row.after_hp<0 else "After battle: %d HP" % row.after_hp)
@@ -311,7 +334,17 @@ func draw_token(c: Vector2, t: String):
 		if t in ["u","b"]:
 			label_at(c+Vector2(11,-10),"!" if t=="u" else "*",16,GOLD)
 		return
+	if t in ["v","m"] and combat_art.has("winch" if t=="v" else "maul"):
+		draw_texture_rect(combat_art["winch" if t=="v" else "maul"],Rect2(c-Vector2(22,22),Vector2(44,44)),false)
+		return
 	match t:
+		"n","e":
+			var opened: bool=world.winch_choice==("rescue" if t=="n" else "armory")
+			var color: Color=TEAL if opened else Color("e59680")
+			draw_rect(Rect2(c-Vector2(17,21),Vector2(34,42)),color,false,3)
+			if not opened:
+				for i in range(3): draw_line(c+Vector2(-10+i*10,-18),c+Vector2(-10+i*10,18),color,3)
+			label_at(c+Vector2(-6,6),t,15,color)
 		"k":
 			draw_circle(c+Vector2(-6,0),6,GOLD,false,3); draw_line(c,c+Vector2(13,0),GOLD,3); draw_line(c+Vector2(10,0),c+Vector2(10,6),GOLD,3)
 		"D","L":
@@ -337,7 +370,7 @@ func draw_token(c: Vector2, t: String):
 			if t in ["u","b"]: label_at(c+Vector2(12,-12),"!" if t=="u" else "*",16,GOLD)
 			if t in ["B","V","K","Z"]:
 				for i in range(3): draw_line(c+Vector2(-10+i*10,-14),c+Vector2(-10+i*10,-22),GOLD,4)
-		"M","C","E","F","T","N","Q","J","I","O","R","X","U","Y","t":
+		"M","C","E","F","T","N","Q","J","I","O","R","X","U","Y","t","v","m":
 			var color := GOLD if t in ["M","T","C"] else TEAL
 			draw_rect(Rect2(c-Vector2(16,16),Vector2(32,32)),color.darkened(0.65))
 			draw_rect(Rect2(c-Vector2(16,16),Vector2(32,32)),color,false,2)
@@ -392,6 +425,10 @@ func draw_book():
 	var lines := ["Exact forecasts include ambush, thorns, gear, skills and talents.","Thorns ignores DEF. Brace and total-loss reduction still apply.","C: hero / gear / talents. E: local choices, quests and ledger.","J: researcher / I: sample / O: valve / R: relic / X: encounter.","Interest: first entry to floors 4 and 5 only, never steps or waiting.","Grow stronger and revisit. U reverses the entire previous action.","L: 2-key lock / $: +60 gold / A: +5 ATK / P: +140 HP, +1 focus.","H / Esc / click closes. Battles are cosmetic replays; any key skips."]
 	for i in lines.size(): label_at(Vector2(265,505+i*27),lines[i],15,MUTED)
 func token_name(t: String) -> String:
+	if t=="v": return "Winch: rescue shortcut OR siege maul armory"
+	if t=="m": return "Siege maul: double hits, double counters; -4 DEF"
+	if t=="n": return "North rescue gate: open" if world.winch_choice=="rescue" else "North rescue gate: sealed"
+	if t=="e": return "Siege maul armory: open" if world.winch_choice=="armory" else "Siege maul armory: sealed"
 	if t=="~" and world.bridge_built: return "Survey bridge: cross safely above the water"
 	if t=="~" and world.water_choice=="drain": return "Drained passage to the relic vault"
 	if t=="X": return world.event_title()
@@ -402,6 +439,7 @@ func nearby(t: String) -> bool:
 		if world.tile(world.pos+d)==t: return true
 	return false
 func available_actions() -> Array:
+	if winch_pending!="": return [["winch_confirm","Confirm permanent winch choice"],["winch_cancel","Cancel: leave both options undecided"]]
 	var rows: Array = []
 	if checkpoint_pending!=Vector2i.ZERO:
 		rows.append(["continue","Spend keys and open this door" if pending_reason=="door" else "Continue upstairs: settle interest now"])
@@ -412,6 +450,7 @@ func available_actions() -> Array:
 	rows.append_array(world.npc_offers())
 	rows.append_array(world.oath_offers())
 	rows.append_array(world.audit_offers())
+	rows.append_array(world.winch_offers())
 	if nearby("M"):
 		if (world.seal_clues & 1)==0: rows.append(["seal_contract","Read the old contract: calibration clue / lift power required"])
 		rows.append(["buy","Buy armor-breaker: 60 gold / +12 ATK (once)"])
@@ -468,6 +507,9 @@ func action_label(rect: Rect2, source: String):
 	label_at(rect.position+Vector2(12,15),text.left(cut),14)
 	label_at(rect.position+Vector2(12,31),text.substr(cut).strip_edges(),14)
 func draw_interaction():
+	if winch_pending!="":
+		draw_winch_confirmation()
+		return
 	if nearby("Q") and pending_reason=="":
 		draw_calibration()
 		return
@@ -543,19 +585,42 @@ func draw_key_confirmation():
 	label_at(Vector2(290,580),"U restores the opened door, your keys and your position together.",15,MUTED)
 	label_at(Vector2(290,640),"Nothing is spent until you confirm.",16,TEAL)
 	label_at(Vector2(290,672),"Click a choice / press 1-2. E / Esc cancels.",14,MUTED)
-func perform_action(id: String):
+func draw_winch_confirmation():
+	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
+	panel(Rect2(260,120,770,570),Color("0c1928"))
+	label_at(Vector2(290,158),"ONE WINCH / ONE PERMANENT CHOICE",24,GOLD)
+	var lines: Array=["Open the north rescue gate.","Reach Mira without fighting the Archive Gaoler.","The siege maul armory stays sealed for this run."] if winch_pending=="winch_rescue" else ["Open the siege maul armory.","The north rescue shortcut stays sealed for this run.","Mira can still be rescued by defeating the Archive Gaoler."]
+	if winch_pending=="winch_armory" and world.winch_offers().size()==1:
+		lines=["Open the siege maul armory."]
+	for i in lines.size(): label_at(Vector2(290,220+i*38),lines[i],18,TEAL if i==0 else INK)
+	label_at(Vector2(290,345),"No cost until confirmed. U can undo the complete action.",15,MUTED)
+	action_rows=visible_actions()
+	for i in action_rows.size():
+		var rect := Rect2(285,375+i*43,720,37)
+		panel(rect,Color("253748")); action_label(rect,"%d  %s" % [i+1,action_rows[i][1]])
+	label_at(Vector2(290,672),"Click a choice / press 1-2. E / Esc cancels.",14,MUTED)
+func perform_action(id: String, confirmed:=false):
+	if id=="winch_cancel": winch_pending=""; return
+	if id=="winch_confirm":
+		var choice: String=winch_pending
+		winch_pending=""
+		if choice!="": perform_action(choice,true)
+		return
+	if id in ["winch_rescue","winch_armory"] and not confirmed:
+		winch_pending=id; interaction=true; interaction_page=0
+		return
 	if id=="cancel":
-		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; return
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; return
 	if id=="continue":
 		var direction := checkpoint_pending
-		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""
 		move(direction,true)
 		return
 	reset_armed=false
 	var before: Dictionary=world.save_data().duplicate(true)
 	if world.action(id):
 		if id=="expedition":
-			book=false; journal=false; growth=false; interaction=false; battle_time=0.0
+			book=false; journal=false; growth=false; interaction=false; winch_pending=""; battle_time=0.0
 			checkpoint_pending=Vector2i.ZERO; pending_reason=""
 		if id in ["spring","drain","quest_bridge","camp_bridge"]: play_sound("water")
 		elif id in ["expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher","audit_medicine"]: play_sound("pickup")
@@ -564,7 +629,7 @@ func perform_action(id: String):
 		if history.size()>100: history.pop_front()
 		save_game(false)
 	else:
-		world.message={"camp_medicine":"Need 70 gold, remaining medicine stock, and a nearby camp (U).","camp_focus":"Need 55 gold, remaining focus stock, missing focus, and a nearby camp (U).","camp_bridge":"Need 80 gold, an unbuilt bridge, and a nearby engineer (Y).","quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"Solve the powered calibration before choosing a reward."}.get(id,world.message if id.begins_with("secret_") or id.begins_with("seal_") or id.begins_with("camp_") or id=="expedition" or id.begins_with("rescue_") or id.begins_with("oath_") or id.begins_with("fast_travel_") or id.begins_with("audit_") else "This choice is unavailable. Check its cost and requirements.")
+		world.message={"camp_medicine":"Need 70 gold, remaining medicine stock, and a nearby camp (U).","camp_focus":"Need 55 gold, remaining focus stock, missing focus, and a nearby camp (U).","camp_bridge":"Need 80 gold, an unbuilt bridge, and a nearby engineer (Y).","quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"Solve the powered calibration before choosing a reward."}.get(id,world.message if id.begins_with("secret_") or id.begins_with("seal_") or id.begins_with("camp_") or id=="expedition" or id.begins_with("rescue_") or id.begins_with("oath_") or id.begins_with("fast_travel_") or id.begins_with("audit_") or id.begins_with("winch_") else "This choice is unavailable. Check its cost and requirements.")
 func quest_hint() -> String:
 	return ["J: find the researcher's request","QUEST: seek the sample (I)","SURVEY: J reward or F bridge","SURVEY: delivered to J","SURVEY: flood bridge built"][clampi(world.quest_state,0,4)]
 func skill_description() -> String:
@@ -591,7 +656,7 @@ func visible_growth_actions() -> Array:
 	return rows.slice(gear_page*3,gear_page*3+3)
 func open_growth():
 	comparison=false
-	growth=not growth; journal=false; interaction=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	growth=not growth; journal=false; interaction=false; winch_pending=""; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if growth: growth_tab=2 if not Progression.talent_options(world.kills,world.talents).is_empty() else 0
 func draw_growth():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
@@ -641,7 +706,7 @@ func open_journal():
 	comparison=false
 	journal=not journal
 	journal_page=0
-	book=false; growth=false; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	book=false; growth=false; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 func floor_has(index: int, token: String) -> bool:
 	for row in world.floors[index]:
 		if token in row: return true
@@ -653,6 +718,7 @@ func journal_lines() -> Array:
 	entries.append_array(world.oath_journal())
 	entries.append_array(world.audit_journal())
 	entries.append_array(world.audit_lines())
+	entries.append_array(world.winch_journal())
 	if world.expedition_started:
 		entries.append("Chapter II: supplies are finite; old floors remain available.")
 		entries.append("Camp stock: medicine %d / focus %d. Bridges: %s." % [world.camp_medicine_left,world.camp_focus_left,"open" if world.expedition_bridge else "closed"])
@@ -740,7 +806,7 @@ func draw_battle():
 	var is_ambush: bool=World.ENEMIES.get(battle_kind,{}).get("first_strike",false)
 	var phase_text := "Readying the strike"
 	if phase>=0.15 and phase<0.30 and is_ambush:
-		phase_text="Oath cancels the first strike" if battle_details.get("first_strike_suppressed",false) else "AMBUSH: enemy strikes first"
+		phase_text={"oath":"Oath cancels the first strike","flank":"Flank barrier cancels the first strike"}.get(battle_details.get("first_strike_suppression","none"),"AMBUSH: enemy strikes first")
 		enemy_pos.x-=sin((phase-0.15)/0.15*PI)*55
 		draw_circle(hero_pos,47,Color(0.9,0.35,0.3,0.3))
 	elif phase>=0.30 and phase<0.60:
@@ -771,7 +837,7 @@ func battle_breakdown(details: Dictionary) -> Array[String]:
 	return [
 		"Raw: normal %d + ambush %d + thorns %d" % [int(details.get("normal_damage",0)),int(details.get("first_strike_damage",0)),int(details.get("thorns_damage",0))],
 		"EXTRA opening hit %d + charge bonus %d / %d retaliations" % [int(details.get("feint_damage",0)),int(details.get("charged_damage",0)),int(details.get("retaliations",0))],
-		"Shield %d / oath %d / total reduction %d" % [int(details.get("equipment_blocked",0)),int(details.get("oath_blocked",0)),int(details.get("blocked_damage",0))],
+		"Shield %d / oath %d / flank %d / total reduction %d" % [int(details.get("equipment_blocked",0)),int(details.get("oath_blocked",0)),int(details.get("flank_blocked",0)),int(details.get("blocked_damage",0))],
 		"Final loss %d / recovery +%d / %s" % [int(details.get("damage",0)),int(details.get("heal_after",0)),"skill used" if details.get("skill_consumed",false) else "no active skill"]
 	]
 
@@ -804,6 +870,9 @@ func _unhandled_input(event):
 					if Rect2(225,220+i*61,830,55).has_point(mouse): select_travel(i); return
 			return
 		if comparison:
+			if comparison_rows().size()>4:
+				if Rect2(800,170,110,35).has_point(get_global_mouse_position()): compare_page=maxi(0,compare_page-1); return
+				if Rect2(920,170,110,35).has_point(get_global_mouse_position()): compare_page+=1; return
 			if not Rect2(195,110,890,580).has_point(get_global_mouse_position()): comparison=false
 			return
 		if book:
@@ -831,7 +900,7 @@ func _unhandled_input(event):
 			var rows := visible_actions()
 			for i in rows.size():
 				if Rect2(285,375+i*43,720,37).has_point(get_global_mouse_position()): perform_action(rows[i][0]); return
-			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 			return
 		if world.won and chapter_button().has_point(get_global_mouse_position()) and not world.chapter_offers().is_empty():
 			perform_action(world.chapter_offers()[0][0]); return
@@ -866,12 +935,14 @@ func _unhandled_input(event):
 		if event.keycode==KEY_V: open_comparison(); return
 		if comparison:
 			if event.keycode==KEY_ESCAPE: comparison=false
+			elif event.keycode==KEY_BRACKETLEFT: compare_page=maxi(0,compare_page-1)
+			elif event.keycode==KEY_BRACKETRIGHT: compare_page+=1
 			return
 		if event.keycode==KEY_J: open_journal(); return
 		if event.keycode==KEY_C: open_growth(); return
-		if event.keycode==KEY_H: book=not book; journal=false; growth=false; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
-		if event.keycode==KEY_E: interaction=not interaction; interaction_page=0; journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
-		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_H: book=not book; journal=false; growth=false; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_E: interaction=not interaction; winch_pending=""; interaction_page=0; journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
 		if journal:
 			if event.keycode==KEY_BRACKETLEFT: journal_page=maxi(0,journal_page-1)
 			if event.keycode==KEY_BRACKETRIGHT: journal_page+=1
@@ -911,7 +982,7 @@ func request_restart(mode: String):
 	comparison=false
 	if reset_armed and reset_mode==mode:
 		world=World.new(world.seed_value if mode=="replay" else randi_range(1,2147483646))
-		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 		save_game(false)
 	else:
 		reset_armed=true; reset_mode=mode
@@ -933,18 +1004,17 @@ func move(direction: Vector2i, confirmed:=false):
 		return
 	var before: Dictionary = world.save_data().duplicate(true)
 	var enemy: String = world.tile(world.pos+direction)
-	var preview: Dictionary = world.battle_preview(enemy) if World.ENEMIES.has(enemy) else {}
-	var used_skill: bool = preview.get("skill_consumed",false)
 	var hero_before: String = world.hero_id
 	if world.step(direction):
 		if World.ENEMIES.has(enemy): play_sound("victory" if world.won else "impact")
 		elif enemy in ["D","L"]: play_sound("door")
-		elif enemy in ["k","h","a","d","C","I","T","$","A","P"]: play_sound("pickup")
+		elif enemy in ["k","h","a","d","C","I","T","$","A","P","m"]: play_sound("pickup")
 		elif enemy=="~": play_sound("water")
 		else: play_sound("move")
 		if World.ENEMIES.has(enemy):
-			battle_time=2.4; battle_name=World.ENEMIES[enemy].name; battle_loss=int(preview.get("damage",0))
-			battle_details=preview; battle_kind=enemy; battle_hero=hero_before; battle_skill=used_skill
+			var resolved: Dictionary=world.last_battle.duplicate(true)
+			battle_time=2.4; battle_name=World.ENEMIES[enemy].name; battle_loss=int(resolved.get("damage",0))
+			battle_details=resolved; battle_kind=enemy; battle_hero=hero_before; battle_skill=resolved.get("skill_consumed",false)
 		history.append(before)
 		if history.size()>100: history.pop_front()
 		save_game(false)
@@ -966,11 +1036,11 @@ func load_game():
 	if not FileAccess.file_exists(save_path): world.message="No saved journey yet."; return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
 	if not parsed is Dictionary: world.message="Save is invalid. Current journey is unchanged."; return
-	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6 or parsed.get("version")==7 or parsed.get("version")==8
+	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6 or parsed.get("version")==7 or parsed.get("version")==8 or parsed.get("version")==9
 	if upgrading:
 		var probe=World.new(0)
 		if not probe.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
-		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else (".pre-schema7.json" if parsed.get("version")==6 else (".pre-schema8.json" if parsed.get("version")==7 else ".pre-schema9.json"))))
+		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else (".pre-schema7.json" if parsed.get("version")==6 else (".pre-schema8.json" if parsed.get("version")==7 else (".pre-schema9.json" if parsed.get("version")==8 else ".pre-schema10.json")))))
 		if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(backup_path)):
 			world.message="Could not back up the old save. Current journey is unchanged."
 			return
@@ -982,6 +1052,6 @@ func load_game():
 	if not world.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
 	if upgrading: save_game(false)
 	history.clear()
-	journal=false; journal_page=0; interaction=false; growth=false; gear_page=0; book=false
+	journal=false; journal_page=0; interaction=false; winch_pending=""; growth=false; gear_page=0; book=false
 	checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	battle_time=0.0

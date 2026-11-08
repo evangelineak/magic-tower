@@ -3,6 +3,15 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"Open north gate: rescue Mira without fighting W / siege maul permanently lost":"开北门：免战营救米拉，永久放弃攻城锤",
+"Open armory: claim siege maul / rescue Mira by fighting W later":"开装备库：领取攻城锤，营救米拉仍需对战W",
+"The north gate is open. Mira can leave without fighting W; the siege maul is sealed away forever.":"北门已开：米拉无需对战W即可离开，攻城锤永久封闭。",
+"The armory gate is open. The north shortcut is sealed; defeat W to rescue Mira.":"装备库已开：北侧捷径封闭，击败W才能营救米拉。",
+"This winch gate is locked. One mechanism can open only one route.":"卷扬机门尚未开启，一台机关只能开启一条路。",
+"Siege maul recovered. Double strikes, double counters, -4 DEF. Compare before fighting.":"已取得攻城锤：每击伤害翻倍、双倍反击、防御-4。战前请比较。",
+"North gate opened. Mira can be rescued without W; the siege maul is permanently forgone.":"北门已开，可免战营救米拉，永久放弃攻城锤。",
+"Armory opened. Claim the siege maul; defeating W remains the way to rescue Mira.":"装备库已开，可领取攻城锤；营救米拉仍须击败W。",
+
 "Roadworks":"桥梁工程",
 "Merchant":"商人",
 "Inspect Ilen's three supply labels: a deduction, not a gamble":"查看伊莲的三张验货签：凭推理，不靠运气",

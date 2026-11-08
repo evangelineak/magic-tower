@@ -3,6 +3,8 @@ extends RefCounted
 # Pure display catalog. English simulation IDs and rule text remain untouched.
 # Dynamic templates retain argument order; %% is a literal percent sign.
 const EXACT = {
+"Siege maul":"攻城锤",
+"-4 DEF. Double damage per strike; each nonlethal strike draws two counters. Ambush and thorns still apply.":"防御-4。每击伤害翻倍；每次未击杀的攻击招致两次反击。先制与荆棘仍然生效。",
 "Repeating crossbow":"连发弩",
 "-3 ATK / -6 DEF. Fire up to three hits before counters begin. First strike and thorns still apply.":"攻击 -3 / 防御 -6。开场最多连射三次后敌人才开始普通反击；先制与每击荆棘仍生效。",
 	"Warden": "护卫",

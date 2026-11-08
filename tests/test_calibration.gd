@@ -145,7 +145,7 @@ func run_tests():
 	scene.load_game()
 	check(FileAccess.file_exists(backup_path) and FileAccess.get_file_as_string(backup_path)==original_bytes,"legacy JSON backup preserves original bytes")
 	var upgraded=JSON.parse_string(FileAccess.get_file_as_string(scene.save_path))
-	check(upgraded is Dictionary and upgraded.version==9 and scene.world.seal_clues==0,"successful legacy load atomically writes current schema nine")
+	check(upgraded is Dictionary and upgraded.version==10 and scene.world.seal_clues==0,"successful legacy load atomically writes current schema ten")
 	legacy_save.gold=1; write_file(scene.save_path,JSON.stringify(legacy_save))
 	scene.load_game()
 	check(scene.world.gold==1 and FileAccess.get_file_as_string(backup_path)==original_bytes,"second legacy load never overwrites first backup")

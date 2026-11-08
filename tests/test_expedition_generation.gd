@@ -26,7 +26,7 @@ func _init():
 	var geometries:Dictionary={}; var min_hp:=1000000; var max_hp:=0
 	for seed_value in range(200):
 		var run:=Expedition.generate(seed_value)
-		check(run.content_revision==2 and run.quest_supported,"new expedition content revision")
+		check(run.content_revision==3 and run.quest_supported,"new expedition content revision")
 		check(Expedition.rescue_topology(run.maps).valid,"rescue single guard topology")
 		check(run.solvable,"seed %d solvable"%seed_value)
 		check(run.maps==Expedition.generate(seed_value).maps,"deterministic")
@@ -63,11 +63,23 @@ func _init():
 	var invalid:Array=Expedition.generate(0).maps.duplicate(true); invalid[2][3][8]="."
 	check(not Expedition.validate(invalid).solvable,"missing boss rejected")
 	for variant in range(3):
+		var fixture:Array=[Expedition.build(0,variant),Expedition.build(1,variant),Expedition.build(2,variant)]
+		var guard:=Vector2i(5,[8,7,6][variant])
+		check(Expedition.flanking_position(fixture,1,guard,guard+Vector2i.RIGHT),"H east-adjacent flank exists")
+		for offset in [Vector2i.LEFT,Vector2i.UP,Vector2i.DOWN,Vector2i(2,0),Vector2i.ZERO]:
+			check(not Expedition.flanking_position(fixture,1,guard,guard+offset),"no remote or wrong-side flank")
+		fixture[1][guard.y][guard.x]="."
+		check(not Expedition.flanking_position(fixture,1,guard,guard+Vector2i.RIGHT),"defeated guard cannot be flanked")
+	for variant in range(3):
 		var maps:Array=[Expedition.build(0,variant),Expedition.build(1,variant),Expedition.build(2,variant)]
 		for bypass in [".","D","="]:
 			var broken:=maps.duplicate(true); broken[1][1][8]=bypass
 			check(not Expedition.rescue_topology(broken).valid,"rescue rejects wall, door and bridge bypass")
 			check(not Expedition.validate(broken).solvable,"proof rejects rescue bypass")
+		for hole in [Vector2i(9,3),Vector2i(9,5)]:
+			for bypass in [".","D","="]:
+				var broken:=maps.duplicate(true); broken[1][hole.y][hole.x]=bypass
+				check(not Expedition.validate(broken).solvable,"armory wall/door/bridge bypass rejected")
 		var removed:=maps.duplicate(true); removed[1][2][9]="."
 		check(not Expedition.validate(removed).solvable,"missing optional guardian rejected")
 		var missing:=maps.duplicate(true); missing[1][1][9]="."

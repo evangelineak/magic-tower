@@ -2,7 +2,7 @@ class_name TowerNavigation
 extends RefCounted
 # Pure current-state route proof. No World actions, pickup, combat or mutation.
 const ANCHORS = ["J","N","F","M","U","Y","E"]
-const SAFE = [".","J","F","M","U","Y","E","O","Q","X","<",">"]
+const SAFE = [".","J","F","M","U","Y","E","O","Q","X","v","<",">"]
 const DIRS = [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]
 static func integer(v) -> bool:
 	return (v is int or v is float) and is_finite(float(v)) and float(v)==floor(float(v))
@@ -41,6 +41,8 @@ static func safe(p:Vector3i,state:Dictionary)->bool:
 	if t in SAFE: return true
 	if t=="N": return state.get("clue",false)==true and (int(state.get("seal_clues",0))&4)==4
 	if t=="~": return state.get("water_choice","")=="drain" or state.get("bridge_built",false)==true
+	if t in ["n","e"]:
+		return state.get("expedition_revision",0)==3 and state.get("winch_choice","")==("rescue" if t=="n" else "armory")
 	if t=="=": return state.get("expedition_bridge",false)==true
 	return false
 static func valid_maps(state:Dictionary)->bool:
@@ -54,6 +56,7 @@ static func valid_maps(state:Dictionary)->bool:
 			if not row is Array or row.size()!=11: return false
 			for t in row:
 				if not t is String or t.length()!=1: return false
+	if not bounded_integer(state.get("expedition_revision",0),0,3) or state.get("winch_choice","") not in ["","rescue","armory"]: return false
 	if state.anchors.size()>64: return false
 	for key in ["clue","bridge_built","expedition_bridge"]:
 		if not state.get(key,false) is bool: return false

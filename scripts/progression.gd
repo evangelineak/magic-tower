@@ -13,6 +13,7 @@ const HEROES := {
 const GEAR := {
 	"balanced": {"name":"Traveler's kit", "atk":0, "def":0, "description":"No bonuses or penalties. The safe baseline."},
 	"buckler": {"name":"Heavy buckler", "atk":-4, "def":6, "description":"+6 DEF / -4 ATK. Block the first enemy attack, not thorns."},
+	"maul": {"name":"Siege maul", "atk":0, "def":-4, "description":"-4 DEF. Double damage per strike; each nonlethal strike draws two counters. Ambush and thorns still apply."},
 	"repeater": {"name":"Repeating crossbow", "atk":-3, "def":-6, "description":"-3 ATK / -6 DEF. Fire up to three hits before counters begin. First strike and thorns still apply."},
 	"duelist": {"name":"Duelist's rig", "atk":6, "def":-3, "description":"WARNING: take an EXTRA opening counter, even on a one-shot. Enemy DEF -8; +6 ATK / -3 DEF."}
 }
@@ -58,8 +59,8 @@ static func skill_description(hero: String, chosen: Array) -> String:
 		"scholar": return "Spend 1 focus outside battle: recover %d HP." % mend_heal(chosen)
 	return "Unknown hero."
 
-static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: String, skill: bool, equipment: String, talents: Array, oath: String = "none") -> Dictionary:
-	var result := {"valid":false, "survivable":false, "damage":-1, "hit":0, "rounds":0, "heal_after":0, "skill_consumed":false, "effective_atk":0, "effective_def":0, "enemy_def":0, "normal_damage":0, "first_strike_damage":0, "thorns_damage":0, "blocked_damage":0, "feint_damage":0, "charged_damage":0, "equipment_blocked":0, "oath_blocked":0, "oath_active":oath=="watch", "first_strike_suppressed":false, "retaliations":0, "reason":"Invalid battle input."}
+static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: String, skill: bool, equipment: String, talents: Array, oath: String = "none", flank: bool = false) -> Dictionary:
+	var result := {"valid":false, "survivable":false, "damage":-1, "hit":0, "rounds":0, "heal_after":0, "skill_consumed":false, "effective_atk":0, "effective_def":0, "enemy_def":0, "normal_damage":0, "first_strike_damage":0, "thorns_damage":0, "blocked_damage":0, "feint_damage":0, "charged_damage":0, "equipment_blocked":0, "oath_blocked":0, "oath_active":oath=="watch", "first_strike_suppressed":false, "first_strike_suppression":"none", "flank_blocked":0, "flank_active":flank, "attack_multiplier":1, "retaliations_per_hit":1, "retaliations":0, "reason":"Invalid battle input."}
 	if not HEROES.has(hero) or not GEAR.has(equipment) or not valid_talents(talents) or not oath in ["none","watch"]: return result
 	if attack<=0 or defense<0 or hp<=0: return result
 	for key in ["hp","atk","def"]:
@@ -67,7 +68,9 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 		if not is_finite(float(enemy[key])) or float(enemy[key])!=floor(float(enemy[key])) or enemy[key]<0: return result
 	if enemy.hp<=0: return result
 	if not enemy.get("first_strike",false) is bool: return result
-	result.first_strike_suppressed=oath=="watch" and enemy.get("first_strike",false)
+	result.first_strike_suppressed=(flank or oath=="watch") and enemy.get("first_strike",false)
+	if result.first_strike_suppressed:
+		result.first_strike_suppression="flank" if flank else "oath"
 	var thorns_value = enemy.get("thorns",0)
 	if not (thorns_value is int or thorns_value is float): return result
 	if not is_finite(float(thorns_value)) or float(thorns_value)!=floor(float(thorns_value)) or thorns_value<0: return result
@@ -100,11 +103,15 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	if "last_stand" in talents and hp<200: percent+=20
 	if "giant_slayer" in talents and enemy.hp>=180: percent+=10
 	hit=int(floor(float(hit*percent)/100.0))
+	result.attack_multiplier=2 if equipment=="maul" else 1
+	result.retaliations_per_hit=2 if equipment=="maul" else 1
+	# Maul multiplies the already rounded per-hit damage, not each modifier.
+	hit*=int(result.attack_multiplier)
 	var rounds := ceili(float(enemy.hp)/hit)
 	var incoming_hit := maxi(0,int(enemy.atk)-effective_def)
 	# Components are BEFORE total-loss mitigation. First strike attacks once even
 	# if the hero would one-shot. Thorns ignores DEF and includes the killing hit.
-	var normal_retaliations := maxi(0,rounds-(3 if equipment=="repeater" else 1))
+	var normal_retaliations := maxi(0,rounds-(3 if equipment=="repeater" else 1))*int(result.retaliations_per_hit)
 	var feint_counter := 1 if equipment=="duelist" else 0
 	var retaliations := normal_retaliations+feint_counter
 	var normal_damage := normal_retaliations*incoming_hit
@@ -118,12 +125,14 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	var raw_loss := normal_damage+feint_damage+charged_damage+first_strike_damage+thorns_damage
 	# Watch suppresses the ambush itself, then halves EACH thorn trigger.
 	# Raw components remain visible; its reduction is separately reported.
-	var oath_blocked := first_strike_damage+rounds*(int(thorns_value)-floori(float(thorns_value)/2.0)) if oath=="watch" else 0
+	var flank_blocked := first_strike_damage if flank else 0
+	# Flank gets attribution first; an active oath cannot cancel the same ambush twice.
+	var oath_blocked := (0 if flank else first_strike_damage)+rounds*(int(thorns_value)-floori(float(thorns_value)/2.0)) if oath=="watch" else 0
 	# The shield intercepts exactly the first enemy attack: first strike if
 	# present, otherwise retaliation #1. The blocked swing still advances the
 	# enemy counter, and thorns can never be intercepted by this equipment.
-	var equipment_blocked := incoming_hit if equipment=="buckler" and ((enemy.get("first_strike",false) and oath!="watch") or retaliations>0) else 0
-	var loss := raw_loss-oath_blocked-equipment_blocked
+	var equipment_blocked := incoming_hit if equipment=="buckler" and ((enemy.get("first_strike",false) and not result.first_strike_suppressed) or retaliations>0) else 0
+	var loss := raw_loss-flank_blocked-oath_blocked-equipment_blocked
 	# Order: equipment, then floor(remaining loss * Brace rate), then Unbroken.
 	# No minimum block: a one-damage battle still costs one HP without a shield.
 	if skill and hero=="warden": loss-=int(floor(float(loss*brace_percent(talents))/100.0))
@@ -137,6 +146,7 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	result.charged_damage=charged_damage
 	result.equipment_blocked=equipment_blocked
 	result.oath_blocked=oath_blocked
+	result.flank_blocked=flank_blocked
 	result.retaliations=retaliations
 	result.first_strike_damage=first_strike_damage
 	result.thorns_damage=thorns_damage

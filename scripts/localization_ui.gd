@@ -1,5 +1,27 @@
 extends RefCounted
 const EXACT = {
+"Flank barrier active":"侧袭挡板生效",
+"East-adjacent attack only":"须在东侧相邻格向左攻击",
+"Current position: flank barrier active":"当前位置：侧袭挡板生效",
+"Current position: no flank barrier":"当前位置：无侧袭挡板收益",
+"Flank barrier cancels the first strike":"侧袭挡板抵消先制攻击",
+"Confirm permanent winch choice":"确认卷扬机永久取舍",
+"Cancel: leave both options undecided":"取消：保留两种选择",
+"ONE WINCH / ONE PERMANENT CHOICE":"一台卷扬机 / 一次永久取舍",
+"Open the north rescue gate.":"开启北侧救援门。",
+"Reach Mira without fighting the Archive Gaoler.":"无需对战档案狱卒即可抵达米拉。",
+"The siege maul armory stays sealed for this run.":"本局攻城锤装备库将永久封闭。",
+"Open the siege maul armory.":"开启攻城锤装备库。",
+"The north rescue shortcut stays sealed for this run.":"本局北侧救援捷径将永久封闭。",
+"Mira can still be rescued by defeating the Archive Gaoler.":"仍可正面击败档案狱卒，再营救米拉。",
+"No cost until confirmed. U can undo the complete action.":"确认前不作改变；U可完整撤销这次行动。",
+"Winch: rescue shortcut OR siege maul armory":"卷扬机：救援捷径或攻城锤装备库",
+"Siege maul: double hits, double counters; -4 DEF":"攻城锤：每击双倍伤害、双倍反击，防御-4",
+"North rescue gate: open":"北侧救援门：已开",
+"North rescue gate: sealed":"北侧救援门：封闭",
+"Siege maul armory: open":"攻城锤装备库：已开",
+"Siege maul armory: sealed":"攻城锤装备库：封闭",
+
 "ENGINEER & SUPPLY LABELS":"工程师与验货签",
 "J: review discovered labels and the explanation.":"J：回看已读题面与解答。",
 "SAFE TRAVEL  T":"安全快旅  T",
@@ -313,6 +335,7 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["Shield %d / oath %d / flank %d / total reduction %d","盾挡%d / 誓约%d / 侧袭%d / 总减伤%d"],
 ["Travel to floor %d: %s?","前往第%d层：%s？"],
 ["Safe route: skip %d walking / lift operations","安全通路：省去%d次行走或电梯操作"],
 ["%d  Floor %d: %s","%d  第%d层：%s"],

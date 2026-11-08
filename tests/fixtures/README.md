@@ -47,3 +47,22 @@ version 8. Neither version numbers nor gameplay fields are manually changed.
 These synthetic, non-user fixtures preserve active/spent oath and earned
 repeater/three-stock rewards. Their visited floors must not create fast-travel
 anchors when migrating to schema 9, nor count as reading/solving the new audit.
+
+## Schema 9 solved audit and registered landmarks
+
+`schema9-medicine.json` and `schema9-retrain.json` originate from published commit
+`79d2c803a40004002d28cfd1fb3bb6895bf6a027`, exported into an isolated directory.
+Its actual World loads the genuine schema 8 supplies fixture, walks down/up at N,
+then via real stairs onto U and Y, registering three landmarks. It performs real
+safe fast travel N and back Y, reads the audit and independently enumerates the
+three statements to choose the unique answer. From that exact solved snapshot:
+medicine chooses `audit_medicine`; retrain learns the three already-earned tiers
+(`keen_edge`, `trained_focus`, `battle_medic`) then chooses `audit_retrain`.
+No field, map, position, resource or version-number edits are used.
+Both preserve spent oath, NPC supplies outcome and stock 3/3. The medicine branch
+has 594 moves / 515 HP; the retrain branch 597 moves / 375 HP and cleared talents.
+These are synthetic gameplay state, not user saves.
+
+SHA256:
+- schema9-medicine.json: `a84db2d263266f8defcd8e5c7d1542a5f297ac968e9851709a7e89fce744c03d`
+- schema9-retrain.json: `bf0b3f38db2aa603244f2f1a8735eba4e2e2b2740b21bfc6a268ce448a7cb732`
