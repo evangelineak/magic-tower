@@ -1,5 +1,30 @@
 extends RefCounted
 const EXACT = {
+"Ferry Warden":"渡口守卫",
+"Camp stock is finite and shared across all three new floors.":"营地库存有限，新增三层共享库存。",
+"Medicine is used immediately. Focus purchases require missing focus.":"药剂购买后立即使用；专注未满时才可购买专注。",
+"Roadworks open all expedition bridges once; old water is unchanged.":"工程一次开启所有远征桥，不改变旧塔水域。",
+"Bridges bypass guards, but also their gold and kill rewards.":"过桥可绕开守卫，也会错过其金币与击杀奖励。",
+"You may return for supplies or fight bypassed guards later.":"可回访营地补给，或以后再回来挑战绕过的守卫。",
+
+ "Need 70 gold, remaining medicine stock, and a nearby camp (U).":"需要 70 金币、剩余药剂库存，且位于营地 U 附近。",
+ "Need 55 gold, remaining focus stock, missing focus, and a nearby camp (U).":"需要 55 金币、剩余专注库存、专注未满，且位于营地 U 附近。",
+ "Need 80 gold, an unbuilt bridge, and a nearby engineer (Y).":"需要 80 金币、桥尚未修复，且位于工程站 Y 附近。",
+ "open":"已开放",
+ "closed":"未开放",
+
+ "Expedition bridge: open":"远征桥：已开放",
+ "Broken bridge: engineering unlocks a shortcut":"断桥：工程修复可开启近路",
+ "THE EXPEDITION IS COMPLETE": "远征完成",
+ "Your victory is saved. Continuing is optional.": "首章胜利已保存，可自行决定是否继续。",
+ "1  Continue: 3 more floors / +120 HP": "1  继续远征：新增三层 / 生命 +120",
+ "Keep your hero, gold and old floors. No new loan.": "保留角色、金币与旧楼层，不提供新的贷款。",
+ "Both chapters are complete. Your journey is saved.": "两个章节均已通关，旅程已保存。",
+ "R twice: replay / J: journal / U: undo": "按两次 R 重玩 / J 日志 / U 撤销",
+ "Expedition camp: finite tactical supplies": "远征营地：限量战术补给",
+ "Engineering station: inspect local options": "工程站：查看此处可用方案",
+ "Chapter II: supplies are finite; old floors remain available.": "第二章：补给有限，仍可回访旧楼层。",
+
  "Could not back up the old save. Current journey is unchanged.": "无法备份旧存档，当前旅程未改变。",
   "Merchant: calibration needs a powered lift": "商人：校准需要升降梯供能",
   "Core: lift powers calibration; forge/sale forfeits it": "机关芯：修梯可供能；锻造或出售将放弃校准",
@@ -252,6 +277,8 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+ ["Camp stock: medicine %d / focus %d. Bridges: %s.","营地库存：药剂 %d / 专注 %d。远征桥：%s。"],
+ ["FLOOR %d / %d", "楼层 %d / %d"],
   ["Choose 50 voucher: repay %d / receive %d gold", "选择固定 50 账券：抵债 %d / 入袋 %d 金币"],
   ["Calibration reward: %s", "校准奖励：%s"],
   ["%s: costs %d gold keys", "%s：消耗 %d 把金钥匙"],

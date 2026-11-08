@@ -3,6 +3,20 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"Ashen Castellan":"灰烬堡主",
+"THE ASH CAMP":"灰烬营地",
+"THE BROKEN ROAD":"断裂之路",
+"THE LAST WATCH":"最后守望",
+"Continue expedition: 3 more floors / +120 HP once":"继续远征：新增三层 / 一次性生命 +120",
+"Roadworks: 80 gold / open expedition bridges once":"工程修复：80 金币 / 永久开启远征桥",
+"Expedition bridges are already open":"远征桥已经开放",
+"Bridge closed. Pay for roadworks at Y, or take the guarded road.":"桥梁未通。可在 Y 付费修复，也可走敌人驻守的道路。",
+"Expedition validation failed. Your first-chapter victory is preserved.":"远征地图校验失败，首章胜利已保留。",
+"Expedition begun: +120 HP once. Old floors and all earlier choices remain.":"远征开始：一次性生命 +120。保留旧楼层及此前所有选择。",
+"Medicine consumed: +140 HP. Stock is shared across the expedition.":"已使用药剂：生命 +140。整个远征共享限量库存。",
+"Focus restored: +1. Full focus never consumes gold or stock.":"专注 +1。专注已满时不会消耗金币或库存。",
+"Roadworks complete. Expedition bridges open; guarded roads remain optional.":"工程已完成，远征桥开放；仍可选择走敌人驻守的路线。",
+
 	"Core: lift powers calibration; forge +8 DEF or sell 35 forfeits that quest.":"机关芯：修梯可为校准供能；锻造加8防御或卖35金币，将永久放弃此支线。",
 	"Calibration needs all three clues and the repaired lift.":"校准需要读齐三条线索，并修好升降梯。",
 	"Use each symbol once. Backspace or clear to change the sequence.":"每个符号只能使用一次。退格或清空可修改顺序。",
@@ -93,6 +107,8 @@ const EXACT = {
 # Preserve conversion types and argument order. The display adapter matches
 # these full English templates; %s values may themselves have catalog names.
 const TEMPLATES = [
+["Medicine: 70 gold / +140 HP now / %d left","药剂：70 金币 / 立即生命 +140 / 剩余 %d 份"],
+["Focus: 55 gold / +1 now / %d left","专注：55 金币 / 立即 +1 / 剩余 %d 份"],
 	["Contract: %s is neither first nor last.", "契约线索：%s既不在第一位，也不在最后一位。"],
 	["Valve: %s must be immediately before %s.", "水阀线索：%s必须紧挨在%s前面。"],
 	["Inscription: %s is before %s.", "碑文线索：%s在%s前面。"],

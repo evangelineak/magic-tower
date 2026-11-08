@@ -17,20 +17,24 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "a2d938e75ba29932d77ae4afc5c12dcaec814d81b04235e9fb0a100c224cbdb4",
-  "bytes": 332924,
+  "output_sha256": "38c090bbe94373b27c20cd2579e8be20ed554833addd4fd40abb57d9aa6cc64b",
+  "bytes": 341856,
   "coverage": {
-    "mapped_codepoints": 869,
-    "glyphs": 1765,
-    "required_codepoints": 710,
+    "mapped_codepoints": 893,
+    "glyphs": 1806,
+    "required_codepoints": 734,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
   },
   "scanned_sources": [
     {
+      "path": "scripts/expedition.gd",
+      "sha256": "f95cbe99448c9dd7cd05af27b195c342ac6e3e1b43ed06cf91ebe814839466bb"
+    },
+    {
       "path": "scripts/generation.gd",
-      "sha256": "49937be79c8047ffb4f150936f8864d5d5c255efa9cbda73931f127c09cf1d0d"
+      "sha256": "55b7eda427248a3fe9885e61746a42ee328cd02a74dd3d502cf7e09aa06b4f55"
     },
     {
       "path": "scripts/localization.gd",
@@ -42,15 +46,15 @@
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "3fb4e7ffa6525d3e0f1e7df167e390a50c0d8c1f06512f78db610137e25b8ad4"
+      "sha256": "6ae48a049051e844c79c355e4e3f3165e6938c4ead8382a3b794e1a6a1d865e0"
     },
     {
       "path": "scripts/localization_world.gd",
-      "sha256": "1d2f3aecc4209c2fb112976c1181c442a35250f9b33786c469ef219f9933bf02"
+      "sha256": "219db2a75916095af914babd7aa69e54b80e750353d27667c258bc02c285eb62"
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "d8bf6794e1e63425e334f71688ce304c189660fad1451d5182c951775c18643a"
+      "sha256": "af9ab54fa8b016bee43218bc6a863cc2177b567a7670a4b81c24dc9f7d861824"
     },
     {
       "path": "scripts/progression.gd",
@@ -62,7 +66,7 @@
     },
     {
       "path": "scripts/world.gd",
-      "sha256": "d5d5b1ea4855ac62f0fb404b2729d342807087007796497f873cf9eb50ab7ca6"
+      "sha256": "cec57c1c251e337e0456e1aeeff5e56ab81cfa6ddbec1d9ccf5b5e1a88889d08"
     },
     {
       "path": "project.godot",

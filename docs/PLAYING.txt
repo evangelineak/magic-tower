@@ -10,9 +10,13 @@ U 撤销；L 读档；M 静音；R 连按两次同种子重开；N 连按两次�
 五层按顺序输入四个符号。错答不扣资源，解开后两种奖励只能选一种。
 所有贷款都只是游戏金币；走路、等待、回头不会增加利息。
 
-仍使用 journey-v4.json 文件名，内部存档结构为版本5。
-读取有效版本4旧存档时会先保留一次 .pre-schema5.json 原文备份。
+仍使用 journey-v4.json 文件名，内部存档结构为版本6。
+读取有效版本4旧档先保留 .pre-schema5.json，版本5保留 .pre-schema6.json 原文备份。
 旧版本已经领过秘密奖励的存档不会再领奖。升级前仍建议自行备份存档。
+
+五层首章胜利可按1或点击主动继续三层远征，一次补120生命，不自动续章。
+六层营地药剂与专注各限两份，工程80金币开放三座桥；可回旧塔取宝。
+图鉴按 [ / ] 或点击页钮翻页。
 
 这是未签名开发预览，并非正式发行。Windows包已交叉导出，但尚未在
 真实Windows系统运行验收。请勿仅因开发者说“未签名”就绕过系统警告。
@@ -33,9 +37,14 @@ F2: Chinese / English (defaults to Chinese). Language does not change your save.
 All loans use fictional game gold, not real money.
 
 Look at battle previews. Not every route is affordable. The third-floor vault
-is optional: return stronger before defeating the final boss. A survey sample
+is optional: return stronger before the final expedition boss. A survey sample
 can buy a reward back on floor 1 OR a bridge on floor 4, not both. Keep the
 single machine core for the elevator, the forge, or a sale. Read each choice.
+
+After the first five floors, press 1/click to continue the optional three-floor
+expedition with +120 HP once. Old floors stay accessible. Camp medicine and focus
+have finite shared stock; bridge works cost 80 gold and do not award skipped kills.
+Use [ / ] or page buttons to turn enemy guide pages.
 
 Saves are under the operating system's Godot app_userdata folder, in
 Magic Tower · 苍穹之钥/journey-v4.json. Old saves are not deleted by exports.

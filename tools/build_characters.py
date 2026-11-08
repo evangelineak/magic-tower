@@ -1,5 +1,5 @@
 """Original low-poly combat cast. Blender 4.3: blender -b -P tools/build_characters.py
-Ten transparent sprites and one editable scene; no downloaded assets.
+Eleven transparent sprites and one editable scene; no downloaded assets.
 All dimensions/materials are authored here; deterministic and CPU-renderable.
 Optional incremental render: blender -b -P tools/build_characters.py -- --only juggernaut
 """
@@ -275,8 +275,48 @@ box('Great hammer head',(.91,-.05,2.70),(.97,.56,.49),'brass',.065)
 for x in [.43,1.39]:box('Hammer striking face',(x,-.05,2.70),(.11,.65,.57),'steel',.028)
 box('Hammer charge stripe',(.91,-.35,2.70),(.37,.035,.10),'amber',.012)
 
+new('archivist')
+# The archive keeper is suspended inside a three-part mechanical star chart.
+# A sealed, faceted carapace replaces a human face or an ordinary royal cloak.
+cone('Archive lower carapace',(0,.02,.93),.46,.62,.96,'teal',8)
+cone('Lower bronze rim',(0,.02,.46),.49,.47,.10,'brass',8)
+cone('Archive chest shell',(0,.02,1.59),.62,.39,.80,'steel',8)
+cone('Chest bronze rim',(0,.02,1.18),.65,.64,.10,'brass',8)
+box('Archive front plate',(0,-.46,1.49),(.53,.15,.55),'brass',.045)
+# The three lit studs echo the three orbit bands without pretending to animate.
+for x,z in [(-.14,1.39),(0,1.63),(.14,1.39)]:
+ orb('Star chart stud',(x,-.56,z),(.055,.035,.055),'jade',1)
+for a in range(8):
+ angle=math.tau*a/8
+ top=(.46*math.sin(angle),.02+.46*math.cos(angle),1.19)
+ bottom=(.34*math.sin(angle),.02+.34*math.cos(angle),.55)
+ rod('Cuirass seam',bottom,top,.027,'gold',6)
+cone('Sealed helm',(0,.02,2.16),.33,.22,.52,'teal',8)
+cone('Helm lower ring',(0,.02,1.91),.35,.34,.10,'brass',8)
+box('Single archive lens',(0,-.30,2.17),(.13,.075,.21),'jade',.035)
+cone('Helm point',(0,.02,2.55),.23,0,.30,'brass',6)
+# Suspended arms and open palms hold an intangible map between them.
+for sign in [-1,1]:
+ orb('Floating pauldrons',(sign*.62,.01,1.80),(.27,.30,.31),'brass',1)
+ rod('Forearm housing',(sign*.67,-.02,1.63),(sign*.79,-.16,1.28),.13,'steel')
+ box('Chart hand',(sign*.80,-.20,1.18),(.25,.27,.22),'teal',.045)
+ orb('Palm beacon',(sign*.80,-.36,1.21),(.07,.035,.07),'jade',1)
+# Three distinct floating bands; the lower and middle use opposing inclines.
+for index,z,radius,tilt in [(1,.47,.86,.12),(2,1.41,1.08,-.12),(3,2.69,.65,.16)]:
+ bpy.ops.mesh.primitive_torus_add(major_segments=40,minor_segments=6,major_radius=radius,minor_radius=.041,location=(0,.02,z))
+ ring=finish(bpy.context.object,'Orbit band %d'%index,'brass')
+ ring.rotation_euler=(tilt,.16 if index==2 else -.09,0)
+ # Three asymmetric calibration marks make each mechanical band readable.
+ for mark in range(3):
+  angle=math.tau*mark/3 + .28*index
+  x=radius*math.sin(angle);y=.02+radius*math.cos(angle)
+  zz=z+tilt*radius*math.cos(angle)
+  orb('Orbit marker %d.%d'%(index,mark),(x,y,zz),(.062,.062,.062),'jade',1)
+# A separated floating base fin conveys hover rather than a grounded humanoid.
+cone('Hover fin',(0,.02,.22),.04,.20,.28,'gold',4)
+
 # Shared transparent portrait rig. Each character collection is render-isolated.
-cast=[bpy.data.collections[n] for n in ['warden','ranger','scholar','mossling','sentinel','colossus','regent','stalker','briar','juggernaut']]
+cast=[bpy.data.collections[n] for n in ['warden','ranger','scholar','mossling','sentinel','colossus','regent','stalker','briar','juggernaut','archivist']]
 active=bpy.data.collections.new('Portrait rig');bpy.context.scene.collection.children.link(active)
 scene=bpy.context.scene
 scene.world.use_nodes=True
@@ -306,4 +346,4 @@ for coll in cast:
 cast[0].hide_render=False
 scene.render.filepath=os.path.join(OUT,'warden.png')
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT,'characters.blend'),compress=True)
-print('COMBAT CAST COMPLETE: ten editable characters; rendered '+', '.join(sorted(requested)))
+print('COMBAT CAST COMPLETE: eleven editable characters; rendered '+', '.join(sorted(requested)))
