@@ -323,3 +323,17 @@ PCK JS SHA `2bc4bafce2f6738d111b9d42d5ea9583ff8fec9d5c8eeb2a5ee3807350f459b9` �
 真实Chrome生产JS callback+IndexedDB harness82项通过，points-browser-82.png。中间发现伪空pool的测试夹具没有同步新容量0，先触发INVALID_LEGACY_POINTS；已修夹具使其内部schema合法，只违反真实档案出生pool，保留精确INVALID_BIRTH_DRAFT断言，并加Node前置检查。生产规则未放宽。此浏览器结果不代表Godot Web引擎成功加载。
 
 远端首轮PR CI暴露另一个测试假设：test_main随机新seed的第一张策略可能是研习策略（自带+4级），两处固定期待12级会把正确16级误报失败。已改成明确12+策略4，并补确定性研习/非研习策略两组真实预览与原子确认断言。生产代码未改；UI195项连续三次通过，不靠重跑掩盖问题。待该修复新head的CI通过才发布Web。
+
+## 封箱货梯与真实战后收益：schema18
+
+本批在新layout2旅程启用同一70HP货箱的时序选择：一层付1钥当场开，或双确认免费发运到固定种子目的地；原D/h移除不诱开空房。三层c占原保护墙且永不可通行，需V死后相邻领取；五层箱与Q共交互点但独立状态，需K死且主动继续远征，未改Q谜题奖励。旧17及以前/新layout1均cargo off，不刷新地图。普通Undo可退回发运/领取，出生版本和目的地固定；死亡差分不改箱状态。
+
+完整门禁`/tmp/tower-cargo-full.log`退出0：52套Godot、7组Node940项通过，无SCRIPT ERROR/ERROR。货箱World575、storage318、Session404、UI222、本地化96。生成回放改为200个真实World.new(seed_value)而非覆盖seed0地图，偶奇各100；178435检查、137几何、0fallback、保守HP28–157。另200远征种子及9条路线3882个合法存读状态通过。真实17 active/death/pending/allocated夹具来自冻结2d2855f，而非把新版本号改旧。
+
+真实GUI新seed0：9步到源货箱，取消发运后实际1钥开箱，274→344HP；普通U两次恢复，再确认发运、L恢复10步274HP/1钥/8金币，源D+h消失。中英货签正确显示V条件和同箱70HP，无自动领取。仅验证源端选择与持久化，未声称GUI已经走完整三层领取支线；后段由合法World路线与门槛测试覆盖。证据cargo-actual-store.json及cargo-confirm-zh/en、cargo-local-claimed、cargo-shipped-reloaded截图。
+
+真实旧游玩checkpoint原字节复制到独立QA目录，未伪造角色数值：黄铜巨像战635→575HP损60、专注2→3实际恢复1、金币184→208入袋24/抵债0，战报中英清楚展示。证据battle-receipt-actual-store.json与battle-receipt-actual-zh/en.png。Session还覆盖满焦返0、先支再返、税后奖励18抵债10净入袋8、ACK丢失重试一次摘要、load不回播。修正未用技能游侠的Precision标签、取消先制仍受伤、把每次出手前接触荆棘画为事后反伤的误导；总2.4秒仅顺序示意并明确可跳，不冒称逐击动画。
+
+真实Chrome生产JS callback+IndexedDB89项通过（cargo-browser-89.png），不是Godot Web实玩。新增原创Blender货箱/空货位资产独立，不覆盖旧角色；原文件、生成脚本及manifest入库。字体921字缺0、1077 cmap/2138glyphs、422864bytes SHA256 440f7846b26a62e6259b9ad502ed8cc305f9303f845f8c90eb241f7b719cea20，所有扫描source hashes一致。
+
+玩法而非仅架构证据：合法货梯对照见CARGO-ROUTE-AUDIT.md。seed1发运保钥能在2F后提前回1F花2钥取60金币，开箱组此时少1钥但以后仍能回访。延迟70HP使K后166→96；继续章节+120与货物+70明确分开。gate审查见LEGACY-GATE-ROUTE-AUDIT.md：8组合法构筑首次3F都不能破V防，5F未K回访仍不够；7F W原装学者已可打，未借高回焦为由任意削弱玩家构筑。全局最优平衡、Windows实际运行、音频实听与Godot Web引擎实玩仍未认证。

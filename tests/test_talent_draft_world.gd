@@ -33,7 +33,7 @@ func encounter(w,kind:String,floor_id:int)->Vector2i:
  check(false,"real enemy fixture exists");return Vector2i.ZERO
 func _init():
  var w=W.new(0);var birth=state(w);var offers=w.talent_draft.duplicate(true)
- check(w.save_data().version==17 and w.last_kill_kind=="" and w.talent_options().is_empty() and w.talent_progress().next_kills==3,"new run starts with fixed hidden future cards and no prior kill")
+ check(w.save_data().version==18 and w.last_kill_kind=="" and w.talent_options().is_empty() and w.talent_progress().next_kills==3,"new run starts with fixed hidden future cards and no prior kill")
  check(W.from_snapshot(JSON.parse_string(JSON.stringify(birth))).save_data()==birth,"new candidates survive canonical JSON roundtrip")
  check(not w.talent_preview_targets().any(func(t):return t.floor==2 and t.kind=="V"),"unseen third-floor vault is not exposed")
  var first_done:=false;var second_done:=false;var floor_three:=false

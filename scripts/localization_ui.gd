@@ -1,5 +1,22 @@
 extends RefCounted
 const EXACT = {
+"Ship the original supply free / delay its 70 HP":"免费发运原补给 / 延后获得 70 生命",
+"Confirm shipment to the fixed destination":"确认发运至固定目的地",
+"Cancel: keep the floor 1 box sealed":"取消：保留一层的封箱补给",
+"Read the freight label / no resources spent":"读取货签 / 不消耗资源",
+"CONFIRM SEALED FREIGHT":"确认封箱发运",
+"SEALED FREIGHT LABEL":"封箱货签",
+"Shipping spends no key. The 70 HP is delayed, never duplicated.":"发运不消耗钥匙。原本的 70 生命只是延后领取，不会复制。",
+"No collection is available here yet. Check the label and guard condition.":"此处暂时不能收货，请查看货签与守卫条件。",
+"Shipping and collection are manual. U can undo the complete action.":"发运与领取均需手动操作；U 可完整撤销该次操作。",
+"Skill prepared":"技能已准备",
+"No active skill":"未启用主动技能",
+"No opening ambush":"敌人没有先制攻击",
+"Opening feint: extra enemy counter":"开局佯攻：额外承受敌人反击",
+"Contact thorns: before every hero strike, including the last":"接触荆棘：每次英雄出手前生效，最后一击也不例外",
+"Approaching the enemy":"接近敌人",
+"Victory saved: actual gains below":"胜利已保存：下方为实际收支",
+"Order illustration, not every strike. Damage saved once; any key / click skips.":"顺序示意，并非逐击回放。伤害仅保存一次；任意键或点击跳过。",
 "PREPARE THIS RUN / STRATEGY + LEGACY POINTS":"本局准备 / 轮回策略与传承配点",
 "One confirmation locks both choices. You may leave points unused. No modifier means original strategy and zero points.":"一次确认锁定策略与配点，可以不花完。原装策略加零投入即为原始规则。",
 "0  Original strategy / points still optional":"0  原装策略 / 仍可自选配点",
@@ -449,6 +466,9 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["HP %d -> %d / loss %d / recovered +%d","生命 %d → %d / 损失 %d / 恢复 +%d"],
+["Focus %d -> %d / skill spent %d / actually restored +%d","专注 %d → %d / 技能消耗 %d / 实际恢复 +%d"],
+["Gold loot %d / debt paid %d / pocket +%d (%d -> %d)","金币战利 %d / 抵债 %d / 入袋 +%d（%d → %d）"],
 	["Warden: %d%% block / Ranger: ignore %d DEF / Scholar: heal %d HP", "护卫：减伤 %d%% / 游侠：无视 %d 防御 / 学者：治疗 %d 生命"],
 ["Capacity %d / unassigned %d", "容量 %d / 未分配 %d"],
 ["Study: %d / 2", "研习：%d / 2"],
@@ -490,7 +510,7 @@ const TEMPLATES = [
 ["After battle: %d HP","战后生命：%d"],
 ["Loss %s / hero strikes %d / retaliations %d","损血 %s / 攻击 %d 次 / 反击 %d 次"],
  ["Thorns %d","荆棘 %d"],
- ["%d thorns per hit, including the final hit.","每次攻击反伤 %d，包括最后一击。"],
+ ["Contact %d before each strike (last too).","每次出手前接触伤害 %d，最后一击也算。"],
  ["%d hero strikes  /  %d damage per hit  /  %d HP lost","攻击 %d 次 / 每击 %d 伤害 / 损失 %d 生命"],
  ["Camp stock: medicine %d / focus %d. Bridges: %s.","营地库存：药剂 %d / 专注 %d。远征桥：%s。"],
  ["FLOOR %d / %d", "楼层 %d / %d"],

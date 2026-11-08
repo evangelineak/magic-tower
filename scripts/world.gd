@@ -1,5 +1,7 @@
 class_name TowerWorld
 extends RefCounted
+const Cargo=preload("res://scripts/cargo.gd")
+var cargo:Dictionary=Cargo.legacy()
 const Layout = preload("res://scripts/layout.gd")
 const Generator = preload("res://scripts/generation.gd")
 const BattleTimeline = preload("res://scripts/battle_timeline.gd")
@@ -121,6 +123,8 @@ func _init(run_seed: int = 0, run_layout: int = 2, session_run_id: String = "", 
 	event_kind=["bargain","smuggler","oath"][seed_value%3]
 	var generated: Dictionary = Generator.generate(seed_value, MAPS, layout_revision)
 	floors=generated.maps
+	cargo=Cargo.birth(seed_value,layout_revision)
+	Cargo.install(floors,cargo)
 	generation_attempts=generated.attempts
 	generation_fallback=generated.fallback
 	generation_valid=bool(generated.validation.solvable) and Layout.valid_revision(run_layout) and valid_run_id(run_id) and mode in ["safe","risk"] and Strategy.valid_draft(seed_value,draft)
@@ -441,7 +445,9 @@ func _tile_tooltip_data(point: Vector2i) -> Dictionary:
 		elif forecast.get("first_strike_suppression","")=="oath": lines.append("The active Watch oath cancels this enemy's first strike.")
 		lines.append("Fight only by a deliberate adjacent move. Click walking never fights.")
 		return {"title":str(enemy.name),"lines":lines}
-	var titles={"#":"Wall",".":"Cleared floor","k":"Gold key","h":"Spring water","a":"Ruby of resolve","d":"Sapphire ward","D":"Locked door","L":"Double lock","$":"Sealed treasury","A":"Sealed edge","P":"Sealed provisions","T":"Star vault","C":"Ancient core","M":"Merchant","J":"Ilen's workshop","N":"Watch inscription","E":"The old elevator","F":"Old forge","Q":"Old-tower calibration","I":"Survey sample","O":"Waterworks","R":"Flooded relic chest","X":event_title(),"U":"Expedition camp","Y":"Roadworks","v":"One-use winch","n":"North rescue gate","e":"Armory gate","m":"Siege maul","t":"Mira","~":"Flooded ground","=":"Expedition bridge","<":"Downstairs",">":"Upstairs"}
+	var titles={"c":"Freight chute","#":"Wall",".":"Cleared floor","k":"Gold key","h":"Spring water","a":"Ruby of resolve","d":"Sapphire ward","D":"Locked door","L":"Double lock","$":"Sealed treasury","A":"Sealed edge","P":"Sealed provisions","T":"Star vault","C":"Ancient core","M":"Merchant","J":"Ilen's workshop","N":"Watch inscription","E":"The old elevator","F":"Old forge","Q":"Old-tower calibration","I":"Survey sample","O":"Waterworks","R":"Flooded relic chest","X":event_title(),"U":"Expedition camp","Y":"Roadworks","v":"One-use winch","n":"North rescue gate","e":"Armory gate","m":"Siege maul","t":"Mira","~":"Flooded ground","=":"Expedition bridge","<":"Downstairs",">":"Upstairs"}
+	if cargo.version==1 and ((floor_index==0 and point in [Cargo.source_door(),Cargo.source_box()]) or (floor_index==Cargo.destination_floor(cargo) and point==Cargo.destination_point(cargo))):
+		lines.append(cargo_description())
 	match token:
 		".": lines.append("Click to walk through cleared floor only. Nothing is picked up or activated.")
 		"#": lines.append("Impassable wall.")
@@ -492,7 +498,9 @@ func _tile_tooltip_data(point: Vector2i) -> Dictionary:
 			else: lines.append("The room's contents have changed. Inspect before opening.")
 		elif token=="D" and layout_revision==1:
 			lines.append("Legacy shortcut: this old layout may have another way around.")
-	return {"title":str(titles.get(token,"Unknown tile")),"lines":lines}
+	var title:=str(titles.get(token,"Unknown tile"))
+	if token=="h" and cargo.version==1 and floor_index==0 and point==Cargo.source_box():title="Sealed medical supply"
+	return {"title":title,"lines":lines}
 func flank_position(target: Vector2i) -> Vector2i:
 	if expedition_revision!=3 or floor_index<5 or floor_index>7 or tile(target)!="H": return Vector2i(-1,-1)
 	var candidate:=target+Layout.direction(floor_index,Vector2i.RIGHT,layout_revision)
@@ -547,6 +555,9 @@ func step(direction: Vector2i) -> bool:
 	if strategy_pending() or ended_reason!="" or not generation_valid or won or absi(direction.x)+absi(direction.y)!=1: return false
 	var target := pos + direction
 	var t := tile(target)
+	if t == "c":
+		message=cargo_description()
+		return false
 	if t == "#": return false
 	if t in ["n","e"] and (expedition_revision!=3 or winch_choice!=("rescue" if t=="n" else "armory")):
 		message="This winch gate is locked. One mechanism can open only one route."
@@ -621,11 +632,12 @@ func step(direction: Vector2i) -> bool:
 		keys += 1
 		message = "A gold key. Every door is a decision."
 	elif t in ["D","L"]:
+		if cargo.version==1 and cargo.state=="waiting" and floor_index==0 and target==Cargo.source_door():cargo.state="opened"
 		keys -= 2 if t=="L" else 1
 		message = "The seal breaks."
 	elif t == "h":
 		hp += 70
-		message = "Spring water: +70 HP"
+		message = "Medical supply collected: +70 HP." if cargo.version==1 and floor_index==0 and target==Cargo.source_box() else "Spring water: +70 HP"
 	elif t == "a":
 		atk += 5
 		message = "Ruby of resolve: +5 ATK"
@@ -703,6 +715,36 @@ func _read_seal(bit: int):
 	var index := 0 if bit==1 else (1 if bit==2 else 2)
 	message=Riddle.clues(seed_value)[index]
 
+func cargo_status()->String:
+	if cargo.version==0:return ""
+	match cargo.state:
+		"waiting":return "Freight status: sealed on floor 1; dispatch is still available."
+		"opened":return "Freight status: source opened; the 70 HP supply is still inside." if floors[0][2][9]=="h" else "Freight status: the source supply was collected locally."
+		"shipped":return "Freight status: ready for manual collection." if cargo_ready() else "Freight status: dispatched; destination seal is still locked."
+	return "Freight status: collected at destination; no further reward."
+func cargo_description()->String:
+	if cargo.version==0:return ""
+	var destination:="Floor 3 freight chute: the Vault Colossus must be defeated." if cargo.destination=="vault" else "Floor 5 cargo beside the calibration stand: defeat the Regent AND continue the expedition before collection."
+	return cargo_status()+" "+("Sealed freight: the SAME 70 HP supply, not an extra reward. Open the floor 1 door with 1 key now, or ship it free and collect later. " if cargo.state=="waiting" else "Freight contains only the original 70 HP supply; it is not an extra reward. ")+destination+" Shipping removes the empty source lock. Destination is fixed; this supply can only be collected once. Normal Undo remains available."
+func cargo_journal()->Array:
+	if cargo.version==0:return []
+	return [cargo_status(),"Destination: floor 3 freight chute, after defeating the Vault Colossus." if cargo.destination=="vault" else "Destination: cargo beside the floor 5 calibration stand, after the Regent and expedition continuation."]
+func _cargo_near(f:int,p:Vector2i)->bool:
+	return floor_index==f and absi(pos.x-p.x)+absi(pos.y-p.y)<=1
+func cargo_ready()->bool:
+	if cargo.version!=1 or cargo.state!="shipped":return false
+	if cargo.destination=="vault":return floors[2][3][8]!="V"
+	if not expedition_started:return false
+	for row in floors[4]:
+		if "K" in row:return false
+	return true
+func cargo_context()->bool:
+	return cargo.version==1 and (_cargo_near(0,Cargo.source_door()) or _cargo_near(Cargo.destination_floor(cargo),Cargo.destination_point(cargo)))
+func cargo_offers()->Array:
+	if cargo.version!=1 or strategy_pending() or ended_reason!="" or won or not generation_valid:return []
+	if cargo.state=="waiting" and _cargo_near(0,Cargo.source_door()):return [["cargo_ship",cargo_description()]]
+	if cargo_ready() and _cargo_near(Cargo.destination_floor(cargo),Cargo.destination_point(cargo)):return [["cargo_claim","Collect the shipped supply: +70 HP once. This is the original floor 1 box."]]
+	return []
 func event_title() -> String:
 	return {"bargain":"The tower keeper", "smuggler":"The locked-road smuggler", "oath":"The well of resolve"}[event_kind]
 func event_offers() -> Array:
@@ -712,6 +754,19 @@ func event_offers() -> Array:
 	return [["bargain_blood","Blood bargain: pay 80 HP / gain +6 ATK"],["bargain_gold","Ward bargain: pay 25 gold / gain +5 DEF"],["bargain_leave","Decline this encounter permanently"]]
 func action(id: String) -> bool:
 	if strategy_pending() or ended_reason!="": return false
+	if id in ["cargo_ship","cargo_claim"]:
+		var allowed:=false
+		for offer in cargo_offers():
+			if offer[0]==id:allowed=true
+		if not allowed:return false
+		if id=="cargo_ship":
+			cargo.state="shipped";floors[0][2][8]=".";floors[0][2][9]="."
+			message="Freight dispatched. The empty source door is removed; the original 70 HP supply awaits its stated destination."
+		else:
+			cargo.state="claimed";hp+=70
+			message="Freight collected: +70 HP. The original supply cannot be collected again."
+		moves+=1
+		return true
 	if id=="legacy_focus":
 		if not legacy_focus_available(): return false
 		legacy_reserves-=1;focus+=1;moves+=1
@@ -1004,7 +1059,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":17,"legacy_points":legacy_points.duplicate(true),"legacy_reserves":legacy_reserves,"talent_draft":talent_draft.duplicate(true),"last_kill_kind":last_kill_kind,"draft":draft.duplicate(true),"death_record":death_record.duplicate(true),"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":18,"cargo":cargo.duplicate(true),"legacy_points":legacy_points.duplicate(true),"legacy_reserves":legacy_reserves,"talent_draft":talent_draft.duplicate(true),"last_kill_kind":last_kill_kind,"draft":draft.duplicate(true),"death_record":death_record.duplicate(true),"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -1012,7 +1067,7 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13 and save_version!=14 and save_version!=15 and save_version!=16 and save_version!=17): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13 and save_version!=14 and save_version!=15 and save_version!=16 and save_version!=17 and save_version!=18): return false
 	if save_version>=14:
 		if not d.get("death_record") is Dictionary or not d.get("ended_reason") is String: return false
 		if d.get("ended_reason")=="death": return _restore_death(d)
@@ -1050,6 +1105,10 @@ func restore(d: Dictionary) -> bool:
 		var revision=d.get("layout_revision")
 		if not (revision is int or revision is float) or not is_finite(float(revision)) or (revision!=1 and revision!=2): return false
 		saved_layout=int(revision)
+	var saved_cargo:Dictionary=Cargo.legacy()
+	if save_version>=18:
+		if not Cargo.valid_record(d.get("cargo"),d.get("seed_value"),saved_layout):return false
+		saved_cargo=d.cargo.duplicate(true);saved_cargo.version=int(saved_cargo.version)
 	var old_seal: bool = save_version==4
 	var saved_winch := ""
 	var saved_maul := false
@@ -1199,7 +1258,8 @@ func restore(d: Dictionary) -> bool:
 					if saved_revision!=3: return false
 					machinery[c]+=1
 				if not saved_expedition and c in ["U","Y","=","Z","H","t","W","v","n","e","m"]: return false
-				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","w","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">","U","Y","=","Z","H","t","W","v","n","e","m"]: return false
+				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","w","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">","U","Y","=","Z","H","t","W","v","n","e","m","c"]: return false
+	if not Cargo.valid_maps(d.floors,saved_cargo,saved_expedition):return false
 	if cores_remaining>1 or (cores_remaining>0 and (d.core or d.core_use!="")): return false
 	if old_seal and d.secret:
 		if seals_remaining>1: return false
@@ -1296,6 +1356,7 @@ func restore(d: Dictionary) -> bool:
 	expedition_started=saved_expedition; expedition_bridge=saved_bridge
 	camp_medicine_left=saved_medicine; camp_focus_left=saved_focus_stock
 	won = d.won
+	cargo=saved_cargo
 	generation_valid=true
 	message = "Your journey resumes."
 	return true
@@ -1325,7 +1386,8 @@ func _restore_death(d: Dictionary) -> bool:
 	var delta:=Vector2i(int(record.x),int(record.y))-probe.pos
 	if not probe.lethal_fight(delta): return false
 	var expected:=d.duplicate(true)
-	expected.version=17
+	expected.version=18
+	if int(d.version)<18:expected.cargo=Cargo.legacy()
 	if int(d.version)<17:
 		expected.legacy_points=LegacyPoints.legacy()
 		expected.legacy_reserves=0

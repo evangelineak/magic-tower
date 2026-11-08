@@ -48,7 +48,7 @@ assert.throws(()=>api.snapshotCopy({...f.risk_dead,mode:'safe'},true));checks++;
 assert.throws(()=>api.snapshotCopy(f.risk_dead,false));checks++;
 const living13=f.schema13_active.runs[f.schema13_active.slot.activeRunId].snapshot;
 check(api.snapshotCopy(living13).version===13,'real old store payload remains readable without mutation');
-const upgraded=api.upgradeSnapshot(living13);check(upgraded.version===17&&Object.keys(upgraded.death_record).length===0&&upgraded.run_id===living13.run_id,'old identity preserved, no death fabricated');
+const upgraded=api.upgradeSnapshot(living13);check(upgraded.version===18&&Object.keys(upgraded.death_record).length===0&&upgraded.run_id===living13.run_id,'old identity preserved, no death fabricated');
 const archived13=f.schema13_archived.runs[f.schema13_archived.slot.activeRunId].snapshot;
 check(api.summaryOf(archived13,'withdrawn').moves===archived13.moves,'real old archive summary unchanged');
 console.log(`SESSION STORAGE PROTOCOL: PASS (${checks} checks; production pure validation, no IDB)`);

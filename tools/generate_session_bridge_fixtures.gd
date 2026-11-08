@@ -33,4 +33,24 @@ func _initialize():
  assert(draft_run.choose_strategy(draft_run.draft.offers[0]));payload.draft_selected=draft_run.save_data().duplicate(true)
  assert(draft_run.step(Vector2i.RIGHT));payload.draft_moved=draft_run.save_data().duplicate(true)
  payload.draft_next=World.new(51,2,"vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv","risk",false,Strategy.pool_for_milestones([3,5])).save_data().duplicate(true)
+ var cargo_run=World.new(0,2,"cccccccccccccccccccccccccccccccc","risk",false,Strategy.pool_for_milestones([3,5]))
+ payload.cargo_fresh=cargo_run.save_data().duplicate(true)
+ assert(cargo_run.choose_strategy("none"))
+ assert(_walk(cargo_run,Vector2i(8,1)));payload.cargo_approach=cargo_run.save_data().duplicate(true)
+ assert(cargo_run.action("cargo_ship"));payload.cargo_shipped=cargo_run.save_data().duplicate(true)
  var file=FileAccess.open("res://tools/session_bridge_fixtures.json",FileAccess.WRITE);file.store_string(JSON.stringify(payload));file.close();quit()
+
+func _walk(w,target):
+ var queue=[w.pos];var paths={w.pos:[]}
+ while not queue.is_empty():
+  var p=queue.pop_front()
+  if p==target:
+   for delta in paths[p]:
+    if not w.step(delta):return false
+   return true
+  for delta in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+   var next=p+delta
+   if next.x<1 or next.x>9 or next.y<1 or next.y>9 or paths.has(next):continue
+   if not w.floors[w.floor_index][next.y][next.x] in [".","a","d","h","k","s","g"]:continue
+   paths[next]=paths[p]+[delta];queue.append(next)
+ return false

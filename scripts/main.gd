@@ -58,11 +58,14 @@ var talent_notice_tier := -1
 var talent_notice_time := 0.0
 var reset_mode := ""
 var battle_details: Dictionary = {}
+var battle_receipt: Dictionary = {}
 var battle_kind := "s"
 var battle_hero := "warden"
 var battle_skill := false
 var interaction_page := 0
 var interaction := false
+var cargo_pending := false
+var cargo_inspecting := false
 var winch_pending := ""
 var battle_time := 0.0
 var battle_name := ""
@@ -121,6 +124,8 @@ func _ready():
 	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","juggernaut","colossus","regent","gate_brute","archivist","ferryman","jailer","ilen","mira"]:
 		var path := "res://assets/map_icons/%s.png" % id
 		if ResourceLoader.exists(path): map_art[id]=load(path)
+	for cargo_art in ["cargo","cargo_empty"]:
+		if ResourceLoader.exists("res://assets/cargo/%s.png" % cargo_art): map_art[cargo_art]=load("res://assets/cargo/%s.png" % cargo_art)
 	buttons = [Rect2(768,636,148,40),Rect2(932,636,148,40),Rect2(1096,636,148,40),Rect2(1014,536,230,40),Rect2(768,586,230,40),Rect2(768,536,230,40),Rect2(1014,586,230,40),Rect2(768,686,476,40)]
 	await initialize_session()
 	queue_redraw()
@@ -162,7 +167,12 @@ func _draw():
 			if t == "#":
 				draw_rect(Rect2(p+Vector2(3,3),Vector2(58,58)),Color("283748"))
 				draw_line(p+Vector2(5,5),p+Vector2(58,5),Color("3c5061"),2)
-			else: draw_token(p+Vector2(CELL/2,CELL/2),t)
+			elif world.cargo.version==1 and world.floor_index==0 and Vector2i(x,y)==World.Cargo.source_box() and t=="h":
+				draw_cargo_icon(p+Vector2(CELL/2,CELL/2),true)
+			else:
+				draw_token(p+Vector2(CELL/2,CELL/2),t)
+				if t=="Q" and world.cargo.version==1 and world.cargo.destination=="crown":
+					draw_cargo_icon(p+Vector2(47,47),world.cargo.state=="shipped",26)
 			if hover == Vector2i(x,y): draw_rect(Rect2(p,Vector2(CELL,CELL)),Color(0.4,0.85,0.76,0.35),false,2)
 	if world.expedition_revision>=3:
 		for y in range(1,10):
@@ -386,7 +396,7 @@ func open_attunement():
 	if attuning: close_attunement(); return
 	if battle_time>0.0: return
 	close_travel(); comparison=false; journal=false; book=false; growth=false; interaction=false
-	winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	attune_gear=world.equipped if world.equipped!="balanced" else "buckler"; attune_pending=""; attuning=true
 func cycle_attunement(delta: int):
 	var ids: Array=["buckler","duelist","repeater","maul"]
@@ -525,7 +535,18 @@ func draw_victory():
 	panel(Rect2(395,575,490,48),Color("253748"))
 	label_at(Vector2(408,606),"2  Finish chapter one and record" if not world.expedition_started else "2  Settle final victory",18,GOLD)
 	label_at(Vector2(395,650),"Nothing is settled until you explicitly confirm.",15,MUTED)
+func draw_cargo_icon(center: Vector2, full: bool, size:=60.0):
+	var icon: String="cargo" if full else "cargo_empty"
+	if map_art.has(icon): draw_texture_rect(map_art[icon],Rect2(center-Vector2.ONE*size/2,Vector2.ONE*size),false)
+	else:
+		draw_rect(Rect2(center-Vector2.ONE*size*0.35,Vector2.ONE*size*0.7),Color("a7793e"),full,-1 if full else 2)
+		if full:
+			draw_line(center-Vector2(size*0.2,0),center+Vector2(size*0.2,0),TEAL,4)
+			draw_line(center-Vector2(0,size*0.2),center+Vector2(0,size*0.2),TEAL,4)
 func draw_token(c: Vector2, t: String):
+	if t=="c":
+		draw_cargo_icon(c,world.cargo.state=="shipped")
+		return
 	if MAP_ENEMY_ART.has(t) and map_art.has(MAP_ENEMY_ART[t]):
 		draw_texture_rect(map_art[MAP_ENEMY_ART[t]],Rect2(c-Vector2(30,30),Vector2(60,60)),false)
 		draw_rect(Rect2(c-Vector2(29,29),Vector2(58,58)),Color("ce7971"),false,1)
@@ -615,7 +636,7 @@ func draw_token(c: Vector2, t: String):
 func enemy_traits(enemy: Dictionary, compact:=false) -> Array:
 	var traits: Array=[]
 	if enemy.get("first_strike",false): traits.append("First strike" if compact else "Strikes first, even if you one-shot it.")
-	if int(enemy.get("thorns",0))>0: traits.append(("Thorns %d" if compact else "%d thorns per hit, including the final hit.") % int(enemy.thorns))
+	if int(enemy.get("thorns",0))>0: traits.append(("Thorns %d" if compact else "Contact %d before each strike (last too).") % int(enemy.thorns))
 	if int(enemy.get("heavy_every",0))>0: traits.append("Charge / 3" if compact else "Every 3rd retaliation doubles; feint counts.")
 	if traits.is_empty() and not compact: traits.append("Normal retaliation after your attacks.")
 	return traits
@@ -658,7 +679,14 @@ func nearby(t: String) -> bool:
 	for d in [Vector2i.ZERO,Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 		if world.tile(world.pos+d)==t: return true
 	return false
+func cargo_actions() -> Array:
+	var rows: Array=[]
+	for offer in world.cargo_offers():
+		rows.append([offer[0],"Ship the original supply free / delay its 70 HP" if offer[0]=="cargo_ship" else offer[1]])
+	return rows
 func available_actions() -> Array:
+	if cargo_pending: return [["cargo_confirm","Confirm shipment to the fixed destination"],["cargo_cancel","Cancel: keep the floor 1 box sealed"]]
+	if cargo_inspecting: return cargo_actions()
 	if winch_pending!="": return [["winch_confirm","Confirm permanent winch choice"],["winch_cancel","Cancel: leave both options undecided"]]
 	var rows: Array = []
 	if checkpoint_pending!=Vector2i.ZERO:
@@ -671,6 +699,8 @@ func available_actions() -> Array:
 	rows.append_array(world.oath_offers())
 	rows.append_array(world.audit_offers())
 	rows.append_array(world.winch_offers())
+	rows.append_array(cargo_actions())
+	if world.cargo_context() and nearby("Q"): rows.append(["cargo_inspect","Read the freight label / no resources spent"])
 	if nearby("M"):
 		if (world.seal_clues & 1)==0: rows.append(["seal_contract","Read the old contract: calibration clue / lift power required"])
 		rows.append(["buy","Buy armor-breaker: 60 gold / +12 ATK (once)"])
@@ -727,6 +757,9 @@ func action_label(rect: Rect2, source: String):
 	label_at(rect.position+Vector2(12,15),text.left(cut),14)
 	label_at(rect.position+Vector2(12,31),text.substr(cut).strip_edges(),14)
 func draw_interaction():
+	if cargo_pending or cargo_inspecting or (world.cargo_context() and not nearby("Q") and pending_reason==""):
+		draw_cargo()
+		return
 	if winch_pending!="":
 		draw_winch_confirmation()
 		return
@@ -805,6 +838,20 @@ func draw_key_confirmation():
 	label_at(Vector2(290,580),"U restores the opened door, your keys and your position together.",15,MUTED)
 	label_at(Vector2(290,640),"Nothing is spent until you confirm.",16,TEAL)
 	label_at(Vector2(290,672),"Click a choice / press 1-2. E / Esc cancels.",14,MUTED)
+func draw_cargo():
+	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
+	panel(Rect2(260,120,770,570),Color("0c1928"))
+	label_at(Vector2(290,158),"CONFIRM SEALED FREIGHT" if cargo_pending else "SEALED FREIGHT LABEL",24,GOLD)
+	draw_wrapped(Vector2(290,202),world.cargo_description(),705,17,INK,7)
+	label_at(Vector2(290,354),"Shipping spends no key. The 70 HP is delayed, never duplicated.",15,TEAL)
+	action_rows=visible_actions()
+	for i in action_rows.size():
+		var rect:=Rect2(285,375+i*43,720,37)
+		panel(rect,Color("253748"));action_label(rect,"%d  %s" % [i+1,action_rows[i][1]])
+	if action_rows.is_empty(): draw_wrapped(Vector2(290,410),"No collection is available here yet. Check the label and guard condition.",700,17,MUTED,2)
+	draw_wrapped(Vector2(290,570),"Shipping and collection are manual. U can undo the complete action.",700,15,TEAL,2)
+	draw_wrapped(Vector2(290,625),status_message(),700,14,TEAL,2)
+	label_at(Vector2(290,672),"Click a choice or press its number. E / Esc closes without choosing.",14,MUTED)
 func draw_winch_confirmation():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
 	panel(Rect2(260,120,770,570),Color("0c1928"))
@@ -822,31 +869,42 @@ func draw_winch_confirmation():
 func perform_action(id: String, confirmed:=false):
 	if not can_mutate(): return
 	cancel_walk()
-	if id=="winch_cancel": winch_pending=""; return
+	if id=="cargo_inspect": cargo_inspecting=true; interaction=true; interaction_page=0; return
+	if id=="cargo_cancel": cargo_pending=false; return
+	if id=="cargo_confirm":
+		if not cargo_pending: return
+		cargo_pending=false
+		await perform_action("cargo_ship",true)
+		return
+	if id=="cargo_ship" and not confirmed:
+		cargo_pending=true; interaction=true; interaction_page=0
+		return
+	if id=="winch_cancel": winch_pending=""; cargo_pending=false; cargo_inspecting=false; return
 	if id=="winch_confirm":
 		var choice: String=winch_pending
-		winch_pending=""
+		winch_pending=""; cargo_pending=false; cargo_inspecting=false
 		if choice!="": await perform_action(choice,true)
 		return
 	if id in ["winch_rescue","winch_armory"] and not confirmed:
 		winch_pending=id; interaction=true; interaction_page=0
 		return
 	if id=="cancel":
-		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; return
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; return
 	if id=="continue":
 		var direction := checkpoint_pending
-		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false
 		await move(direction,true)
 		return
 	reset_armed=false
 	var result: Dictionary=await session.action(id)
 	apply_session_result(result)
 func action_effect(id: String):
+	if id in ["cargo_ship","cargo_claim"]: cargo_pending=false
 	if id=="expedition":
-		book=false; journal=false; growth=false; interaction=false; winch_pending=""; battle_time=0.0
+		book=false; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; battle_time=0.0
 		checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if id in ["spring","drain","quest_bridge","camp_bridge"]: play_sound("water")
-	elif id in ["expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher","audit_medicine"]: play_sound("pickup")
+	elif id in ["cargo_claim","expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher","audit_medicine"]: play_sound("pickup")
 	if id.begins_with("hero_") or id.begins_with("talent_"): growth=false
 	if id.begins_with("talent_"): talent_selected=""; talent_submitted=false; talent_notice_time=0.0
 func quest_hint() -> String:
@@ -880,7 +938,7 @@ func open_growth():
 	close_attunement()
 	cancel_walk()
 	comparison=false
-	growth=not growth; journal=false; interaction=false; winch_pending=""; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	growth=not growth; journal=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if growth: growth_tab=2 if not world.talent_options().is_empty() else 0
 func draw_growth():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
@@ -937,7 +995,7 @@ func open_journal():
 	comparison=false
 	journal=not journal
 	journal_page=0
-	book=false; growth=false; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	book=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 func floor_has(index: int, token: String) -> bool:
 	for row in world.floors[index]:
 		if token in row: return true
@@ -950,6 +1008,7 @@ func journal_lines() -> Array:
 	entries.append_array(world.audit_journal())
 	entries.append_array(world.audit_lines())
 	entries.append_array(world.winch_journal())
+	entries.append_array(world.cargo_journal())
 	entries.append_array(world.attunement_journal())
 	entries.append(world.legacy_summary())
 	if not strategy_pending():
@@ -1032,43 +1091,75 @@ func battle_figure(id: String, center: Vector2, hero: bool):
 		draw_circle(center,28,TEAL.darkened(0.4))
 		label_at(center+Vector2(-8,8),"H",24,TEAL)
 	else: draw_token(center,battle_kind)
+func battle_phase_state(phase: float) -> Dictionary:
+	var enemy: Dictionary=World.ENEMIES.get(battle_kind,{})
+	var state={"text":"Skill prepared" if battle_skill else "No active skill", "hero_attack":false,"enemy_attack":false,"contact":false,"blocked":false}
+	if phase>=0.12 and phase<0.24:
+		var suppression: String=str(battle_details.get("first_strike_suppression","none"))
+		if enemy.get("first_strike",false):
+			if suppression!="none":
+				state.text="Flank barrier cancels the first strike" if suppression=="flank" else "Oath cancels the first strike"
+				state.blocked=true
+			else:
+				state.text="AMBUSH: enemy strikes first"
+				state.enemy_attack=true
+		else: state.text="No opening ambush"
+	elif phase>=0.24 and phase<0.30:
+		state.enemy_attack=int(battle_details.get("feint_damage",0))>0
+		state.text="Opening feint: extra enemy counter" if state.enemy_attack else "Approaching the enemy"
+	elif phase>=0.30 and phase<0.40:
+		state.contact=int(enemy.get("thorns",0))>0
+		state.text="Contact thorns: before every hero strike, including the last" if state.contact else "Approaching the enemy"
+	elif phase>=0.40 and phase<0.65:
+		state.text="Precision shot" if battle_hero=="ranger" and battle_skill else "Hero attacks"
+		state.hero_attack=true
+	elif phase>=0.65 and phase<0.80:
+		state.text="Retaliation resolved"
+		state.enemy_attack=int(battle_details.get("retaliations",0))>0
+	elif phase>=0.80: state.text="Victory saved: actual gains below"
+	return state
+func battle_gain_lines() -> Array[String]:
+	if battle_receipt.is_empty(): return []
+	return [
+		"HP %d -> %d / loss %d / recovered +%d" % [battle_receipt.hp_before,battle_receipt.hp_after,battle_receipt.hp_lost,battle_receipt.hp_restored],
+		"Focus %d -> %d / skill spent %d / actually restored +%d" % [battle_receipt.focus_before,battle_receipt.focus_after,battle_receipt.focus_spent,battle_receipt.focus_restored],
+		"Gold loot %d / debt paid %d / pocket +%d (%d -> %d)" % [battle_receipt.gold_reward,battle_receipt.debt_paid,int(battle_receipt.gold_after)-int(battle_receipt.gold_before),battle_receipt.gold_before,battle_receipt.gold_after]
+	]
 func draw_battle():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.58))
-	panel(Rect2(285,170,710,465),Color("0c1928"))
-	label_at(Vector2(320,210),"BATTLE REPLAY",23,GOLD)
+	panel(Rect2(245,125,790,590),Color("0c1928"))
+	label_at(Vector2(280,163),"BATTLE REPLAY",23,GOLD)
 	var phase := clampf(1.0-battle_time/2.4,0.0,1.0)
-	var hero_pos := Vector2(450,345)
-	var enemy_pos := Vector2(825,345)
-	var is_ambush: bool=World.ENEMIES.get(battle_kind,{}).get("first_strike",false)
-	var phase_text := "Readying the strike"
-	if phase>=0.15 and phase<0.30 and is_ambush:
-		phase_text={"oath":"Oath cancels the first strike","flank":"Flank barrier cancels the first strike"}.get(battle_details.get("first_strike_suppression","none"),"AMBUSH: enemy strikes first")
-		enemy_pos.x-=sin((phase-0.15)/0.15*PI)*55
+	var state:=battle_phase_state(phase)
+	var hero_pos := Vector2(450,300)
+	var enemy_pos := Vector2(825,300)
+	if state.enemy_attack:
+		var t: float=(phase-0.12)/0.12 if phase<0.24 else ((phase-0.24)/0.06 if phase<0.30 else (phase-0.65)/0.15)
+		enemy_pos.x-=sin(t*PI)*45
+		# Suppressed ambushes never enter this branch or flash a damage ring.
 		draw_circle(hero_pos,47,Color(0.9,0.35,0.3,0.3))
-	elif phase>=0.30 and phase<0.60:
-		phase_text="Precision shot" if battle_hero=="ranger" else "Hero attacks"
-		var action_phase := (phase-0.30)/0.30
-		if battle_hero=="warden": hero_pos.x+=sin(action_phase*PI)*65
-		var projectile := hero_pos.lerp(enemy_pos,action_phase)
+	if state.blocked: draw_circle(hero_pos,51,Color(0.3,0.8,0.75,0.8),false,3)
+	if state.contact:
+		draw_circle(enemy_pos,52,Color(0.85,0.65,0.3,0.8),false,3)
+		draw_line(hero_pos+Vector2(53,0),enemy_pos-Vector2(53,0),Color("ba8759"),2)
+	if state.hero_attack:
+		var t: float=(phase-0.40)/0.25
+		if battle_hero=="warden": hero_pos.x+=sin(t*PI)*65
+		var projectile:=hero_pos.lerp(enemy_pos,t)
 		if battle_hero=="scholar": draw_circle(projectile,8,Color("c5a3ed"))
 		else: draw_line(projectile-Vector2(17,8),projectile+Vector2(17,-8),GOLD,3)
-	elif phase>=0.60 and phase<0.80:
-		phase_text="Thorns reflect damage" if int(World.ENEMIES.get(battle_kind,{}).get("thorns",0))>0 else "Retaliation resolved"
-		if int(battle_details.get("normal_damage",0))>0: enemy_pos.x-=sin((phase-0.60)/0.20*PI)*45
-		draw_circle(enemy_pos,50,Color(0.85,0.75,0.4,0.25),false,3)
-	else:
-		if phase>=0.80: phase_text="Victory: the forecast holds"
-	label_at(Vector2(320,240),phase_text,15,TEAL)
-	draw_ellipse_shadow(hero_pos)
-	draw_ellipse_shadow(enemy_pos)
-	battle_figure(battle_hero,hero_pos,true)
-	battle_figure(ENEMY_ART.get(battle_kind,""),enemy_pos,false)
-	label_at(Vector2(365,420),Progression.HEROES[battle_hero].name,19,TEAL)
-	label_at(Vector2(730,420),battle_name,19,GOLD)
-	label_at(Vector2(320,463),"%d hero strikes  /  %d damage per hit  /  %d HP lost" % [int(battle_details.get("rounds",0)),int(battle_details.get("hit",0)),battle_loss],19)
-	var detail_lines := battle_breakdown(battle_details)
-	for i in detail_lines.size(): label_at(Vector2(320,489+i*22),detail_lines[i],14,MUTED if i<2 else TEAL)
-	label_at(Vector2(320,582),"Cosmetic replay. Damage resolves once; any key / click skips.",14,GOLD)
+	draw_wrapped(Vector2(280,195),state.text,720,15,TEAL,2)
+	draw_ellipse_shadow(hero_pos); draw_ellipse_shadow(enemy_pos)
+	battle_figure(battle_hero,hero_pos,true); battle_figure(ENEMY_ART.get(battle_kind,""),enemy_pos,false)
+	label_at(Vector2(365,375),Progression.HEROES[battle_hero].name,19,TEAL)
+	label_at(Vector2(730,375),battle_name,19,GOLD)
+	label_at(Vector2(280,411),"%d hero strikes  /  %d damage per hit  /  %d HP lost" % [int(battle_details.get("rounds",0)),int(battle_details.get("hit",0)),battle_loss],18)
+	var detail_lines:=battle_breakdown(battle_details)
+	for i in detail_lines.size(): label_at(Vector2(280,439+i*22),detail_lines[i],14,MUTED)
+	var gain_lines:=battle_gain_lines()
+	for i in gain_lines.size(): label_at(Vector2(280,543+i*25),gain_lines[i],16,TEAL)
+	draw_wrapped(Vector2(280,637),"Order illustration, not every strike. Damage saved once; any key / click skips.",720,14,GOLD,2)
+
 func battle_breakdown(details: Dictionary) -> Array[String]:
 	return [
 		"Raw: normal %d + ambush %d + thorns %d" % [int(details.get("normal_damage",0)),int(details.get("first_strike_damage",0)),int(details.get("thorns_damage",0))],
@@ -1211,7 +1302,7 @@ func _unhandled_input(event):
 			var rows := visible_actions()
 			for i in rows.size():
 				if Rect2(285,375+i*43,720,37).has_point(get_global_mouse_position()): perform_action(rows[i][0]); return
-			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 			return
 		if world.won and Rect2(395,575,490,48).has_point(get_global_mouse_position()): request_finish(); return
 		if Rect2(768,738,476,32).has_point(get_global_mouse_position()): request_finish(); return
@@ -1264,9 +1355,9 @@ func _unhandled_input(event):
 			return
 		if event.keycode==KEY_J: open_journal(); return
 		if event.keycode==KEY_C: open_growth(); return
-		if event.keycode==KEY_H: book=not book; journal=false; growth=false; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
-		if event.keycode==KEY_E: interaction=not interaction; winch_pending=""; interaction_page=0; journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
-		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_H: book=not book; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_E: interaction=not interaction; winch_pending=""; cargo_pending=false; cargo_inspecting=false; interaction_page=0; journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
 		if journal:
 			if event.keycode==KEY_BRACKETLEFT: journal_page=maxi(0,journal_page-1)
 			if event.keycode==KEY_BRACKETRIGHT: journal_page+=1
@@ -1318,7 +1409,7 @@ func request_restart(mode: String):
 		var result: Dictionary=await session.new_run(world.seed_value if mode=="replay" else randi_range(1,2147483646),2,true,selected_run_mode)
 		apply_session_result(result)
 		if not result.get("committed",false): return
-		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	else:
 		reset_armed=true; reset_mode=mode; selected_run_mode="safe"
 		ui_notice="Press %s again: %s. Autosave will be replaced." % ["R" if mode=="replay" else "N","replay this seed" if mode=="replay" else "start a new seed"]
@@ -1348,7 +1439,7 @@ func move(direction: Vector2i, confirmed:=false):
 		ui_notice="A new milestone settles interest. Repay first, continue, or cancel."
 		return
 	apply_session_result(await session.step(direction))
-func step_effect(enemy: String, hero_before: String):
+func step_effect(enemy: String, hero_before: String, combat: Dictionary={}):
 	if World.ENEMIES.has(enemy) and not world.won:
 		for i in Progression.TALENT_TIERS.size():
 			if world.kills==Progression.TALENT_TIERS[i].kills:
@@ -1361,6 +1452,7 @@ func step_effect(enemy: String, hero_before: String):
 	if World.ENEMIES.has(enemy):
 		var resolved: Dictionary=world.last_battle.duplicate(true)
 		battle_time=2.4; battle_name=World.ENEMIES[enemy].name; battle_loss=int(resolved.get("damage",0))
+		battle_receipt=combat.duplicate(true)
 		battle_details=resolved; battle_kind=enemy; battle_hero=hero_before; battle_skill=resolved.get("skill_consumed",false)
 func undo():
 	if not can_mutate(): return
@@ -1382,7 +1474,7 @@ func load_game():
 		result=await session.new_run(initial_seed())
 	apply_session_result(result)
 	if not result.get("ok",false): return
-	journal=false; journal_page=0; interaction=false; winch_pending=""; growth=result.get("committed",false) and result.get("effect",{}).get("operation","")=="create"; gear_page=0; book=false; comparison=false
+	journal=false; journal_page=0; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; growth=result.get("committed",false) and result.get("effect",{}).get("operation","")=="create"; gear_page=0; book=false; comparison=false
 	checkpoint_pending=Vector2i.ZERO; pending_reason=""; battle_time=0.0
 func retry_save():
 	if session==null or session.busy: return
@@ -1416,7 +1508,7 @@ func initialize_session():
 
 func dispatch_committed_effect(effect: Dictionary):
 	match effect.get("operation",""):
-		"step": step_effect(str(effect.get("token",".")),str(effect.get("hero",world.hero_id)))
+		"step": step_effect(str(effect.get("token",".")),str(effect.get("hero",world.hero_id)),effect.get("combat",{}))
 		"action": action_effect(str(effect.get("input","")))
 		"walk": play_sound("move")
 		"undo": battle_time=0.0; talent_selected=""; talent_submitted=false; talent_notice_time=0.0
@@ -1433,7 +1525,7 @@ func dispatch_committed_effect(effect: Dictionary):
 			finish_pending=""
 			close_attunement(); close_travel(); comparison=false; journal=false; book=false
 			reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0
-			interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+			interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 
 func is_terminal() -> bool:
 	return session!=null and session.get("terminal")==true

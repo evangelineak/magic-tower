@@ -253,8 +253,17 @@ static func reachable(grid: Array, blocked: Array) -> Dictionary:
 			seen[next]=true; queue.append(next)
 	return seen
 
+# A freight chute occupies an authored wall and is never walkable, even when
+# its delivery is ready. Proofs must not treat its display token as a passage.
+static func solid_cargo(maps:Array)->Array:
+	var result:=maps.duplicate(true)
+	for grid in result:
+		for row in grid:
+			for x in range(row.size()):
+				if row[x]=="c":row[x]="#"
+	return result
 static func topology(maps:Array,layout_revision:int=2)->Dictionary:
-	return _topology_canonical(Layout.orient_maps(maps,0,layout_revision),layout_revision==2)
+	return _topology_canonical(Layout.orient_maps(solid_cargo(maps),0,layout_revision),layout_revision==2)
 static func door_isolation(grid:Array,door:Vector2i,reward:Vector2i)->Dictionary:
 	var closed_grid:=grid.duplicate(true); closed_grid[door.y][door.x]="#"
 	var closed:=reachable(closed_grid,["#"])
@@ -307,7 +316,7 @@ static func validate(maps:Array,layout_revision:int=2)->Dictionary:
 			if not row is Array or row.size()!=11: return {"solvable":false,"reason":"Invalid row"}
 	var connectivity := topology(maps,layout_revision)
 	if not connectivity.valid: return {"solvable":false,"reason":connectivity.reason}
-	var work := maps.duplicate(true)
+	var work := solid_cargo(maps)
 	var stats := {"hp":280,"atk":18,"def":8}
 	var route := ""
 	for floor_index in work.size():

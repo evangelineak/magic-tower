@@ -62,7 +62,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema7-"+name+".json"))
   check(w.restore(old) and w.oath_state=="fresh","real old schema7 state upgrades with fresh oath: "+name)
   var now=state(w); now.erase("oath_state"); now.version=7
-  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft","talent_draft","last_kill_kind","legacy_points","legacy_reserves"]: now.erase(field)
+  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record","draft","talent_draft","last_kill_kind","legacy_points","legacy_reserves","cargo"]: now.erase(field)
   check(JSON.parse_string(JSON.stringify(now))==old,"migration preserves all old resources, maps, NPC choices, inventory: "+name)
   restore_check(w)
   if name=="supplies": check(w.camp_medicine_left==3 and w.camp_focus_left==3,"old earned camp expansion is not clamped to two")
