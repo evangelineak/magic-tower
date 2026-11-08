@@ -51,7 +51,7 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    r=await rpc('create',{auth,snapshot:fixtures.first,replace:true,request_id:id});check(!r.ok&&r.code==='STALE_WRITER','old fence cannot replace new active run');
    r=await rpc('read');check(r.ok&&eq(r.run.snapshot,fixtures.second),'latest active payload stays exact');
    parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:window.MagicTowerJourneysTestDatabase,scope:'Production JS callback protocol + real IndexedDB, not Godot WebGL/JavaScriptBridge runtime'}},location.origin);
-  }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,checks,database:testDB}},location.origin)}
+  }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,checks,database:window.MagicTowerJourneysTestDatabase}},location.origin)}
  }
  log({ready:true,database:MagicTowerJourneys.databaseName});
 })();
