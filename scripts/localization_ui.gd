@@ -1,5 +1,21 @@
 extends RefCounted
 const EXACT = {
+"Actual next-battle skill: armed":"实际下场技能：已备战",
+"Actual next-battle skill: off":"实际下场技能：未备战",
+"TACTICAL WHAT-IF / READ ONLY":"战术试算 / 只读",
+"What-if only. Nothing is equipped, armed, moved or attacked.":"这里只试算，不会换装、备战、移动或攻击。",
+"Healing is not an armed combat skill.":"治疗属于战外技能，不纳入本次战斗。",
+"TAB: BARRIER POSITION":"Tab：查看挡板侧站位",
+"TAB: CURRENT POSITION":"Tab：查看当前位置",
+"No cleared-floor safe route":"没有仅经已清空地的安全路线",
+"Current position only; no flank barrier for this enemy.":"当前站位试算；此敌没有侧袭挡板。",
+"BARRIER POSITION (THEORETICAL)":"挡板侧站位（理论试算）",
+"CURRENT POSITION":"当前位置",
+"WITHOUT SKILL":"不使用技能",
+"1 FOCUS SKILL (THEORETICAL)":"使用 1 专注技能（理论试算）",
+"1 FOCUS SKILL / UNAVAILABLE: NO FOCUS":"使用 1 专注技能 / 当前专注不足",
+"SCHOLAR: OUT-OF-BATTLE HEALING":"学者：战外治疗",
+
 "Read-only snapshot. Close this journal, then press L to reload.":"当前为只读进度。请先关闭日志，再按 L 读取最新旅程。",
 "Current build only; changes on the way to this enemy are not included.":"按当前构筑预览，不含走近途中发生的变化。",
 "TAB: TARGETS":"Tab：回访目标",
@@ -476,6 +492,14 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["Full-fight loss %d / LETHAL; no recovery","整场试算损血 %d / 致死，无恢复"],
+["Loss %d / after battle %d HP","损血 %d / 战后生命 %d"],
+["Hero strikes %d / retaliations %d","出手 %d 次 / 反击 %d 次"],
+["Safe walking: %d steps","安全步行：%d 步"],
+["Focus: spend %d / restore %d / after %d","专注：消耗 %d / 恢复 %d / 战后 %d"],
+["Victory: %d gold before debt / +%d HP","胜利：抵债前 %d 金币 / 恢复 %d 生命"],
+["V / Esc: close. [ / ]: equipment pages. %d / %d","V / Esc 关闭；[ / ] 装备翻页。%d / %d"],
+
 ["Floor %d","第 %d 层"],
 ["HP %d -> %d / loss %d / recovered +%d","生命 %d → %d / 损失 %d / 恢复 +%d"],
 ["Focus %d -> %d / skill spent %d / actually restored +%d","专注 %d → %d / 技能消耗 %d / 实际恢复 +%d"],

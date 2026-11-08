@@ -44,6 +44,10 @@ var comparison := false
 var compare_pos := Vector2i(-1,-1)
 var compare_floor := -1
 var compare_page := 0
+var compare_flank := false
+var compare_cache: Dictionary={}
+var compare_cache_world=null
+var compare_refresh_count:=0
 var book := false
 var book_page := 0
 var journal := false
@@ -473,55 +477,85 @@ func draw_attunement():
 			label_at(Vector2(225,485),"Only owned equipment can be attuned, once per item per run.",17,MUTED)
 	label_at(Vector2(225,684),"G / Esc closes. Viewing is free. Only equipped modifiers apply.",15,MUTED)
 
+func close_comparison():
+	comparison=false; compare_cache.clear(); compare_cache_world=null
 func open_comparison():
 	cancel_walk()
-	if comparison: comparison=false; return
+	if comparison: close_comparison(); return
 	if battle_time>0.0 or book or journal or growth or interaction or travel_menu: return
 	if not World.ENEMIES.has(world.tile(hover)): return
-	compare_pos=hover; compare_floor=world.floor_index; compare_page=0; comparison=true
+	compare_pos=hover; compare_floor=world.floor_index; compare_page=0; compare_flank=false; comparison=true
+	compare_cache.clear(); compare_cache_world=null
+	comparison_forecast()
+func comparison_forecast() -> Dictionary:
+	if world==null or compare_floor!=world.floor_index or not World.ENEMIES.has(world.tile(compare_pos)): return {}
+	if compare_cache.is_empty() or compare_cache_world!=world or compare_cache.get("target",Vector2i(-1,-1))!=compare_pos:
+		compare_cache=world.tactical_forecast(compare_pos)
+		compare_cache_world=world
+		compare_refresh_count+=1
+	return compare_cache
 func comparison_rows() -> Array:
 	var rows: Array=[]
-	if compare_floor!=world.floor_index: return rows
-	var kind: String=world.tile(compare_pos)
-	if not World.ENEMIES.has(kind): return rows
-	for id in world.inventory:
-		var preview: Dictionary=world.battle_preview(kind,id,compare_pos)
-		var alive: bool=preview.get("valid",false) and preview.get("survivable",false)
-		rows.append({"id":id,"preview":preview,"after_hp":world.hp-int(preview.damage)+int(preview.get("heal_after",0)) if alive else -1})
+	for row in comparison_forecast().get("rows",[]):
+		var item: Dictionary=row.duplicate(true)
+		item.preview=row.current.preview
+		item.after_hp=row.current.after_hp
+		rows.append(item)
 	return rows
+func toggle_compare_position():
+	if comparison_forecast().get("flank",{}).get("available",false): compare_flank=not compare_flank
+func tactical_result_text(branch: Dictionary) -> String:
+	if branch.is_empty(): return "Healing is not an armed combat skill."
+	var preview: Dictionary=branch.get("preview",{})
+	if not preview.get("valid",false): return "Cannot penetrate defense"
+	if not preview.get("survivable",false): return "Full-fight loss %d / LETHAL; no recovery" % int(preview.damage)
+	return "Loss %d / after battle %d HP" % [int(preview.damage),int(branch.after_hp)]
+func draw_tactical_branch(branch: Dictionary,p:Vector2):
+	if branch.is_empty():
+		draw_wrapped(p,"Healing is not an armed combat skill.",390,14,MUTED,2)
+		return
+	var preview: Dictionary=branch.get("preview",{})
+	label_at(p,tactical_result_text(branch),14,TEAL if preview.get("survivable",false) else RED)
+	label_at(p+Vector2(0,19),"Hero strikes %d / retaliations %d" % [int(preview.get("rounds",0)),int(preview.get("retaliations",0))],12,MUTED)
+	if preview.get("survivable",false) and branch.get("focus_after")!=null:
+		label_at(p+Vector2(0,36),"Focus: spend %d / restore %d / after %d" % [int(branch.focus_cost),int(branch.focus_restored),int(branch.focus_after)],11,TEAL)
+		label_at(p+Vector2(0,52),"Victory: %d gold before debt / +%d HP" % [int(preview.get("gold_after",0)),int(preview.get("heal_after",0))],11,TEAL)
 func draw_comparison():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
-	panel(Rect2(195,110,890,580),Color("0c1928"))
-	label_at(Vector2(225,155),"EQUIPMENT FORECAST / READ ONLY",24,GOLD)
+	panel(Rect2(195,70,890,670),Color("0c1928"))
+	label_at(Vector2(220,105),"TACTICAL WHAT-IF / READ ONLY",24,GOLD)
+	var forecast:=comparison_forecast()
 	var rows: Array=comparison_rows()
 	if rows.is_empty():
-		label_at(Vector2(225,210),"This enemy is no longer on the current floor.",18)
+		label_at(Vector2(225,155),"This enemy is no longer on the current floor.",18)
 		return
-	compare_page=clampi(compare_page,0,maxi(0,ceili(rows.size()/4.0)-1))
-	if rows.size()>4:
-		panel(Rect2(800,170,110,35),Color("253748")); label_at(Vector2(812,194),"PREV",14)
-		panel(Rect2(920,170,110,35),Color("253748")); label_at(Vector2(932,194),"NEXT",14)
-		label_at(Vector2(650,194),"Page %d   [ / ]" % (compare_page+1),13,GOLD)
-	rows=rows.slice(compare_page*4,compare_page*4+4)
-	label_at(Vector2(225,193),World.ENEMIES[world.tile(compare_pos)].name,21,TEAL)
-	label_at(Vector2(225,225),"Same HP, talents, run strategy, oath and armed skill for every row.",16,MUTED)
-	label_at(Vector2(225,252),"Armed skill included" if world.skill_armed and world.focus>0 else "No armed skill included",15,GOLD)
-	label_at(Vector2(600,252),"Watch oath ACTIVE" if world.oath_state=="active" else ("Oath released permanently" if world.oath_state=="spent" else "No watch oath"),15,GOLD)
-	label_at(Vector2(225,277),"Current position: flank barrier active" if rows[0].preview.get("flank_active",false) else "Current position: no flank barrier",14,TEAL)
+	compare_page=clampi(compare_page,0,maxi(0,ceili(rows.size()/3.0)-1))
+	label_at(Vector2(220,135),World.ENEMIES[world.tile(compare_pos)].name,19,TEAL)
+	label_at(Vector2(220,162),"What-if only. Nothing is equipped, armed, moved or attacked.",14,GOLD)
+	label_at(Vector2(220,187),"Actual next-battle skill: armed" if world.skill_armed and world.focus>0 else "Actual next-battle skill: off",14,MUTED)
+	label_at(Vector2(610,187),"Watch oath ACTIVE" if world.oath_state=="active" else ("Oath released permanently" if world.oath_state=="spent" else "No watch oath"),14,MUTED)
+	var flank: Dictionary=forecast.get("flank",{})
+	if flank.get("available",false):
+		panel(Rect2(220,201,385,33),Color("253748"))
+		label_at(Vector2(230,224),"TAB: BARRIER POSITION" if not compare_flank else "TAB: CURRENT POSITION",14,TEAL)
+		label_at(Vector2(620,224),"Safe walking: %d steps" % int(flank.steps) if flank.get("reachable",false) else "No cleared-floor safe route",14,GOLD)
+	else: label_at(Vector2(220,224),"Current position only; no flank barrier for this enemy.",14,MUTED)
+	label_at(Vector2(220,253),"BARRIER POSITION (THEORETICAL)" if compare_flank else "CURRENT POSITION",14,GOLD)
+	label_at(Vector2(235,280),"WITHOUT SKILL",14,INK)
+	label_at(Vector2(650,280),"SCHOLAR: OUT-OF-BATTLE HEALING" if not forecast.get("skill_supported",false) else ("1 FOCUS SKILL (THEORETICAL)" if world.focus>0 else "1 FOCUS SKILL / UNAVAILABLE: NO FOCUS"),13,TEAL if world.focus>0 else RED)
+	rows=rows.slice(compare_page*3,compare_page*3+3)
 	for i in rows.size():
 		var row: Dictionary=rows[i]
-		var preview: Dictionary=row.preview
-		var y: int=316+i*73
-		panel(Rect2(220,y-24,840,70),Color("203343"))
-		label_at(Vector2(235,y),Progression.GEAR[row.id].name+(" [EQUIPPED]" if world.equipped==row.id else ""),18,GOLD)
-		var status: String="Cannot penetrate defense" if not preview.get("valid",false) else ("LETHAL: no after-battle recovery" if row.after_hp<0 else "After battle: %d HP" % row.after_hp)
-		label_at(Vector2(600,y),status,16,Color("ef928f") if row.after_hp<0 else TEAL)
-		label_at(Vector2(235,y+25),"Loss %s / hero strikes %d / retaliations %d" % [str(int(preview.damage)) if preview.get("valid",false) else "--",int(preview.get("rounds",0)),int(preview.get("retaliations",0))],16,MUTED)
-		label_at(Vector2(720,y+25),"Skill %d / %s" % [int(preview.get("skill_level",10)),Attunement.TEMPLATES[preview.attunement].name if preview.get("attunement","none")!="none" else "Original equipment"],13,TEAL)
-		if preview.get("valid",false): label_at(Vector2(235,y+42),world.victory_reward_text(preview),12,TEAL)
-	label_at(Vector2(225,615),"No equipment changes here. Compare trade-offs, then choose in C.",16,TEAL)
-	label_at(Vector2(225,638),"Current build only; changes on the way to this enemy are not included.",13,MUTED)
-	label_at(Vector2(225,663),"V / Esc / click outside closes. Reading spends nothing.",14,MUTED)
+		var y:=305+i*105
+		panel(Rect2(220,y-16,840,101),Color("203343"))
+		label_at(Vector2(235,y+3),Progression.GEAR[row.id].name+(" [EQUIPPED]" if world.equipped==row.id else ""),16,GOLD)
+		draw_tactical_branch(row.get("flank_unarmed" if compare_flank else "unarmed",{}),Vector2(235,y+24))
+		draw_tactical_branch(row.get("flank_armed" if compare_flank else "armed",{}),Vector2(650,y+24))
+	label_at(Vector2(225,640),"Current build only; changes on the way to this enemy are not included.",13,MUTED)
+	label_at(Vector2(225,662),"No equipment changes here. Compare trade-offs, then choose in C.",13,TEAL)
+	panel(Rect2(800,682,110,35),Color("253748")); label_at(Vector2(812,706),"PREV",14)
+	panel(Rect2(920,682,110,35),Color("253748")); label_at(Vector2(932,706),"NEXT",14)
+	label_at(Vector2(225,706),"V / Esc: close. [ / ]: equipment pages. %d / %d" % [compare_page+1,maxi(1,ceili(comparison_rows().size()/3.0))],14,MUTED)
 func chapter_button() -> Rect2:
 	return Rect2(395,465,490,55)
 func draw_victory():
@@ -1329,10 +1363,11 @@ func _unhandled_input(event):
 					if Rect2(225,220+i*61,830,55).has_point(mouse): select_travel(i); return
 			return
 		if comparison:
-			if comparison_rows().size()>4:
-				if Rect2(800,170,110,35).has_point(get_global_mouse_position()): compare_page=maxi(0,compare_page-1); return
-				if Rect2(920,170,110,35).has_point(get_global_mouse_position()): compare_page+=1; return
-			if not Rect2(195,110,890,580).has_point(get_global_mouse_position()): comparison=false
+			if Rect2(220,201,385,33).has_point(get_global_mouse_position()): toggle_compare_position(); return
+			if comparison_rows().size()>3:
+				if Rect2(800,682,110,35).has_point(get_global_mouse_position()): compare_page=maxi(0,compare_page-1); return
+				if Rect2(920,682,110,35).has_point(get_global_mouse_position()): compare_page+=1; return
+			if not Rect2(195,70,890,670).has_point(get_global_mouse_position()): close_comparison()
 			return
 		if book:
 			if Rect2(760,115,120,40).has_point(get_global_mouse_position()): book_page=maxi(0,book_page-1)
@@ -1413,7 +1448,8 @@ func _unhandled_input(event):
 			return
 		if event.keycode==KEY_V: open_comparison(); return
 		if comparison:
-			if event.keycode==KEY_ESCAPE: comparison=false
+			if event.keycode==KEY_ESCAPE: close_comparison()
+			elif event.keycode==KEY_TAB: toggle_compare_position()
 			elif event.keycode==KEY_BRACKETLEFT: compare_page=maxi(0,compare_page-1)
 			elif event.keycode==KEY_BRACKETRIGHT: compare_page+=1
 			return
@@ -1556,6 +1592,7 @@ func can_mutate() -> bool:
 func apply_session_result(result: Dictionary):
 	if result.get("ok",false):
 		world=session.world; history=session.history; ui_notice=""
+		compare_cache.clear(); compare_cache_world=null
 		if result.get("status","")=="loaded" or result.get("effect",{}).get("operation","")=="create": pinned_target=""
 		validate_pinned_target()
 		if strategy_pending(): cancel_walk()

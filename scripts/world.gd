@@ -4,6 +4,7 @@ const Exploration=preload("res://scripts/exploration.gd")
 const Cargo=preload("res://scripts/cargo.gd")
 var cargo:Dictionary=Cargo.legacy()
 const Layout = preload("res://scripts/layout.gd")
+const TacticalForecast = preload("res://scripts/tactical_forecast.gd")
 const Generator = preload("res://scripts/generation.gd")
 const BattleTimeline = preload("res://scripts/battle_timeline.gd")
 const Progression = preload("res://scripts/progression.gd")
@@ -514,14 +515,18 @@ func flank_position(target: Vector2i) -> Vector2i:
 	if expedition_revision!=3 or floor_index<5 or floor_index>7 or tile(target)!="H": return Vector2i(-1,-1)
 	var candidate:=target+Layout.direction(floor_index,Vector2i.RIGHT,layout_revision)
 	return candidate if Expedition.flanking_position(floors.slice(5),floor_index-5,target,candidate,layout_revision) else Vector2i(-1,-1)
+func tactical_forecast(target:Vector2i)->Dictionary:
+	return TacticalForecast.build(self,target)
 func battle_preview(kind: String, equipment_override: String = "", target: Vector2i = Vector2i(-1,-1)) -> Dictionary:
 	var gear := equipped if equipment_override=="" else equipment_override
 	return _battle_preview_with_talents(kind,gear,target,talents,floor_index)
-func _battle_preview_with_talents(kind:String,gear:String,target:Vector2i,chosen:Array,target_floor:int) -> Dictionary:
+func _battle_preview_with_talents(kind:String,gear:String,target:Vector2i,chosen:Array,target_floor:int,skill_override=null,position_override:Vector2i=Vector2i(-1,-1)) -> Dictionary:
 	if not gear in inventory: gear="invalid_unowned"
-	var flank:=target_floor==floor_index and expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H" and flank_position(target)==pos
+	var at:=pos if position_override==Vector2i(-1,-1) else position_override
+	var armed:bool=skill_armed and focus>0 if skill_override==null else bool(skill_override)
+	var flank:=target_floor==floor_index and expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H" and flank_position(target)==at
 	var enemy:Dictionary=ENEMIES.get(kind,{}).duplicate();enemy.kind=kind
-	return Progression.battle(atk,defense,hp,enemy,hero_id,skill_armed and focus>0,gear,chosen,"watch" if oath_state=="active" else "none",flank,gear_attunement(gear),current_strategy(),last_kill_kind,legacy_study())
+	return Progression.battle(atk,defense,hp,enemy,hero_id,armed,gear,chosen,"watch" if oath_state=="active" else "none",flank,gear_attunement(gear),current_strategy(),last_kill_kind,legacy_study())
 func battle_timeline(target: Vector2i) -> Dictionary:
 	var kind:=tile(target)
 	if not ENEMIES.has(kind): return {"valid":false,"reason":"Not an enemy.","events":[]}

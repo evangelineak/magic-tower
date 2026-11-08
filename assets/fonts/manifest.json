@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "fd2ee7dcf828de14636b77889c531bedee414f1663d0e5f4aa1a0298d467c335",
-  "bytes": 424696,
+  "output_sha256": "a5e6c8ab20a05e810ca7f0f162aef3e751fee0a10d462d5183c6d3a24f0a8198",
+  "bytes": 425396,
   "coverage": {
-    "mapped_codepoints": 1082,
-    "glyphs": 2146,
-    "required_codepoints": 926,
+    "mapped_codepoints": 1085,
+    "glyphs": 2149,
+    "required_codepoints": 929,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -90,15 +90,15 @@
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "3fc86826ba08f4f7baa39b08bf1f1b91347663ff0f394ff0bf0431376dc7a63b"
+      "sha256": "c5216b08ef2a77d88bd05bfbe7cf2b150d2a3eafefc68d14afb2be86ce06c836"
     },
     {
       "path": "scripts/localization_world.gd",
-      "sha256": "fe7f6a3558730d8eecb975f955746e4e078c809781952548e1fc5f7c94e85318"
+      "sha256": "5837295b02743ad62b3a238d03b573c146713b9412fba336abf9ebb2f3cc3102"
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "f5a2dc4b0c9d5304001c97beb715060de1c65494a2f67b629cae4495ed5841be"
+      "sha256": "248a27fab9747f274f4e7b53ecbfbbe65a942bcd1033cef87179120f8ca9fba1"
     },
     {
       "path": "scripts/navigation.gd",
@@ -121,8 +121,12 @@
       "sha256": "ea371017ebb1238a0d766d3ab07c266c6fcaa88b8d93366951254a29b4ab4761"
     },
     {
+      "path": "scripts/tactical_forecast.gd",
+      "sha256": "3fe2a9cc316b473f92492285f79368bcd96f15d89f868aaa0341c3fc0ade7471"
+    },
+    {
       "path": "scripts/world.gd",
-      "sha256": "20916f7577897c1d2a7006bcaec9f56b070d845a9ad89f1fec3e01611d0056a7"
+      "sha256": "8b5cf38b0d6fe2f0f9d7de129f75ddcf3cca6924c0c60ca87d0a37c7c2e272bd"
     },
     {
       "path": "project.godot",
