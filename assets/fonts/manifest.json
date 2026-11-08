@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "8ed324af0ef567572f1fbfd15e10ed97d3a00fd681d4640cf42e2375fd5cad5f",
-  "bytes": 350648,
+  "output_sha256": "e9545dc9ce24744cf0863a15dcb76ada912bc31ad1e288a9fa3f53d7da742c7e",
+  "bytes": 354928,
   "coverage": {
-    "mapped_codepoints": 915,
-    "glyphs": 1841,
-    "required_codepoints": 756,
+    "mapped_codepoints": 925,
+    "glyphs": 1862,
+    "required_codepoints": 766,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -46,19 +46,19 @@
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "3b6f7a28095654a7992296dd510bd6db7bae7465026aed62632e0477e70f41eb"
+      "sha256": "77f4002cec2c90be0298450f22d436201d1fd7c11a9d95077d95f05ddf4a3a0a"
     },
     {
       "path": "scripts/localization_world.gd",
-      "sha256": "4420451cfd2f42248e7b17e38ef794beca78d583521393436aa77a40366b7334"
+      "sha256": "2f036c5dde16ac4841a046dcca80262b1de1da68a7818f449625c9d18f7162d6"
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "73a5faa57b86b0fab9b8a5cc7a31baab4fbabb36830158022bae0e59b78753e8"
+      "sha256": "146976d05013fc0fea158e681e55dc652fba9b1bfdb9f31afe9366648b21b277"
     },
     {
       "path": "scripts/progression.gd",
-      "sha256": "ec663b46c58e5f120ba8901ef5ae4c8672c32772ae9d2b54221b013221241342"
+      "sha256": "fcc4c8dad2101db04bd1a88093767fddb4f0891c0babc0ce4f4c80100b18ac80"
     },
     {
       "path": "scripts/riddle.gd",
@@ -66,7 +66,7 @@
     },
     {
       "path": "scripts/world.gd",
-      "sha256": "db402f0b705aafb8f13623c11b1ce15113144666fd0ca2df130c29deca3fd362"
+      "sha256": "e202a0b520ed93d7f6e2d52deaaaa186846362485b20cf64e2a1d4d508ce8394"
     },
     {
       "path": "project.godot",

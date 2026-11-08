@@ -1,5 +1,23 @@
 extends RefCounted
 const EXACT = {
+"INSCRIPTION & OATH":"碑文与誓约",
+"Clues and oaths are independent. Reading costs no resources.":"线索与誓约独立，阅读不消耗资源。",
+"Watch oath ACTIVE":"守望誓约：生效中",
+"Oath released permanently":"誓约：已永久解除",
+"No watch oath":"未立守望誓约",
+"Oath cancels the first strike":"誓约抵消先制攻击",
+
+"V: compare owned equipment":"V：对照已持装备",
+"EQUIPMENT FORECAST / READ ONLY":"装备战斗对照 / 只读",
+"This enemy is no longer on the current floor.":"当前楼层已没有这名敌人。",
+"Same current HP, talents, oath and armed skill for every row.":"各行使用相同的当前生命、天赋、誓约与备战技能。",
+"Armed skill included":"已计入备战技能",
+"No armed skill included":"未计入备战技能",
+"Cannot penetrate defense":"无法破防",
+"LETHAL: no after-battle recovery":"致死：不计算战后回血",
+"No equipment changes here. Compare trade-offs, then choose in C.":"此处不会换装。比较利弊后，可到 C 装备页自行选择。",
+"V / Esc / click outside closes. Reading spends nothing.":"V / Esc / 点击框外关闭。查看不消耗资源。",
+
 "First strike":"先制",
 "Charge / 3":"每三次反击重击",
 "Mira: the missing apprentice":"米拉：失踪的学徒",
@@ -282,6 +300,9 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["Shield %d / oath %d / total reduction %d","盾挡 %d / 誓约 %d / 总减伤 %d"],
+["After battle: %d HP","战后生命：%d"],
+["Loss %s / hero strikes %d / retaliations %d","损血 %s / 攻击 %d 次 / 反击 %d 次"],
  ["Thorns %d","荆棘 %d"],
  ["%d thorns per hit, including the final hit.","每次攻击反伤 %d，包括最后一击。"],
  ["%d hero strikes  /  %d damage per hit  /  %d HP lost","攻击 %d 次 / 每击 %d 伤害 / 损失 %d 生命"],

@@ -3,6 +3,13 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"Watch oath: -10 ATK / cancel ambush / halve each thorn hit. Return here to release; never bind again.":"守望誓约：攻击 -10 / 免先制 / 每击荆棘减半；回此处可退约，退后永不可重立。",
+"Release the oath here for free. Its protection and attack penalty end; NEVER bind again.":"在此免费退约：保护与攻击惩罚同时结束；本局永不可再次立约。",
+"Watch oath active: -10 ATK, no ambush loss, each thorn hit halved down. Return to N to release once, forever.":"守望誓约生效：攻击 -10，免先制损血，每击荆棘向下减半；回 N 可永久退约。",
+"Watch oath released. No penalty or protection remains. You cannot bind again this run.":"守望誓约已退：不再有惩罚或保护，本局不可再立约。",
+"Watch oath bound. Some fights become harder. Release only at N; after release, no second oath.":"已立守望誓约，部分战斗会更难。只能回 N 退约，退后不可重立。",
+"Watch oath released for free. No focus restored. You can never bind it again this run.":"已免费退约，不恢复专注。本局不可再次立此誓约。",
+
 "Mira is safe. Before defeating Z, return to Ilen at J for a repeating crossbow, or U for camp supplies. Choose once.":"米拉已安全。击败 Z 前，带回 J 找伊莲可获连发弩，或带往 U 支援营地。两者只能选一。",
 "Mira rescued. Before defeating Z, return to Ilen at J or take her to U. Choose her future once.":"已救出米拉。击败 Z 前，带她回 J 找伊莲或带往 U 营地。去向只能选一次。",
 

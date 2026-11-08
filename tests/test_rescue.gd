@@ -134,10 +134,10 @@ func run_tests():
   var expected:int=raw-(hit if gear=="buckler" and retaliation>0 else 0)
   var result=Progression.battle(90,35,1000,World.ENEMIES.W,"warden",false,gear,[])
   check(result.damage==expected and result.retaliations==retaliation,"independent thorns + heavy gear arithmetic: "+gear)
-  w.restore(rescued); w.floors[6][2][9]="W"; w.rescue_state=1; w.floors[6][1][9]="t"; w.pos=Vector2i(9,3); w.hp=1000; w.atk=90; w.defense=35; w.equipped=gear
+  w.restore(rescued); w.floors[6][2][9]="W"; w.rescue_state=1; w.floors[6][1][9]="t"; w.pos=Vector2i(9,3); w.hp=1000; w.atk=90; w.defense=35; w.inventory=["balanced"] if gear=="balanced" else ["balanced",gear]; w.equipped=gear
   before=state(w)
   check(w.battle_preview("W").damage==expected and state(w)==before and w.step(Vector2i.UP) and w.hp==1000-expected,"guard preview and actual deduction agree: "+gear)
- w.restore(rescued); w.floors[6][2][9]="W"; w.rescue_state=1; w.floors[6][1][9]="t"; w.pos=Vector2i(9,3); w.atk=90; w.defense=35; w.equipped="repeater"; w.skill_armed=true
+ w.restore(rescued); w.floors[6][2][9]="W"; w.rescue_state=1; w.floors[6][1][9]="t"; w.pos=Vector2i(9,3); w.atk=90; w.defense=35; w.inventory=["balanced","repeater"]; w.equipped="repeater"; w.skill_armed=true
  w.hp=int(w.battle_preview("W").damage); before=state(w)
  check(not w.step(Vector2i.UP) and state(w)==before,"lethal compound battle consumes no focus, guard, HP or quest progress")
  var ambush={"hp":10,"atk":30,"def":0,"first_strike":true,"thorns":6,"heavy_every":3}
@@ -165,7 +165,7 @@ func run_tests():
  if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
  var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close()
  scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==1 and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==7,"real old expedition load backs up exact bytes and upgrades without new rewards")
+ check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==1 and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==8,"real old expedition load backs up exact bytes and upgrades without new rewards")
  scene.queue_free(); await process_frame
  print("RESCUE: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

@@ -64,7 +64,7 @@ func run_tests():
 	await process_frame
 	var details: Dictionary=scene.world.battle_preview("w")
 	var lines: Array=scene.battle_breakdown(details)
-	check(lines.size()==4 and "charge bonus 32" in lines[1] and "6 retaliations" in lines[1] and "Shield blocks 16; total reduction 16" in lines[2] and "Final loss 112" in lines[3],"UI breakdown exposes heavy bonus and shield without double subtraction")
+	check(lines.size()==4 and "charge bonus 32" in lines[1] and "6 retaliations" in lines[1] and "Shield 16 / oath 0 / total reduction 16" in lines[2] and "Final loss 112" in lines[3],"UI breakdown exposes heavy bonus and shield without double subtraction")
 	before=state(scene.world)
 	scene.move(Vector2i.UP)
 	check(scene.world.hp==388 and scene.battle_loss==112 and scene.battle_details.charged_damage==32,"controller retains exact resolved heavy-battle breakdown")

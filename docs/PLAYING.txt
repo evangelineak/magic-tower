@@ -9,10 +9,12 @@ U 撤销；L 读档；M 静音；R 连按两次同种子重开；N 连按两次�
 旧塔校准需修复电梯；分别读取一层商人、二层阀门、四层碑文的线索，
 五层按顺序输入四个符号。错答不扣资源，解开后两种奖励只能选一种。
 所有贷款都只是游戏金币；走路、等待、回头不会增加利息。
+悬停敌人按V可只读比较已持装备。N可立守望誓约，攻击-10换先制/荆棘保护；
+回N可免费退约，但永久不能再立。比较会包含当前誓约和备战技能。
 
-仍使用 journey-v4.json 文件名，内部存档结构为版本7。
+仍使用 journey-v4.json 文件名，内部存档结构为版本8。
 读取有效版本4旧档先保留 .pre-schema5.json，版本5保留 .pre-schema6.json 原文备份。
-版本6升级另保留 .pre-schema7.json；旧远征地图不补生新任务房。
+版本6/7升级分别保留 .pre-schema7.json / .pre-schema8.json；旧图不补生新任务房。
 旧版本已经领过秘密奖励的存档不会再领奖。升级前仍建议自行备份存档。
 
 五层首章胜利可按1或点击主动继续三层远征，一次补120生命，不自动续章。
@@ -37,6 +39,9 @@ R twice: restart same seed    N twice: new seed    M: mute/unmute
 Battle display can be skipped with any key/click without changing the result.
 F2: Chinese / English (defaults to Chinese). Language does not change your save.
 All loans use fictional game gold, not real money.
+Hover an enemy and press V for a read-only owned-gear comparison. At N, the Watch
+oath trades 10 ATK for ambush/thorns protection. Release at N for free, but never
+bind again in this run. Forecasts include your current oath and armed skill.
 
 Look at battle previews. Not every route is affordable. The third-floor vault
 is optional: return stronger before the final expedition boss. A survey sample

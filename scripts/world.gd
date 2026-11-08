@@ -66,6 +66,7 @@ var atk := 18
 var defense := 8
 var keys := 0
 var gold := 0
+var oath_state := "fresh"
 var expedition_revision := 0
 var rescue_state := 0
 var rescue_reward := ""
@@ -92,6 +93,15 @@ func floor_title() -> String:
 func chapter_offers() -> Array:
 	if won and not expedition_started and floors.size()==5 and _count_token("K")==0:
 		return [["expedition","Continue expedition: 3 more floors / +120 HP once"]]
+	return []
+func oath_offers() -> Array:
+	if won or not nearby("N"): return []
+	if oath_state=="fresh": return [["oath_accept","Watch oath: -10 ATK / cancel ambush / halve each thorn hit. Return here to release; never bind again."]]
+	if oath_state=="active": return [["oath_renounce","Release the oath here for free. Its protection and attack penalty end; NEVER bind again."]]
+	return []
+func oath_journal() -> Array:
+	if oath_state=="active": return ["Watch oath active: -10 ATK, no ambush loss, each thorn hit halved down. Return to N to release once, forever."]
+	if oath_state=="spent": return ["Watch oath released. No penalty or protection remains. You cannot bind again this run."]
 	return []
 func npc_offers() -> Array:
 	if won or expedition_revision==1: return []
@@ -128,8 +138,11 @@ func _count_token(token: String) -> int:
 func tile(p: Vector2i) -> String:
 	if p.x < 0 or p.y < 0 or p.x >= 11 or p.y >= 11: return "#"
 	return floors[floor_index][p.y][p.x]
-func battle_preview(kind: String) -> Dictionary:
-	return Progression.battle(atk,defense,hp,ENEMIES[kind],hero_id,skill_armed and focus>0,equipped,talents)
+func battle_preview(kind: String, equipment_override: String = "") -> Dictionary:
+	var gear := equipped if equipment_override=="" else equipment_override
+	# Comparisons share all live battle context and cannot borrow unowned gear.
+	if not gear in inventory: gear="invalid_unowned"
+	return Progression.battle(atk,defense,hp,ENEMIES.get(kind,{}),hero_id,skill_armed and focus>0,gear,talents,"watch" if oath_state=="active" else "none")
 func damage(kind: String) -> int:
 	var preview := battle_preview(kind)
 	return int(preview.damage) if preview.valid else -1
@@ -353,6 +366,14 @@ func action(id: String) -> bool:
 		moves+=1
 		return true
 	match id:
+		"oath_accept":
+			if not nearby("N") or oath_state!="fresh": return false
+			oath_state="active"
+			message="Watch oath bound. Some fights become harder. Release only at N; after release, no second oath."
+		"oath_renounce":
+			if not nearby("N") or oath_state!="active": return false
+			oath_state="spent"
+			message="Watch oath released for free. No focus restored. You can never bind it again this run."
 		"rescue_accept":
 			if not nearby("J") or rescue_state!=0 or expedition_revision==1: return false
 			rescue_state=1
@@ -512,7 +533,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":7,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":8,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -520,8 +541,12 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8): return false
 	var old_seal: bool = save_version==4
+	var saved_oath := "fresh"
+	if save_version>=8:
+		if not d.get("oath_state") in ["fresh","active","spent"]: return false
+		saved_oath=d.oath_state
 	var saved_expedition := false
 	var saved_bridge := false
 	var saved_medicine := 2
@@ -531,13 +556,13 @@ func restore(d: Dictionary) -> bool:
 		saved_expedition=d.expedition_started; saved_bridge=d.expedition_bridge
 		for key in ["camp_medicine_left","camp_focus_left"]:
 			if not (d.get(key) is int or d.get(key) is float): return false
-			if not is_finite(float(d[key])) or d[key]!=floor(d[key]) or d[key]<0 or d[key]>(3 if save_version==7 and d.get("rescue_reward")=="supplies" else 2): return false
+			if not is_finite(float(d[key])) or d[key]!=floor(d[key]) or d[key]<0 or d[key]>(3 if save_version>=7 and d.get("rescue_reward")=="supplies" else 2): return false
 		saved_medicine=int(d.camp_medicine_left); saved_focus_stock=int(d.camp_focus_left)
 		if not saved_expedition and (saved_bridge or saved_medicine!=2 or saved_focus_stock!=2): return false
 	var saved_revision := 1 if saved_expedition else 0
 	var saved_rescue := 0
 	var saved_reward := ""
-	if save_version==7:
+	if save_version>=7:
 		for key in ["expedition_revision","rescue_state"]:
 			if not (d.get(key) is int or d.get(key) is float): return false
 			if not is_finite(float(d[key])) or d[key]!=floor(d[key]): return false
@@ -671,6 +696,7 @@ func restore(d: Dictionary) -> bool:
 	hp=int(d.hp); atk=int(d.atk); defense=int(d.def); keys=int(d.keys); gold=int(d.gold); moves=int(d.moves)
 	core=d.core; core_use=d.core_use; weapon=d.weapon; secret=d.secret; clue=d.clue
 	principal=int(d.principal); fees=int(d.fees); interest=int(d.interest); loan_used=d.loan_used; overdue=d.overdue; checkpoints=int(d.checkpoints)
+	oath_state=saved_oath
 	expedition_revision=saved_revision; rescue_state=saved_rescue; rescue_reward=saved_reward
 	expedition_started=saved_expedition; expedition_bridge=saved_bridge
 	camp_medicine_left=saved_medicine; camp_focus_left=saved_focus_stock
