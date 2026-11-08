@@ -2,6 +2,7 @@ class_name TowerWorld
 extends RefCounted
 const Layout = preload("res://scripts/layout.gd")
 const Generator = preload("res://scripts/generation.gd")
+const BattleTimeline = preload("res://scripts/battle_timeline.gd")
 const Progression = preload("res://scripts/progression.gd")
 const Attunement = preload("res://scripts/attunement.gd")
 const ATTUNABLE_GEAR = ["buckler","duelist","repeater","maul"]
@@ -31,6 +32,7 @@ const ENEMIES = {
 var run_id := ""
 var mode := "safe"
 var ended_reason := ""
+var death_record: Dictionary = {}
 var layout_revision := 2
 var seed_value := 0
 var generation_attempts := 0
@@ -158,6 +160,10 @@ func finish_run(outcome: String) -> bool:
 	ended_reason="victory" if outcome=="victory" else "retired"
 	return true
 func settlement_summary(outcome: String) -> Dictionary:
+	if outcome=="defeat":
+		if not reward_eligible(): return {"ok":false,"reason":"INELIGIBLE"}
+		if mode!="risk" or ended_reason!="death" or hp!=0 or death_record.is_empty() or highest_seen_floor()==0 or TowerWorld.from_snapshot(save_data())==null: return {"ok":false,"reason":"INVALID_OUTCOME"}
+		return {"ok":true,"summary":{"seed":seed_value,"max_floor":highest_seen_floor(),"moves":moves,"outcome":"defeat"}}
 	if not reward_eligible(): return {"ok":false,"reason":"INELIGIBLE"}
 	if ended_reason=="" or _finish_outcome()!=outcome or not _outcome_legal(outcome):
 		return {"ok":false,"reason":"INVALID_OUTCOME"}
@@ -350,7 +356,9 @@ func _tile_tooltip_data(point: Vector2i) -> Dictionary:
 		lines.append("Predicted loss: %d HP" % int(forecast.damage) if forecast.valid else str(forecast.reason))
 		if forecast.valid and not forecast.survivable: lines.append("Lethal battle is blocked. Grow stronger and return.")
 		if enemy.get("first_strike",false): lines.append("First strike: one opening attack, even against a killing hit.")
-		if int(enemy.get("thorns",0))>0: lines.append("Thorns: %d damage per real hit, including the final hit." % int(enemy.thorns))
+		if int(enemy.get("thorns",0))>0:
+			lines.append("Thorns: %d damage per real hit, including the final hit." % int(enemy.thorns))
+			if mode=="risk": lines.append("Risk combat: contact thorns resolve before your hit. A fatal contact stops that attack.")
 		if int(enemy.get("heavy_every",0))>0: lines.append("Every third retaliation adds one extra hit.")
 		if forecast.get("first_strike_suppression","")=="flank": lines.append("Current position cancels this enemy's first strike.")
 		elif forecast.get("first_strike_suppression","")=="oath": lines.append("The active Watch oath cancels this enemy's first strike.")
@@ -420,6 +428,29 @@ func battle_preview(kind: String, equipment_override: String = "", target: Vecto
 	if expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H":
 		flank=flank_position(target)==pos
 	return Progression.battle(atk,defense,hp,ENEMIES.get(kind,{}),hero_id,skill_armed and focus>0,gear,talents,"watch" if oath_state=="active" else "none",flank,gear_attunement(gear))
+func battle_timeline(target: Vector2i) -> Dictionary:
+	var kind:=tile(target)
+	if not ENEMIES.has(kind): return {"valid":false,"reason":"Not an enemy.","events":[]}
+	var flank:=expedition_revision==3 and floor_index>=5 and floor_index<=7 and kind=="H" and flank_position(target)==pos
+	return BattleTimeline.simulate(atk,defense,hp,ENEMIES[kind],hero_id,skill_armed and focus>0,equipped,talents,"watch" if oath_state=="active" else "none",flank,gear_attunement())
+func lethal_fight(delta: Vector2i) -> bool:
+	# Explicit Session confirmation is separate from ordinary movement.
+	if mode!="risk" or ended_reason!="" or not generation_valid or won or hp<=0 or moves>=1000000 or absi(delta.x)+absi(delta.y)!=1: return false
+	var target:=pos+delta
+	var kind:=tile(target)
+	if not ENEMIES.has(kind): return false
+	var preview:=battle_preview(kind,"",target)
+	if not preview.valid or preview.survivable: return false
+	var timeline:=battle_timeline(target)
+	if not timeline.get("valid",false) or not timeline.get("fatal",false): return false
+	death_record={"floor":floor_index,"x":target.x,"y":target.y,"enemy":kind,"start_hp":hp,"skill_armed":skill_armed}
+	last_battle=timeline.duplicate(true);last_battle.enemy=kind
+	if timeline.skill_consumed:
+		focus-=1
+		skill_armed=false
+	hp=0;ended_reason="death";moves+=1
+	message="Defeated. No kill reward or recovery was granted."
+	return true
 func damage(kind: String, target: Vector2i = Vector2i(-1,-1)) -> int:
 	var preview := battle_preview(kind,"",target)
 	return int(preview.damage) if preview.valid else -1
@@ -882,7 +913,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":13,"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":14,"death_record":death_record.duplicate(true),"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -890,7 +921,11 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13 and save_version!=14): return false
+	if save_version>=14:
+		if not d.get("death_record") is Dictionary: return false
+		if d.get("ended_reason")=="death": return _restore_death(d)
+		if not d.death_record.is_empty(): return false
 	var saved_run_id := ""
 	var saved_mode := "safe"
 	var saved_end := ""
@@ -1111,6 +1146,7 @@ func restore(d: Dictionary) -> bool:
 	if not d.floor_seen[int(d.floor)]: return false
 	if saved_end=="victory" and (not d.won or not saved_expedition or not d.floor_seen[7]): return false
 	if saved_end=="retired" and d.won and (saved_expedition or not d.floor_seen[4] or first_boss_remaining!=0): return false
+	death_record={}
 	run_id=saved_run_id; mode=saved_mode; ended_reason=saved_end
 	layout_revision=saved_layout
 	attunement_version=Attunement.REVISION; gear_offers=saved_gear_offers; gear_choices=saved_gear_choices
@@ -1144,3 +1180,30 @@ func restore(d: Dictionary) -> bool:
 	generation_valid=true
 	message = "Your journey resumes."
 	return true
+
+func _restore_death(d: Dictionary) -> bool:
+	# Reconstruct and validate the full living pre-state, then execute the same
+	# bounded timeline. No serialized round count or client summary is trusted.
+	var record:Dictionary=d.death_record
+	if record.size()!=6: return false
+	for key in ["floor","x","y","start_hp"]:
+		var value=record.get(key)
+		if not (value is int or value is float) or not is_finite(float(value)) or value!=floor(float(value)): return false
+	if record.floor<0 or record.floor>7 or record.x<1 or record.x>9 or record.y<1 or record.y>9 or record.start_hp<1 or record.start_hp>1000000: return false
+	if not record.get("enemy") is String or not ENEMIES.has(record.enemy) or not record.get("skill_armed") is bool: return false
+	if d.get("mode")!="risk" or d.get("won")!=false: return false
+	for key in ["hp","moves","focus","floor","x","y"]:
+		var value=d.get(key)
+		if not (value is int or value is float) or not is_finite(float(value)) or value!=floor(float(value)) or value<0 or value>1000000: return false
+	if d.hp!=0 or d.moves<1 or d.floor!=record.floor or absi(int(d.x)-int(record.x))+absi(int(d.y)-int(record.y))!=1: return false
+	var before:=d.duplicate(true)
+	before.ended_reason="";before.death_record={};before.hp=record.start_hp;before.moves=int(d.moves)-1
+	before.skill_armed=record.skill_armed
+	if record.skill_armed and d.get("skill_armed")==false and d.get("hero_id") in ["warden","ranger"]: before.focus=int(d.focus)+1
+	var probe:=TowerWorld.from_snapshot(before)
+	if probe==null or probe.tile(Vector2i(int(record.x),int(record.y)))!=record.enemy: return false
+	var delta:=Vector2i(int(record.x),int(record.y))-probe.pos
+	if not probe.lethal_fight(delta): return false
+	if JSON.parse_string(JSON.stringify(probe.save_data()))!=JSON.parse_string(JSON.stringify(d)): return false
+	if not restore(before): return false
+	return lethal_fight(delta)

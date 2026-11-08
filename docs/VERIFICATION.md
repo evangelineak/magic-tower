@@ -238,3 +238,16 @@
 - 最终独立Linux包实跑：恢复新0步280HP旅程，X确认退役未新增里程碑，累计仍[3]。关闭并重启初见WRITER_BUSY，等待真实租约到期后L恢复成功，英文终局为本次[]/累计[3]；只读核对两局均archived、两张receipt，旧92步完整保留。截图settlement-export-{terminal,reopened-en}.png，store证据settlement-export-store-evidence.txt。这是实际独立exe，不是godot --path。
 - 导出前后5项核心源码hash一致，Linux二进制SHA e38db738abb8a8e3fc889e29b07a207e926867c249956b93b18b7a33c4d48992，Windows25d9b7f8f67044ea2561c9dd26dc8c7a94867ac9050c750c87d7a00068de91cc仅交叉导出。实际embedded PCK的生产JS为26080字节、SHA06cb854170f200485b115076399cee77b7180ec858f58453c005573dfedf96d8，与源码一致。首次probe漏XDG_CONFIG/CACHE产生环境编辑器目录警告，补全环境后重跑同probe无警告；不隐去初次失败事实。公开网页未改。
 - CI首轮同SHA的PR通过而push42497409028失败：旧test_session_storage以真实80ms租约执行完整校验/文件IO，慢runner在首写前合法到期；测试随后未检查失败响应就访问.auth，协程异常导致240秒timeout。保留日志/tmp/tower-settlement-ci-failure-tail.log，没有将其说成通过或盲重跑。修复仅测试：新增ClockedStore显式逻辑时钟，精确验证事务内续至now+60000和到期等号边界；默认故意等150ms墙钟、另每操作250ms慢IO均不干扰逻辑时间。正常连续3次35项、慢IO35项通过，强制预写过期负例1秒内明确exit1而不Nil挂起。真实GUI租约到期证据仍保留；生产_now/60秒规则、游戏包未修改。
+
+## 明确风险模式与真实死亡（开发分支，2026-11-08）
+
+- 全套tools/test_all.sh退出0，/tmp/tower-risk-preflight.log：28679项Godot功能检查，Node269+17+59；首章200种子178035项、远征200种子97863项、9条对抗通关与2568个合法存档回放通过，导入与30帧启动通过。最后只做已知文字/布局完善，不改变安全战斗公式。
+- 独立battle_timeline19412项检查，9240组存活战斗与旧完整伤害公式等价；事件及迭代均硬限8192，1000万预测回合输入不会先生成巨大range。先制、诱敌、荆棘接触、双反击及重击按真实顺序执行，fatal立即停止；实际HP损失与overkill区分，不截取完整胜利动画冒充死亡。
+- World392项、Session202项、原生death_storage63项。schema14只允许可重放证明的risk/death/HP0记录；不能只写hp0或调用finish(defeat)制造失败摘要。真实合法26步路线与302步七层W路线（含armed/未armed）覆盖死亡、技能仅一次消耗、无杀怪/金钱/治疗、Undo不可复活及新局保留收据。Native在事务内重算死亡；Web由Godot准备并重验，JS事务CAS完整base、只允许规定死亡字段改变，并推导摘要。未声称JS执行GDScript伤害公式或离线防作弊。
+- 真schema13活动/归档完整容器从git archive81a6b85的旧代码实际创建、移动、保存和结算生成，包含校验封装；迁移不补身份或领奖。来源、脚本和SHA见tests/fixtures/README.md。旧全量字段比较只排除新增death_record，未放松World校验。
+- UI146项通过。新局S/D明确选模式，默认safe，不中途改现有模式；致死确认绑定完整开战快照，变更后须重新确认。修复旧P.battle在致死时skill_consumed=false会误示不消耗的文案，改用实际timeline结果，Warden/Rangerarmed均确认一次专注消耗。死亡成功保存后才显示真实事件战报；B支持只读复盘，L重读不重播音效/不写存档。
+- 原生实际同路线safe拒战，risk取消后HP268不变，再确认死亡：27步、0HP、8金币、1次此前击杀，实际10次攻击/10次反击，最后敌人仍30HP，没有新击杀、金币、恢复。run06cc748684b1033e24585b6cfff3ef4c成功归档，max_floor2故里程碑[]；关闭重启L和B复盘完整5页，新safe run2342841f9850017a85532242f7f06571为0步280HP，保留旧defeat收据。截图risk-gui-{safe-refusal,mode,confirm,death-events,fatal-last,reopened-report}.png；模式标签与音效重叠已实看修到英雄名右侧。
+- 真实Chrome生产JS55项通过，人工risk→death→duplicate→关页新标签重读death_record/receipt/profile一致。首次新risk创建被NOT_FRESH_RUN拒绝，查明生成器save_data的浅数组引用被后续合法步行污染，改为所有节点deepcopy并重生成，额外两项纯协议防回归；没有放松生产fresh检查。截图risk-bridge-{selftest,reopened}.png，测试服务器与页面已关闭、DB保留。Godot WebGL引擎完整链路仍未验。
+- 字体892必需字缺0，含battle_timeline扫描，本地化80项通过；408564字节，SHA256 c73cb096e17a9312e01327910cd049f1bd7ae0a97a002265c4f103c81b016c57。永久天赋/轮回策略抽选仍待后续，本批没有付费抽取或重复死亡刷属性；公开网页保持v0.17。
+- 最终独立Linux实际验收：先恢复原safe0步及旧death账本，未改其槽；另新隔离store明确R/D/Enter风险seed0，真实26步到268HP，确认后27步0HP/8金币/1击杀/3专注，无额外奖励。关闭重启先受仍有效租约保护，等待后L恢复，B/F2复盘真实最后事件。截图risk-export-{safe-loaded,confirm,fatal,reopened,review-en}.png与只读risk-export-store.txt。保留最新独立包窗口，测试服务器已关闭。
+- 导出退出0，5项关键源码hash前后一致；Linux二进制SHA256 9db520c1bd7300e574b8f20a1f2a2d2f243e8e1f32ada496d362810a6476663e，Windows b9a8c00d999dbf1fc05f13aaea9e46f3b88c756283befb9383d6bf01b935d90f，仅交叉导出。PCK内生产JS29490字节、SHA a9efce10fed10f6ac9b5cae215f909981b5fbb08793926a81e88539c09d41246与源码一致。环境仍有VSync/ALSA无设备回落dummy告警，没有脚本错误；不宣称主观听音通过。最终UI146/本地化80再次通过。

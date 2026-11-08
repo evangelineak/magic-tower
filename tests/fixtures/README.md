@@ -155,3 +155,24 @@ SHA256:
 - generate_schema12.gd: `16eabaa2354c75bd1bd6376b9cf914ed872e926f05f379e99593d21078450897`
 - schema12-layout2.json: `5a4377130e26ee4ea575dfdd5dd7c9bedcb37c20d77cb0bda738d5c98205b1e6`
 - schema12-layout1.json: `82e1786cb87c2f5a39eead2bc847cb83c6dd93090b8815ce726c39ac50414d6b`
+
+## Authentic schema-13 production containers (risk/death migration)
+
+`schema13-active-store.json` and `schema13-archived-store.json` were generated
+from an isolated `git archive 81a6b85`, not the current World with its version
+number edited. Run `generate_schema13_store.gd` in that historical checkout after
+Godot editor import. It uses the historical production SessionStorage to create
+a fresh identified safe run, makes one legal RIGHT step, commits it, and copies
+the complete checksum-enveloped active container. It then performs the real
+atomic `withdrawn` settlement and copies the archived container. These are
+synthetic test identities, not user data. Runtime writer IDs/timestamps are
+expected to differ on regeneration; the committed originals retain their bytes.
+
+The migration test copies these containers into fresh test-only directories,
+advances only the test writer clock past their original lease, reads them using
+the new adapter and verifies preserved identity/profile/receipt. No old identity
+or reward is invented and no old fixture is rewritten during the test.
+
+SHA256:
+- schema13-active-store.json: `66dbc9e255944ecba84a3c3fbe59afa39f22559f5ef404daf267342e62cbc0c8`
+- schema13-archived-store.json: `fa2b6135515bc20c9d33205c2ddeffe3499772f81c7b6731a26296921da1a664`

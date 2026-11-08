@@ -61,7 +61,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema9-"+reward+".json"))
   check(w.restore(old) and w.expedition_revision==2 and w.winch_choice=="" and not w.maul_claimed,"old begun revision2 gains no new room or reward")
   var upgraded=state(w); upgraded.erase("winch_choice"); upgraded.erase("maul_claimed"); upgraded.erase("layout_revision"); upgraded.version=9
-  for field in ["attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason"]: upgraded.erase(field)
+  for field in ["attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason","death_record"]: upgraded.erase(field)
   check(JSON.parse_string(JSON.stringify(upgraded))==old,"migration conserves solved audit/anchors/oath/NPC resources: "+reward)
   reject(w,"winch_rescue"); reject(w,"winch_armory"); restore_check(w)
  w=World.new(0,1)

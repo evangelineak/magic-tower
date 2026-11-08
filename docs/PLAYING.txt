@@ -19,7 +19,11 @@ U 撤销；L 读档；M 静音；R 连按两次同种子重开；N 连按两次�
 其他窗口占用时只读，请关闭其他窗口并稍候，再按L读取，不能覆盖别人的更新。
 X打开明确退役确认，Enter后结束本局并记录首次到达3/5/8层的里程碑。
 结算保存成功后不能撤销；新局保留跨局记录，不携带物品。里程碑当前不增加属性。
-暂不启用真实死亡或永久天赋效果；当前仍保留致死保护。
+默认安全模式保留致死保护。新局确认页 S选择安全 / D明确选择风险，再确认开局。
+风险模式遇到可预判的致死战斗，仍先二次确认；取消不扣资源。
+确认后只战斗到真正致命事件，原子记录战败；不能撤销、不发击杀奖励或战后回血。
+荆棘先接触后出手，接触已致命则该次攻击不会发生。B可只读复盘死亡战报。
+死亡后可明确新开一局；跨局天赋数值与抽选仍未启用。
 
 五层首章胜利按1主动继续三层远征并补120生命，或按2打开首章结算确认。
 最终胜利按2打开结算确认；不自动结算，L恢复终局也不重复领奖。
@@ -95,4 +99,9 @@ At chapter-one victory, 1 continues the expedition, or 2 opens settlement.
 At final victory, 2 opens settlement. No automatic awards before saving succeeds.
 Undo cannot reopen a settled run. New journeys retain milestone records, not items.
 First visits to floors 3/5/8 are recorded once; these records currently add no stats.
-True death and permanent talent effects are not enabled in this build.
+Safe mode remains the default. In new-run confirmation, S selects safe and D selects risk.
+Risk mode still requires explicit confirmation before a predictable lethal fight.
+Only actual events through death occur; no kill reward or recovery is granted.
+Death and its receipt save atomically. B reviews the saved death report without replaying rewards.
+Contact thorns resolve before the hero hit. A fatal contact stops that hit.
+A new journey may be started explicitly; permanent talent effects and drafts are not enabled yet.

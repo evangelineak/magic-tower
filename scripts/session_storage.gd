@@ -1,6 +1,6 @@
 class_name TowerSessionStorage
 extends RefCounted
-## Unified async adapter. Only new schema-13 journeys; no legacy-slot imports.
+## Unified async adapter for registered full Worlds; no legacy-slot imports.
 const World=preload("res://scripts/world.gd")
 const Profile=preload("res://scripts/legacy_profile.gd")
 const Native=preload("res://scripts/journey_store_native.gd")
@@ -76,7 +76,7 @@ func _claim(explicit:bool=false,for_write:bool=false)->Dictionary:
  if result.get("ok",false):auth=result.auth.duplicate(true)
  return result
 func _canonical(snapshot:Dictionary,allow_ended:bool=false)->Dictionary:
- if snapshot.get("mode")!="safe" or (not allow_ended and snapshot.get("ended_reason")!=""):return {}
+ if snapshot.get("mode") not in ["safe","risk"] or (not allow_ended and snapshot.get("ended_reason")!=""):return {}
  var probe=World.from_snapshot(snapshot)
  return {} if probe==null else probe.save_data().duplicate(true)
 func _normalize(raw:Dictionary)->Dictionary:
@@ -122,7 +122,7 @@ func reacquire_and_read()->Dictionary:
  return _normalize(await _read_raw())
 func create_run(seed:int,layout:int=2,mode:String="safe",replace_active:bool=false,request_id:String="")->Dictionary:
  if not World.valid_run_id(request_id) or request_id=="":return _failure("INVALID_REQUEST_ID")
- if mode!="safe" or seed<0 or seed>2147483647 or layout not in [1,2]:return _failure("INVALID_NEW_RUN")
+ if mode not in ["safe","risk"] or seed<0 or seed>2147483647 or layout not in [1,2]:return _failure("INVALID_NEW_RUN")
  var claim=await _claim(false,true)
  if not claim.get("ok",false):return _failure(str(claim.get("code","WEB_IO")))
  var fresh=World.new(seed,layout,request_id,mode)
@@ -157,7 +157,29 @@ func settle_run(expected_slot:int,expected_revision:int,run_id:String,outcome:St
   if base.is_empty():return _failure("INVALID_SNAPSHOT")
   var probe=World.from_snapshot(base)
   if not probe.finish_run(outcome):return _failure("INVALID_OUTCOME")
-  raw=await _web("settle",{"auth":supplied,"id":run_id,"expected":expected_revision,"outcome":outcome,"request_id":request_id,"base":base,"ended":probe.save_data()})
+  raw=await _web("settle",{"auth":supplied,"id":run_id,"expected":expected_revision,"outcome":outcome,"request_id":request_id,"base":run.snapshot,"ended":probe.save_data()})
  else:raw=native.settle_journey(run_id,supplied,expected_revision,outcome,request_id)
+ if raw.get("ok",false) and test_drop_next_ack:test_drop_next_ack=false;return _failure("ACK_LOST")
+ return _normalize(raw)
+
+func settle_death(expected_slot:int,expected_revision:int,run_id:String,delta:Vector2i,request_id:String="")->Dictionary:
+ if not World.valid_run_id(request_id) or request_id=="" or abs(delta.x)+abs(delta.y)!=1:return _failure("INVALID_DELTA")
+ var claim=await _claim(false,true)
+ if not claim.get("ok",false):return _failure(str(claim.get("code","WEB_IO")))
+ var supplied=auth.duplicate(true);supplied.expectedSlotRevision=expected_slot
+ var raw:Dictionary
+ if use_web:
+  var current=await _read_raw()
+  if not current.get("ok",false):return _failure(str(current.get("code","WEB_IO")))
+  var run=current.get("run",{})
+  if run.get("id")!=run_id:return _failure("SUPERSEDED_OPERATION")
+  var base=_canonical(run.get("snapshot",{}),run.get("status")=="archived")
+  if base.is_empty():return _failure("INVALID_SNAPSHOT")
+  var probe=World.from_snapshot(base)
+  if probe.ended_reason=="":
+   if not probe.lethal_fight(delta):return _failure("INVALID_LETHAL_FIGHT")
+  elif probe.ended_reason!="death":return _failure("INVALID_LETHAL_FIGHT")
+  raw=await _web("death",{"auth":supplied,"id":run_id,"expected":expected_revision,"delta":[delta.x,delta.y],"request_id":request_id,"base":run.snapshot,"ended":probe.save_data()})
+ else:raw=native.settle_death_journey(run_id,supplied,expected_revision,delta,request_id)
  if raw.get("ok",false) and test_drop_next_ack:test_drop_next_ack=false;return _failure("ACK_LOST")
  return _normalize(raw)

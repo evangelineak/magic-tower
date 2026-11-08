@@ -28,21 +28,33 @@ function snapshotCopy(snapshot, allowEnded=false) {
   must(s && [5, 8].includes(s.floor_seen?.length) && s.floor_seen.every(x => typeof x === 'boolean') && s.floor_seen[0], 'INVALID_SNAPSHOT');
   must(!s.floor_seen.some((seen,i) => seen && s.floor_seen.slice(0,i).includes(false)), 'INVALID_SNAPSHOT');
   must(integer(s.floor) && s.floor < s.floor_seen.length && s.floor_seen[s.floor], 'INVALID_SNAPSHOT');
-  must(typeof s.won === 'boolean' && Number.isSafeInteger(s.hp) && s.hp > 0 && integer(s.moves, 10000000) && integer(s.seed_value, 2147483647), 'INVALID_SNAPSHOT');
-  must(s.version===13 && validId(s.run_id) && s.mode==='safe' && (s.ended_reason==='' || (allowEnded && ['retired','victory'].includes(s.ended_reason))), 'INVALID_WORLD');
+  must(typeof s.won === 'boolean' && Number.isSafeInteger(s.hp) && s.hp >= 0 && integer(s.moves, 10000000) && integer(s.seed_value, 2147483647), 'INVALID_SNAPSHOT');
+  must([13,14].includes(s.version) && validId(s.run_id) && ['safe','risk'].includes(s.mode) && (s.ended_reason==='' || (allowEnded && ['retired','victory','death'].includes(s.ended_reason))), 'INVALID_WORLD');
   must([1,2].includes(s.layout_revision) && Array.isArray(s.floors) && s.floors.length===s.floor_seen.length, 'INVALID_WORLD');
   must(integer(s.x,9)&&s.x>=1&&integer(s.y,9)&&s.y>=1&&integer(s.atk,1000000)&&s.atk>0&&integer(s.def,1000000), 'INVALID_WORLD');
   must(s.floors.every(grid=>Array.isArray(grid)&&grid.length===11&&grid.every(row=>Array.isArray(row)&&row.length===11&&row.every(t=>typeof t==='string'&&t.length===1))), 'INVALID_WORLD');
   must(s.floors[s.floor][s.y][s.x]!=='#' && Array.isArray(s.inventory)&&s.inventory.includes(s.equipped)&&s.inventory.includes('balanced'), 'INVALID_WORLD');
+  must(['warden','ranger','scholar'].includes(s.hero_id)&&typeof s.skill_armed==='boolean'&&integer(s.focus,4)&&[3,4].includes(s.focus_cap)&&s.focus<=s.focus_cap,'INVALID_WORLD');
   must(s.gear_offers && typeof s.gear_offers==='object' && s.gear_choices && typeof s.gear_choices==='object' && s.attunement_version===1, 'INVALID_WORLD');
+  const record=s.version===13?{}:s.death_record;
+  must(record&&typeof record==='object'&&!Array.isArray(record),'INVALID_DEATH_RECORD');
+  if(s.ended_reason==='death'){
+   must(s.version===14&&s.mode==='risk'&&s.hp===0&&!s.won&&s.moves>=1,'INVALID_DEATH_RECORD');
+   must(keysExactly(record,['floor','x','y','enemy','start_hp','skill_armed'])&&integer(record.floor,7)&&record.floor===s.floor&&integer(record.x,9)&&record.x>=1&&integer(record.y,9)&&record.y>=1&&integer(record.start_hp,1000000)&&record.start_hp>0&&typeof record.skill_armed==='boolean','INVALID_DEATH_RECORD');
+   must(Math.abs(record.x-s.x)+Math.abs(record.y-s.y)===1&&['s','g','u','b','w','V','K','W','H','Z','B'].includes(record.enemy)&&s.floors[s.floor][record.y][record.x]===record.enemy,'INVALID_DEATH_RECORD');
+  }else must(s.hp>0&&Object.keys(record).length===0,'INVALID_DEATH_RECORD');
   return s;
+}
+function upgradeSnapshot(snapshot){
+ const s=structuredClone(snapshot);if(s.version===13){s.version=14;s.death_record={};}return s;
 }
 function summaryOf(snapshot, outcome) {
  const s=snapshotCopy(snapshot,true);
- must(['withdrawn','chapter1','victory'].includes(outcome),'INVALID_OUTCOME');
+ must(['withdrawn','chapter1','victory','defeat'].includes(outcome),'INVALID_OUTCOME');
  const max_floor=s.floor_seen.filter(Boolean).length;
  const count=token=>s.floors.reduce((n,g)=>n+g.flat().filter(t=>t===token).length,0);
- must(s.ended_reason===(outcome==='victory'?'victory':'retired'),'INVALID_OUTCOME');
+ must(s.ended_reason===(outcome==='defeat'?'death':outcome==='victory'?'victory':'retired'),'INVALID_OUTCOME');
+ if(outcome==='defeat')must(s.mode==='risk'&&s.hp===0&&s.ended_reason==='death','INVALID_OUTCOME');
  if(outcome==='withdrawn')must(!s.won,'INVALID_OUTCOME');
  if(outcome==='chapter1')must(s.won&&!s.expedition_started&&s.floors.length===5&&max_floor===5&&count('K')===0,'INVALID_OUTCOME');
  if(outcome==='victory')must(s.won&&s.expedition_started&&s.floors.length===8&&max_floor===8&&count('Z')===0,'INVALID_OUTCOME');
@@ -85,14 +97,15 @@ function validRun(r) {
  try {
   if(!keysExactly(r,['id','revision','status','snapshot','last_op'])||!validId(r.id)||!integer(r.revision,10000000)||!['active','archived','abandoned'].includes(r.status))return false;
   const op=r.last_op;
-  if(!keysExactly(op,['request_id','kind','expected_slot','expected_revision','hash','result_slot','result_revision'])||!validId(op.request_id)||!['create','save','settle'].includes(op.kind))return false;
+  if(!keysExactly(op,['request_id','kind','expected_slot','expected_revision','hash','result_slot','result_revision'])||!validId(op.request_id)||!['create','save','settle','death'].includes(op.kind))return false;
   if(!integer(op.expected_slot,10000000)||!Number.isSafeInteger(op.expected_revision)||op.expected_revision< -1||op.expected_revision>10000000||!integer(op.result_slot,10000000)||!integer(op.result_revision,10000000))return false;
   if(typeof op.hash!=='string'||!/^[a-f0-9]{64}$/.test(op.hash)||op.result_revision!==r.revision)return false;
   if(op.kind==='create'&&(op.request_id!==r.id||op.expected_revision!==-1||r.revision!==0||op.result_slot!==op.expected_slot+1))return false;
-  if(op.kind!=='create'&&(op.expected_revision<0||op.result_revision!==op.expected_revision+1||op.result_slot!==op.expected_slot+(op.kind==='settle'?1:0)))return false;
-  if((r.status==='archived')!==(op.kind==='settle'))return false;
+  if(op.kind!=='create'&&(op.expected_revision<0||op.result_revision!==op.expected_revision+1||op.result_slot!==op.expected_slot+(['settle','death'].includes(op.kind)?1:0)))return false;
+  if((r.status==='archived')!==(['settle','death'].includes(op.kind)))return false;
   if(r.status==='abandoned'&&r.snapshot===null)return true;
   if(r.snapshot?.run_id!==r.id)return false;
+  if(r.status==='archived'&&((r.snapshot.ended_reason==='death')!==(op.kind==='death')))return false;
   snapshotCopy(r.snapshot,r.status==='archived');
   return r.status!=='archived'||r.snapshot.ended_reason!=='';
  }catch{return false;}
@@ -216,6 +229,20 @@ class ProfileStorage {
     });
   }
 }
+function validateDeathTransition(rawBase,ended,delta){
+ const base=upgradeSnapshot(rawBase),r=ended.death_record;
+ must(base.mode==='risk'&&ended.ended_reason==='death'&&!base.won,'INVALID_LETHAL_FIGHT');
+ must(r&&r.floor===base.floor&&r.x===base.x+delta[0]&&r.y===base.y+delta[1],'INVALID_DEATH_RECORD');
+ // A retry may prepare from the already archived exact payload. The transaction
+ // still verifies its operation receipt and CAS before acknowledging it.
+ if(base.ended_reason==='death'){must(same(base,ended),'INVALID_END_TRANSITION');return;}
+ must(base.ended_reason===''&&base.hp>0&&r.start_hp===base.hp&&r.skill_armed===base.skill_armed,'INVALID_DEATH_RECORD');
+ const expected=structuredClone(base);expected.hp=0;expected.moves=base.moves+1;expected.ended_reason='death';expected.death_record=structuredClone(r);
+ if(base.skill_armed&&base.focus>0&&['warden','ranger'].includes(base.hero_id)){expected.focus=base.focus-1;expected.skill_armed=false;}
+ must(same(expected,ended),'INVALID_END_TRANSITION');
+ // Godot validates/replays the combat before preparation and again on read.
+ // JS verifies atomic full-base/allowed-change invariants, not GDScript damage.
+}
 async function digestSnapshot(snapshot) {
  const bytes=new TextEncoder().encode(JSON.stringify(canonical(snapshot)));
  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
@@ -232,7 +259,7 @@ class JourneyStorage extends ProfileStorage {
    const run=await req(s('runs').get(id)),expected=kind==='create'?-1:args.expected;
    if(run && run.last_op.request_id===args.request_id){
     const op=run.last_op;
-    must(op.kind===kind && op.hash===hash && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
+    must(op.kind===kind && (op.hash===hash || (run.snapshot?.version===13&&same(upgradeSnapshot(run.snapshot),snapshot))) && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
     must(slot.activeRunId===id && slot.revision===op.result_slot && run.revision===op.result_revision && run.status==='active','SUPERSEDED_OPERATION');
     return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile,duplicate:true};
    }
@@ -252,18 +279,20 @@ class JourneyStorage extends ProfileStorage {
     return {ok:true,run:created,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
    }
    must(slot.activeRunId===id && validRun(run)&&run.status==='active','NOT_ACTIVE_RUN');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
-   run.snapshot=snapshot;run.revision=nextCounter(run.revision);
+   must(snapshot.mode===run.snapshot.mode,'MODE_IMMUTABLE');run.snapshot=snapshot;run.revision=nextCounter(run.revision);
    run.last_op={request_id:args.request_id,kind,expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
    slot.writer.leaseUntil=Date.now()+60000;await req(s('runs').put(run));await req(s('slots').put(slot));return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
   });
  }
- async settleJourney(args) {
-  must(validId(args.request_id)&&['withdrawn','chapter1','victory'].includes(args.outcome),'INVALID_OUTCOME');
+ async settleJourney(args,isDeath=false) {
+  const operation=isDeath?'death':'settle';
+  if(isDeath){args={...args,outcome:'defeat'};must(Array.isArray(args.delta)&&args.delta.length===2&&args.delta.every(Number.isSafeInteger)&&Math.abs(args.delta[0])+Math.abs(args.delta[1])===1,'INVALID_DELTA');}
+  must(validId(args.request_id)&&(isDeath?['defeat']:['withdrawn','chapter1','victory']).includes(args.outcome),'INVALID_OUTCOME');
   const base=snapshotCopy(args.base,true),ended=snapshotCopy(args.ended,true);
   const hash=await digestSnapshot(ended);
   must(base.run_id===args.id&&ended.run_id===args.id,'IDENTITY_MISMATCH');
-  const onlyEnd=structuredClone(base);onlyEnd.ended_reason=ended.ended_reason;
-  must(same(onlyEnd,ended),'INVALID_END_TRANSITION');
+  if(isDeath)validateDeathTransition(base,ended,args.delta);
+  else {const onlyEnd=upgradeSnapshot(base);onlyEnd.ended_reason=ended.ended_reason;must(same(onlyEnd,ended),'INVALID_END_TRANSITION');}
   const expectedSummary=summaryOf(ended,args.outcome);
   const fail=point=>{if(databaseName.startsWith('magic-tower-journeys-v1-test-')&&args.test_abort===point)throw new StorageFault('INJECTED_ABORT_'+point)};
   return this.transaction(['slots','runs','profiles','receipts'],'readwrite',async s=>{
@@ -273,18 +302,19 @@ class JourneyStorage extends ProfileStorage {
    checkRunLedger(run,envelope.profile);
    const last=run.last_op;
    if(last.request_id===args.request_id){
-    must(last.kind==='settle'&&last.hash===hash&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
+    must(last.kind===operation&&(last.hash===hash||(run.snapshot.version===13&&same(upgradeSnapshot(run.snapshot),ended)))&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
     const receipt=envelope.profile.receipts[args.id];
     must(receipt&&same(receipt.summary,expectedSummary),'REQUEST_CONFLICT');
     must(slot.activeRunId===args.id&&slot.revision===last.result_slot&&run.revision===last.result_revision&&run.status==='archived','SUPERSEDED_OPERATION');
-    must(same(run.snapshot,ended),'REQUEST_CONFLICT');
+    must(same(upgradeSnapshot(run.snapshot),ended),'REQUEST_CONFLICT');
     return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,receipt,profile:envelope.profile,duplicate:true};
    }
    checkSlot(slot,args.auth,args.id);
    must(run.status==='active','RUN_NOT_ACTIVE');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
    must(run.snapshot.ended_reason===''&&same(run.snapshot,base),'STALE_BASE');
-   const authoritative=structuredClone(run.snapshot);authoritative.ended_reason=ended.ended_reason;
-   must(same(authoritative,ended),'INVALID_END_TRANSITION');
+   let authoritative;
+   if(isDeath){validateDeathTransition(run.snapshot,ended,args.delta);authoritative=ended;}
+   else {authoritative=upgradeSnapshot(run.snapshot);authoritative.ended_reason=ended.ended_reason;must(same(authoritative,ended),'INVALID_END_TRANSITION');}
    const summary=summaryOf(authoritative,args.outcome);
    const decision=settleProfile(envelope.profile,args.id,summary);
    must(decision.ok&&decision.status==='applied','PROFILE_'+decision.status.toUpperCase());
@@ -293,7 +323,7 @@ class JourneyStorage extends ProfileStorage {
    await req(s('receipts').add({id:args.id,receipt:decision.receipt}));fail('after_receipt');
    run.snapshot=authoritative;run.status='archived';run.revision=nextCounter(run.revision);
    slot.revision=nextCounter(slot.revision);slot.writer.leaseUntil=Date.now()+60000;
-   run.last_op={request_id:args.request_id,kind:'settle',expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
+   run.last_op={request_id:args.request_id,kind:operation,expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
    await req(s('runs').put(run));fail('after_archive');await req(s('slots').put(slot));fail('after_slot');
    return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,receipt:decision.receipt,profile:decision.profile};
   });
@@ -316,7 +346,7 @@ async function dispatch(operation,args){
  if(operation==='claim')return {ok:true,auth:await store.claimWriter(args.owner,args.lease_ms)};
  if(operation==='renew')return {ok:true,auth:await store.renewWriter(args.auth,args.lease_ms)};
  if(operation==='read')return store.active();
- if(operation==='settle')return store.settleJourney(args);
+ if(operation==='settle'||operation==='death')return store.settleJourney(args,operation==='death');
  if(operation==='create'||operation==='save')return store.writeJourney(operation,args);
  throw new StorageFault('UNSUPPORTED_OPERATION');
 }

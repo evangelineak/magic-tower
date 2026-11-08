@@ -1,9 +1,9 @@
-# Full-world session storage (schema 13)
+# Full-world session storage (schema 14; registered schema 13 migration)
 
 This is separate from the six-field profile prototype. The current game session
 uses `scripts/session_storage.gd`, `journey_store_native.gd` and
-`profile_storage_web.js`. Atomic safe-mode retirement/chapter/final-victory settlement is exposed; death
-rewards and legacy imports are not. The old `journey-v4` file is untouched.
+`profile_storage_web.js`. Atomic retirement/chapter/final-victory and explicit risk-mode fatal-combat
+settlement are exposed; legacy imports are not. The old `journey-v4` file is untouched.
 
 ## Contract
 
@@ -51,7 +51,7 @@ empty-start/create, full snapshot writes, response-loss retry, stale revisions,
 failed rename, writer contention, replacement, legacy identity rejection,
 lease renewal/expiry/reacquisition and bounded missing/late callbacks.
 
-`tools/generate_session_bridge_fixtures.gd` generates actual schema-13 new-run
+`tools/generate_session_bridge_fixtures.gd` generates actual schema-14 new-run
 and one-real-step payloads. `session_storage_harness.html` loads the production
 JS through `session_storage_runtime.js`, not a fork of its implementation.
 It requires a test-prefixed IndexedDB name and uses visible buttons for writes.
@@ -73,9 +73,10 @@ B's read returned the complete same World. The test page and server were closed;
 the test database was retained. This verifies the production JavaScript callback
 protocol, not the Godot JavaScriptBridge/WebGL runtime.
 
-The adapter and native container reject risk-mode and reject nonempty-ended-reason
-payloads on ordinary writes. Archived reads require a valid ended World and an exactly
-matching receipt in the validated profile. Risk mode remains unsupported.
+The adapter and native container reject nonempty-ended-reason payloads on
+ordinary writes. Archived reads require a valid ended World and an exactly
+matching receipt in the validated profile. New risk runs require an explicit mode
+choice; existing safe runs cannot be switched.
 
 ## Atomic settlement addition
 
@@ -115,3 +116,53 @@ preserved the archived World, receipt and profile. Screenshots
 `settlement-bridge-selftest.png` and `settlement-bridge-reopened.png`.
 This supersedes the pending-browser note above, but does not certify Godot WebGL
 or the engine's JavaScriptBridge runtime.
+
+## Risk-mode fatal combat (schema 14)
+
+New runs explicitly choose safe or risk; the mode cannot be switched through an
+ordinary save. Active payloads in either mode must remain alive and unsealed.
+`settle_death(expected_slot, expected_revision, run_id, delta, request_id)` is the
+only fatal-encounter storage entry point. Native reconstructs the current full
+World, executes `lethal_fight(delta)`, derives the `defeat` summary and atomically
+archives it with its profile/receipt and both revision increments. Ordinary save
+and generic finish cannot publish a dead run. Risk survivors can still retire,
+finish chapter one, or finish the final victory normally.
+
+Schema 13 production containers retain their existing identity, active/archive
+status and receipt when read through World schema 14; no death record or award is
+manufactured. Genuine old-code active/archive fixtures cover this transition.
+
+Web receives the complete base and death candidate after Godot's validation and
+combat replay. Its transaction compares the stored base exactly, verifies the
+same adjacent target and death record, and permits only HP, moves, ended_reason,
+death_record and actually applicable focus/armed changes. Enemy tiles, position,
+gold, kills, equipment and all other fields must remain unchanged. It derives the
+summary from the stored state/candidate, not a caller-provided reward summary.
+JavaScript does **not** independently execute GDScript's combat formula; full
+World restore/replay occurs in Godot before preparation and after reading the
+result. This is transaction integrity, not an offline anti-cheat guarantee.
+
+Death request retries preserve the original delta/CAS/nonce and return one
+receipt. A changed delta conflicts; a newer run supersedes the old request.
+Malformed death records fail native World replay and cannot be read as a valid
+archive. The production browser harness includes a genuine 26-step risk-route
+fixture plus a manually clickable death/retry/reopen flow; browser evidence must
+be recorded separately from the pure validator tests.
+
+
+Risk/death storage verification: `test_death_storage.gd` passes 63 checks,
+including real no-injection seven-floor paths with and without an armed skill,
+actual post-rename uncertainty, safe-mode rejection, normal risk survivor
+settlement and authentic old production-container migration. Production JS pure
+checks now total 59 (including fixture-isolation guards); static/failure-report
+checks remain 17.
+
+The final risk/death production bridge was executed in real Chrome: 55 automated
+checks passed in test database suffix
+`auto-5567d66b-ed1d-4954-b4e4-2db1b0888f5f`. In a separate manual test database,
+claim → real 26-step risk fixture → fatal archive → duplicate retry → actual
+close/reopen/read retained the death record, defeat receipt and profile. The
+archived snapshot had 27 moves, HP 0, and retained its pre-fight 8 gold / 1 kill;
+no target-kill reward was granted. Test pages/server were closed and the test
+DBs retained. This validates production JavaScript/IndexedDB, not the Godot
+WebGL/JavaScriptBridge runtime itself.

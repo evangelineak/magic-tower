@@ -5,6 +5,7 @@
 <button id="claim">获取写权限</button><button id="read">读取当前完整存档</button><br>
 <button id="create">创建真实 A 新局</button><button id="retry_create">重复同请求创建 A</button><button id="save">保存 A 合法一步</button><button id="retry_save">重复同一步请求</button><button id="replace">明确替换为真实 B</button><br>
 <button id="settle">确认退役当前测试旅程</button><br>
+<button id="risk_setup">创建真实26步风险测试局</button><button id="death">确认当前测试致死战斗</button><br>
 <button id="selftest">独立随机库生产桥自动测试</button><pre id="log">准备中…</pre>
 <script>
 const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDatabase=query.get('db')||'magic-tower-journeys-v1-test-manual';
@@ -12,10 +13,10 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
 <script>
 (async()=>{
  const fixtures=await (await fetch('session_bridge_fixtures.json')).json();
- const owner=crypto.randomUUID();let auth,slot=0,revision=0,serial=0;
+ const owner=crypto.randomUUID();let auth,slot=0,revision=0,serial=0,lastReply=null;
  const id=fixtures.first.run_id;const saveId='cccccccccccccccccccccccccccccccc';
  const log=value=>document.querySelector('#log').textContent=JSON.stringify(value,null,2);
- const rpc=(operation,args={})=>new Promise((resolve,reject)=>{const request=++serial;const timeout=setTimeout(()=>reject(Error('HARNESS_TIMEOUT')),10000);MagicTowerJourneys.request(JSON.stringify({request,operation,args}),encoded=>{const answer=JSON.parse(encoded);clearTimeout(timeout);if(answer.request!==request)reject(Error('REQUEST_MISMATCH'));else resolve(answer.result)})});
+ const rpc=(operation,args={})=>new Promise((resolve,reject)=>{const request=++serial;const timeout=setTimeout(()=>reject(Error('HARNESS_TIMEOUT')),10000);MagicTowerJourneys.request(JSON.stringify({request,operation,args}),encoded=>{const answer=JSON.parse(encoded);lastReply=answer.result;clearTimeout(timeout);if(answer.request!==request)reject(Error('REQUEST_MISMATCH'));else resolve(answer.result)})});
  const short=r=>r.run?{...r,run:{...r.run,snapshot:{...r.run.snapshot,floors:`${r.run.snapshot.floors?.length} complete maps retained; omitted only from display`}}}:r;
  const click=(id,fn)=>document.querySelector(id).onclick=async()=>{try{log(short(await fn()))}catch(e){log({error:e.message})}};
  document.querySelector('#context').textContent='DB: '+MagicTowerJourneys.databaseName+' / owner '+owner;
@@ -34,6 +35,20 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    manualFinishArgs={auth:{...auth,expectedSlotRevision:current.slotRevision},id:current.run.id,expected:current.run.revision,outcome:'withdrawn',request_id:crypto.randomUUID().replaceAll('-',''),base,ended};
   }
   const result=await rpc('settle',manualFinishArgs);
+  if(result.ok){slot=result.slotRevision;auth.expectedSlotRevision=slot}return result;
+ });
+ click('#risk_setup',async()=>{
+  const created=await rpc('create',{auth,snapshot:fixtures.risk_fresh,replace:true,request_id:fixtures.risk_fresh.run_id});
+  if(!created.ok)return created;auth.expectedSlotRevision=created.slotRevision;slot=created.slotRevision;
+  return await rpc('save',{auth,id:fixtures.risk_fresh.run_id,expected:0,snapshot:fixtures.risk_base,request_id:'manual_risk_route_save_01'});
+ });
+ let manualDeathArgs=null;
+ click('#death',async()=>{
+  if(!manualDeathArgs){
+   const current=await rpc('read');if(!current.ok||!current.run)return current;
+   manualDeathArgs={auth:{...auth,expectedSlotRevision:current.slotRevision},id:current.run.id,expected:current.run.revision,delta:fixtures.risk_delta,request_id:crypto.randomUUID().replaceAll('-',''),base:current.run.snapshot,ended:fixtures.risk_dead};
+  }
+  const result=await rpc('death',manualDeathArgs);
   if(result.ok){slot=result.slotRevision;auth.expectedSlotRevision=slot}return result;
  });
  click('#selftest',async()=>{
@@ -80,8 +95,28 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    auth.expectedSlotRevision=3;
    r=await rpc('create',{auth,snapshot:fixtures.winner_fresh,replace:true,request_id:fixtures.winner_fresh.run_id});check(r.ok&&Object.keys(r.profile.receipts).length===1,'new active run preserves ledger');
    r=await rpc('settle',finishArgs);check(!r.ok&&r.code==='SUPERSEDED_OPERATION','old finished request cannot revive superseded journey');
+   auth.expectedSlotRevision=4;
+   r=await rpc('create',{auth,snapshot:fixtures.risk_fresh,replace:true,request_id:fixtures.risk_fresh.run_id});check(r.ok&&r.run.snapshot.mode==='risk','create explicit risk journey');auth.expectedSlotRevision=r.slotRevision;
+   r=await rpc('save',{auth,id:fixtures.risk_fresh.run_id,expected:0,snapshot:fixtures.risk_base,request_id:'risk_legal_route_save_0001'});check(r.ok,'persist real 26-step risk route');
+   const deathArgs={auth:{...auth},id:fixtures.risk_base.run_id,expected:1,delta:fixtures.risk_delta,request_id:'risk_death_request_000001',base:fixtures.risk_base,ended:fixtures.risk_dead};
+   for(const point of ['before_writes','after_profile','after_receipt','after_archive','after_slot']){
+    r=await rpc('death',{...deathArgs,test_abort:point});check(!r.ok&&r.code==='INJECTED_ABORT_'+point,'death abort '+point);
+    r=await rpc('read');check(r.ok&&r.slotRevision===5&&r.run.revision===1&&eq(r.run.snapshot,fixtures.risk_base)&&Object.keys(r.profile.receipts).length===1,'death rollback preserves full living state '+point);
+   }
+   r=await rpc('save',{auth,id:deathArgs.id,expected:1,snapshot:fixtures.risk_dead,request_id:'risk_forbidden_dead_save_01'});check(!r.ok,'death cannot bypass atomic archive with ordinary save');
+   r=await rpc('settle',{...deathArgs,outcome:'defeat'});check(!r.ok,'generic settlement cannot invent defeat');
+   const illicit=structuredClone(fixtures.risk_dead);illicit.gold+=100;
+   r=await rpc('death',{...deathArgs,ended:illicit});check(!r.ok&&r.code==='INVALID_END_TRANSITION','death grants no enemy gold or unrelated changes');
+   const died=await rpc('death',deathArgs);check(died.ok&&died.run.status==='archived'&&died.slotRevision===6&&died.run.revision===2&&eq(died.run.snapshot,fixtures.risk_dead),'atomic full death candidate and ledger');
+   check(died.receipt.summary.outcome==='defeat'&&died.receipt.summary.moves===fixtures.risk_base.moves+1,'defeat summary from actual fatal attempt');
+   r=await rpc('death',deathArgs);check(r.ok&&r.duplicate&&eq(r.receipt,died.receipt)&&r.slotRevision===6,'death lost ack retry no duplicate grant');
+   r=await rpc('death',{...deathArgs,delta:[0,1]});check(!r.ok,'changed lethal direction cannot replay old receipt');
+   r=await rpc('read');check(r.ok&&eq(r.run.snapshot,fixtures.risk_dead)&&eq(r.receipt,died.receipt),'death restart read retains exact record and receipt');
+   auth.expectedSlotRevision=6;
+   r=await rpc('create',{auth,snapshot:fixtures.next_fresh,replace:true,request_id:fixtures.next_fresh.run_id});check(r.ok&&Object.keys(r.profile.receipts).length===2,'new safe run preserves prior death ledger');
+   r=await rpc('death',deathArgs);check(!r.ok&&r.code==='SUPERSEDED_OPERATION','old death cannot reactivate newer journey');
    parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:window.MagicTowerJourneysTestDatabase,scope:'Production JS callback protocol + real IndexedDB, not Godot WebGL/JavaScriptBridge runtime'}},location.origin);
-  }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,checks,database:window.MagicTowerJourneysTestDatabase}},location.origin)}
+  }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,lastReply,checks,database:window.MagicTowerJourneysTestDatabase}},location.origin)}
  }
  log({ready:true,database:MagicTowerJourneys.databaseName});
 })();

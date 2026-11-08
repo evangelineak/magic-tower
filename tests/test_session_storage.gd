@@ -65,11 +65,11 @@ func run():
  var different=candidate.save_data();different.run_id=newer.run_id
  invalid=await adapter.commit_run(newer.slot,0,id,different,nonce())
  check(not invalid.ok,"storage key and snapshot identity must agree")
- # Production adapter deliberately supports only active safe-mode payloads.
- # A risk World is valid in the model but must not enter this storage batch.
+ # Both live modes are supported; unknown modes and uncommitted terminal payloads are not.
  var risk=World.new(42,2,newer.run_id,"risk").save_data()
  check(World.from_snapshot(risk)!=null,"risk negative fixture is a valid World, not malformed data")
- for unsupported in [risk, newer.snapshot.duplicate(true)]:
+ var invalid_mode=risk.duplicate(true);invalid_mode.mode="unsupported"
+ for unsupported in [invalid_mode, newer.snapshot.duplicate(true)]:
   if unsupported.mode=="safe":unsupported.ended_reason="withdrawn"
   var rejected=await adapter.commit_run(newer.slot,0,newer.run_id,unsupported,nonce())
   check(not rejected.ok and rejected.readonly,"adapter rejects unsupported mode or sealed payload on write")

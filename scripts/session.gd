@@ -30,11 +30,11 @@ func _gate(allow_terminal:bool=false) -> Dictionary:
 func _nonce() -> String: return Crypto.new().generate_random_bytes(16).hex_encode()
 func _clone(snapshot:Dictionary):
  return World.from_snapshot(snapshot)
-func new_run(seed_value:int,layout:int=2,replace_active:bool=false) -> Dictionary:
+func new_run(seed_value:int,layout:int=2,replace_active:bool=false,run_mode:String="safe") -> Dictionary:
  var gate=_gate(true)
  if not gate.is_empty(): return gate
- if seed_value<0 or seed_value>2147483647 or not layout in [1,2]: return _reply(false,"invalid","Invalid new journey options.")
- _pending={"kind":"create","seed":seed_value,"layout":layout,"replace":replace_active,"request_id":_nonce(),"effect":{"operation":"create"}}
+ if seed_value<0 or seed_value>2147483647 or not layout in [1,2] or not run_mode in ["safe","risk"]: return _reply(false,"invalid","Invalid new journey options.")
+ _pending={"kind":"create","mode":run_mode,"seed":seed_value,"layout":layout,"replace":replace_active,"request_id":_nonce(),"effect":{"operation":"create"}}
  return await _commit_pending()
 func open_current() -> Dictionary:
  if busy: return _reply(false,"busy")
@@ -95,7 +95,7 @@ func _validated_response(result):
   var value=result.get(key)
   if not (value is int or value is float) or not is_finite(float(value)) or value<0 or value>2147483647 or floor(float(value))!=value: return null
  var candidate=_clone(result.snapshot)
- if candidate==null or candidate.run_id!=result.run_id or not candidate.reward_eligible() or candidate.mode!="safe": return null
+ if candidate==null or candidate.run_id!=result.run_id or not candidate.reward_eligible() or not candidate.mode in ["safe","risk"]: return null
  if result.status=="active":
   if candidate.ended_reason!="": return null
   if result.profile.receipts.has(candidate.run_id): return null
@@ -104,7 +104,8 @@ func _validated_response(result):
   if not Profile.validate(result.profile).ok or not result.profile.receipts.has(candidate.run_id): return null
   if not _same_json(result.receipt,result.profile.receipts[candidate.run_id]): return null
   var outcome=result.receipt.summary.outcome
-  if not outcome in ["withdrawn","chapter1","victory"]: return null
+  if not outcome in ["withdrawn","chapter1","victory","defeat"]: return null
+  if outcome=="defeat" and candidate.mode!="risk": return null
   var derived=candidate.settlement_summary(outcome)
   if not derived.get("ok",false) or not _same_json(derived.summary,result.receipt.summary): return null
  return candidate
@@ -145,10 +146,22 @@ func finish(outcome:String) -> Dictionary:
  if world==null: return _reply(false,"empty","No active journey.")
  if not outcome in ["withdrawn","chapter1","victory"]: return _reply(false,"invalid","Unsupported settlement outcome.")
  var candidate=_clone(world.save_data())
- if candidate==null or candidate.mode!="safe" or not candidate.finish_run(outcome): return _reply(false,"rejected","This journey cannot settle with that outcome.")
+ if candidate==null or not candidate.mode in ["safe","risk"] or not candidate.finish_run(outcome): return _reply(false,"rejected","This journey cannot settle with that outcome.")
  var summary=candidate.settlement_summary(outcome)
  if not summary.get("ok",false): return _reply(false,"invalid","Journey settlement summary is invalid.")
  _pending={"kind":"settle","outcome":outcome,"candidate":candidate,"snapshot":candidate.save_data().duplicate(true),"summary":summary.summary.duplicate(true),"slot":slot,"revision":revision,"run_id":world.run_id,"request_id":_nonce(),"effect":{"operation":"settle","input":outcome}}
+ return await _commit_pending()
+func confirm_lethal(delta:Vector2i,expected_snapshot:Dictionary) -> Dictionary:
+ var gate=_gate()
+ if not gate.is_empty(): return gate
+ if world==null: return _reply(false,"empty","No active journey.")
+ if world.mode!="risk": return _reply(false,"rejected","Lethal combat requires an explicitly selected risk journey.")
+ if not _same_json(world.save_data(),expected_snapshot): return _reply(false,"stale_confirmation","The journey changed after this fight was previewed. Review the fight again.")
+ var candidate=_clone(world.save_data())
+ if candidate==null or not candidate.lethal_fight(delta): return _reply(false,"rejected","This is not a legal, predictable lethal fight.")
+ var summary=candidate.settlement_summary("defeat")
+ if not summary.get("ok",false): return _reply(false,"invalid","Defeat settlement summary is invalid.")
+ _pending={"kind":"death","delta":delta,"candidate":candidate,"snapshot":candidate.save_data().duplicate(true),"summary":summary.summary.duplicate(true),"slot":slot,"revision":revision,"run_id":world.run_id,"request_id":_nonce(),"effect":{"operation":"death","input":delta,"token":world.tile(world.pos+delta),"hero":world.hero_id}}
  return await _commit_pending()
 func retry_pending() -> Dictionary:
  if busy: return _reply(false,"busy")
@@ -159,7 +172,9 @@ func _commit_pending() -> Dictionary:
  busy=true
  var result
  if _pending.kind=="create":
-  result=await adapter.create_run(_pending.seed,_pending.layout,"safe",_pending.replace,_pending.request_id)
+  result=await adapter.create_run(_pending.seed,_pending.layout,_pending.mode,_pending.replace,_pending.request_id)
+ elif _pending.kind=="death":
+  result=await adapter.settle_death(_pending.slot,_pending.revision,_pending.run_id,_pending.delta,_pending.request_id)
  elif _pending.kind=="settle":
   result=await adapter.settle_run(_pending.slot,_pending.revision,_pending.run_id,_pending.outcome,_pending.request_id)
  else:
@@ -173,10 +188,10 @@ func _commit_pending() -> Dictionary:
  if restored==null:
   read_only=true
   return _reply(false,"invalid_response","Committed journey response failed validation; reload required.")
- if _pending.kind!="settle" and not profile.is_empty() and not _same_json(profile,result.profile):
+ if not _pending.kind in ["settle","death"] and not profile.is_empty() and not _same_json(profile,result.profile):
   read_only=true
   return _reply(false,"invalid_response","A non-settlement operation changed the profile ledger.")
- if _pending.kind=="settle":
+ if _pending.kind in ["settle","death"]:
   if result.status!="archived" or int(result.slot)!=_pending.slot+1 or int(result.revision)!=_pending.revision+1 or result.run_id!=_pending.run_id or restored.save_data()!=_pending.snapshot or not _same_json(result.receipt.summary,_pending.summary):
    read_only=true
    return _reply(false,"invalid_response","Settlement acknowledgement does not match the pending journey.")
@@ -198,7 +213,7 @@ func _commit_pending() -> Dictionary:
   # Keep the speculative transient message/battle snapshot for effects only now.
   world=_pending.candidate
  else:
-  var fresh=World.new(_pending.seed,_pending.layout,_pending.request_id,"safe")
+  var fresh=World.new(_pending.seed,_pending.layout,_pending.request_id,_pending.mode)
   if result.status!="active" or int(result.revision)!=0 or int(result.slot)<=slot or restored.run_id!=_pending.request_id or restored.save_data()!=fresh.save_data():
    read_only=true
    return _reply(false,"invalid_response","Created journey does not match the requested fresh run.")

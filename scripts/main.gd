@@ -11,6 +11,7 @@ const INK := Color("e5ebee")
 const MUTED := Color("7e96a4")
 const GOLD := Color("e9bd6d")
 const TEAL := Color("65dac4")
+const RED := Color("ed827f")
 const Session = preload("res://scripts/session.gd")
 var session = null # Explicit dependency injection; production uses the durable adapter.
 var world = null
@@ -62,6 +63,12 @@ var action_rows: Array = []
 var checkpoint_pending := Vector2i.ZERO
 var pending_reason := ""
 var reset_armed := false
+var selected_run_mode := "safe"
+var lethal_delta := Vector2i.ZERO
+var lethal_snapshot: Dictionary={}
+var lethal_preview: Dictionary={}
+var death_report := false
+var death_page := 0
 var hover := Vector2i(-1,-1)
 var tick := 0.0
 var buttons: Array = []
@@ -197,11 +204,15 @@ func _draw():
 	if not modal_open(): draw_tooltip()
 	if finish_pending!="": draw_finish_confirmation()
 	if is_terminal(): draw_terminal()
+	if reset_armed: draw_new_run_confirmation()
+	if not lethal_snapshot.is_empty(): draw_lethal_confirmation()
+	if death_report: draw_death_report()
 	if session!=null and (session.busy or session.read_only):
 		panel(Rect2(210,15,1020,44),Color("182738"))
 		label_at(Vector2(225,44),"Saving safely. Please wait." if session.busy else "Read-only: L reloads the current stored journey.",18,GOLD)
 func draw_sidebar():
 	panel(Rect2(752,72,504,704),Color("101c2a"))
+	label_at(Vector2(1100,106),"RISK MODE" if world.mode=="risk" else "SAFE MODE",14,GOLD)
 	if combat_art.has(world.hero_id): draw_texture_rect(combat_art[world.hero_id],Rect2(766,82,72,72),false)
 	label_at(Vector2(850,106),Progression.HEROES[world.hero_id].name,22,INK)
 	label_at(Vector2(850,134),"FOCUS %d / %d  |  %s" % [world.focus,world.focus_cap,"SKILL ARMED" if world.skill_armed else ("SKILL READY" if world.focus>0 else "NO FOCUS")],15,TEAL)
@@ -225,7 +236,7 @@ func draw_sidebar():
 	# Manual controls remain available by keyboard.
 	# label_at(Vector2(768,750),"WASD / arrows: manual actions. R / N twice: restart.",13,MUTED)
 func modal_open() -> bool:
-	return finish_pending!="" or is_terminal() or attuning or book or growth or interaction or journal or comparison or travel_menu or battle_time>0.0 or (world!=null and world.won)
+	return reset_armed or not lethal_snapshot.is_empty() or death_report or finish_pending!="" or is_terminal() or attuning or book or growth or interaction or journal or comparison or travel_menu or battle_time>0.0 or (world!=null and world.won)
 func wrapped_lines(source: String, width: float, size: int) -> Array[String]:
 	var result: Array[String]=[]
 	var remaining: String=display(source)
@@ -1059,10 +1070,33 @@ func _unhandled_input(event):
 		if event.keycode==KEY_F5: retry_save(); return
 		if event.keycode==KEY_L and (world==null or session.read_only or is_terminal() or not modal_open()): load_game(); return
 	if world==null: return
+	if death_report:
+		if event is InputEventKey and event.pressed and not event.echo:
+			if event.keycode==KEY_BRACKETLEFT: death_page=maxi(0,death_page-1)
+			elif event.keycode==KEY_BRACKETRIGHT: death_page=mini(death_page_count()-1,death_page+1)
+			else: death_report=false
+		elif event is InputEventMouseButton and event.pressed: death_report=false
+		return
+	if reset_armed:
+		if event is InputEventKey and event.pressed and not event.echo:
+			match event.keycode:
+				KEY_ESCAPE: reset_armed=false
+				KEY_S: selected_run_mode="safe"
+				KEY_D: selected_run_mode="risk"
+				KEY_ENTER: request_restart(reset_mode)
+				KEY_N: request_restart("new")
+				KEY_R: request_restart("replay")
+		return
+	if not lethal_snapshot.is_empty():
+		if event is InputEventKey and event.pressed and not event.echo:
+			if event.keycode==KEY_ESCAPE: clear_lethal()
+			elif event.keycode==KEY_ENTER: confirm_lethal()
+		return
 	if is_terminal():
 		if event is InputEventKey and event.pressed and not event.echo:
 			if event.keycode==KEY_N: request_restart("new")
 			elif event.keycode==KEY_R: request_restart("replay")
+			elif event.keycode==KEY_B and world.ended_reason=="death": death_report=true;death_page=0
 		elif event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 			if Rect2(250,595,350,48).has_point(get_global_mouse_position()): request_restart("new")
 		return
@@ -1222,18 +1256,26 @@ func request_restart(mode: String):
 	close_travel()
 	comparison=false
 	if reset_armed and reset_mode==mode:
-		var result: Dictionary=await session.new_run(world.seed_value if mode=="replay" else randi_range(1,2147483646),2,true)
+		var result: Dictionary=await session.new_run(world.seed_value if mode=="replay" else randi_range(1,2147483646),2,true,selected_run_mode)
 		apply_session_result(result)
 		if not result.get("committed",false): return
 		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	else:
-		reset_armed=true; reset_mode=mode
+		reset_armed=true; reset_mode=mode; selected_run_mode="safe"
 		ui_notice="Press %s again: %s. Autosave will be replaced." % ["R" if mode=="replay" else "N","replay this seed" if mode=="replay" else "start a new seed"]
 func move(direction: Vector2i, confirmed:=false):
 	if not can_mutate(): return
 	cancel_walk()
 	reset_armed=false
 	var target_token: String=world.tile(world.pos+direction)
+	if world.mode=="risk" and World.ENEMIES.has(target_token):
+		var preview: Dictionary=world.battle_preview(target_token,"",world.pos+direction)
+		if preview.get("valid",false) and not preview.get("survivable",false):
+			var timeline: Dictionary=world.battle_timeline(world.pos+direction)
+			if not timeline.get("valid",false) or not timeline.get("fatal",false): return
+			preview.skill_consumed=timeline.get("skill_consumed",false)
+			lethal_delta=direction; lethal_snapshot=world.save_data().duplicate(true); lethal_preview=preview.duplicate(true)
+			return
 	var key_cost := 2 if target_token=="L" else 1
 	if not confirmed and target_token in ["D","L"] and world.keys>=key_cost and not world.won:
 		checkpoint_pending=direction; pending_reason="door"
@@ -1269,7 +1311,7 @@ func save_game(_announce:=true):
 	apply_session_result(await session.save())
 func load_game():
 	if session==null or session.busy: return
-	close_attunement(); cancel_walk(); close_travel(); finish_pending=""
+	close_attunement(); cancel_walk(); close_travel(); finish_pending=""; clear_lethal(); death_report=false; reset_armed=false
 	var result: Dictionary=await session.reacquire_and_reload()
 	if result.get("status")=="empty" and world==null:
 		result=await session.new_run(initial_seed())
@@ -1312,9 +1354,12 @@ func dispatch_committed_effect(effect: Dictionary):
 		"action": action_effect(str(effect.get("input","")))
 		"walk": play_sound("move")
 		"undo": battle_time=0.0
+		"death":
+			clear_lethal(); cancel_walk(); battle_time=0.0; death_report=true; death_page=0; play_sound("impact")
 		"settle":
 			finish_pending=""; cancel_walk(); battle_time=0.0; play_sound("victory")
 		"create":
+			clear_lethal(); death_report=false
 			finish_pending=""
 			close_attunement(); close_travel(); comparison=false; journal=false; book=false
 			reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0
@@ -1355,7 +1400,7 @@ func pending_milestones() -> Array:
 func terminal_lines() -> Array[String]:
 	var receipt: Dictionary=session.receipt
 	var profile: Dictionary=session.profile
-	return [display({"withdrawn":"Exploration retired","chapter1":"Chapter one complete","victory":"Final victory recorded"}.get(receipt.get("summary",{}).get("outcome",""),"JOURNEY RECORDED")),"This journey is archived and read-only. Undo and further moves are unavailable.",
+	return [display({"defeat":"Journey ended in battle","withdrawn":"Exploration retired","chapter1":"Chapter one complete","victory":"Final victory recorded"}.get(receipt.get("summary",{}).get("outcome",""),"JOURNEY RECORDED")),"This journey is archived and read-only. Undo and further moves are unavailable.",
 		"New milestones: %s" % milestone_text(receipt.get("milestones",[])),
 		"Recorded milestones: %s" % milestone_text(profile.get("milestones",[])),
 		"Records and unlock identifiers provide no stat bonuses in this version."]
@@ -1372,6 +1417,7 @@ func draw_terminal():
 	panel(Rect2(250,595,350,48),Color("253748"))
 	label_at(Vector2(265,625),"N twice: new journey",19,GOLD)
 	label_at(Vector2(650,625),"L: reload record / F2: language",16,MUTED)
+	if world.ended_reason=="death": label_at(Vector2(245,565),"B: review the fatal events (read-only)",18,TEAL)
 
 func settlement_notice() -> String:
 	if session!=null and session.busy: return "Saving safely. Please wait."
@@ -1380,3 +1426,45 @@ func milestone_text(values: Array) -> String:
 	var floors: Array[int]=[]
 	for value in values: floors.append(int(value))
 	return str(floors)
+
+func clear_lethal():
+	lethal_delta=Vector2i.ZERO; lethal_snapshot={}; lethal_preview={}
+func confirm_lethal():
+	if lethal_snapshot.is_empty() or not can_mutate(): return
+	apply_session_result(await session.confirm_lethal(lethal_delta,lethal_snapshot.duplicate(true)))
+func draw_new_run_confirmation():
+	panel(Rect2(210,150,860,530),Color("101c2a"))
+	label_at(Vector2(245,200),"CHOOSE A NEW JOURNEY",26,GOLD)
+	draw_wrapped(Vector2(245,255),"S: Safe mode. Lethal battles are refused.",770,20,TEAL,2)
+	draw_wrapped(Vector2(245,325),"D: Risk mode. Confirmed lethal combat ends and records this run. No Undo after death.",770,20,GOLD,3)
+	label_at(Vector2(245,440),"RISK MODE" if selected_run_mode=="risk" else "SAFE MODE",24,GOLD)
+	draw_wrapped(Vector2(245,485),"This choice applies only to the new run. The current run is not converted. Replacing it abandons its unfinished progress.",770,18,INK,3)
+	label_at(Vector2(245,610),"ENTER: create chosen mode / ESC: cancel",20,TEAL)
+func draw_lethal_confirmation():
+	panel(Rect2(210,130,860,550),Color("101c2a"))
+	label_at(Vector2(245,180),"LETHAL BATTLE: CONFIRM DEATH?",25,RED)
+	label_at(Vector2(245,225),"Current HP %d / full fight forecast %d damage" % [world.hp,int(lethal_preview.get("damage",0))],19,GOLD)
+	draw_wrapped(Vector2(245,275),"Death ends and records this journey. It cannot be undone. No kill gold or after-battle healing is awarded.",770,19,INK,3)
+	draw_wrapped(Vector2(245,375),"An armed skill consumes focus. Thorns deal contact damage before your strike; lethal contact prevents that strike.",770,19,INK,3)
+	label_at(Vector2(245,485),"Focus %d / armed skill will consume: %s" % [world.focus,"yes" if lethal_preview.get("skill_consumed",false) else "no"],18,TEAL)
+	draw_wrapped(Vector2(245,525),settlement_notice(),770,16,RED,2)
+	label_at(Vector2(245,610),"ENTER: fight to the fatal event / ESC: cancel",20,GOLD)
+func draw_death_report():
+	panel(Rect2(210,130,860,550),Color("101c2a"))
+	label_at(Vector2(245,185),"Journey ended in battle",27,RED)
+	draw_wrapped(Vector2(245,235),"Only actual events up to death are shown. No victory or kill reward occurred.",770,19,INK,3)
+	var details: Dictionary=world.last_battle
+	label_at(Vector2(245,305),"Actual hero strikes %d / counters %d / HP lost %d" % [int(details.get("hero_hits",0)),int(details.get("counter_count",0)),int(details.get("damage",0))],18,GOLD)
+	var rows:=death_event_lines()
+	for i in range(death_page*6,mini(rows.size(),death_page*6+6)):
+		label_at(Vector2(245,350+(i-death_page*6)*37),rows[i],16,INK)
+	label_at(Vector2(245,595),"[ / ]: events page %d / %d" % [death_page+1,death_page_count()],17,GOLD)
+	label_at(Vector2(245,640),"Any other key: view the saved record",18,TEAL)
+func death_page_count() -> int:
+	return maxi(1,ceili(world.last_battle.get("events",[]).size()/6.0))
+func death_event_lines() -> Array[String]:
+	var lines: Array[String]=[]
+	var names={"hero_hit":"Hero strike","counter":"Enemy counter","first_strike":"Enemy first strike","feint":"Duelist opening counter","thorns":"Contact thorns","charged":"Heavy strike bonus"}
+	for item in world.last_battle.get("events",[]):
+		lines.append("%s: damage %d / HP %d / enemy HP %d" % [display(names.get(item.kind,item.kind)),int(item.damage),int(item.hp),int(item.enemy_hp)])
+	return lines

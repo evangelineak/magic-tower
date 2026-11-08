@@ -3,6 +3,18 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"INVALID_DELTA":"战斗方向无效，未修改旅程。",
+"INVALID_LETHAL_FIGHT":"当前状态不允许此致死战斗，未修改旅程。",
+"Risk combat: contact thorns resolve before your hit. A fatal contact stops that attack.":"风险战斗中先结算接触荆棘；若接触已致命，本次攻击不会击中敌人。",
+"Not an enemy.":"目标不是敌人。",
+"Defeated. No kill reward or recovery was granted.":"你已战败，未获得击杀奖励或战后恢复。",
+"Lethal combat requires an explicitly selected risk journey.":"只有明确选择的风险模式旅程可以确认致死战斗。",
+"The journey changed after this fight was previewed. Review the fight again.":"预览后旅程状态已改变，请重新查看战斗并确认。",
+"This is not a legal, predictable lethal fight.":"这不是可验证的致死战斗，未执行。",
+"Defeat settlement summary is invalid.":"战败结算摘要未通过校验。",
+"Invalid timeline input.":"战斗时序参数无效。",
+"TIMELINE_LIMIT":"战斗事件超过安全上限，未执行战斗或结算。",
+"Defeated. Contact thorns resolve before the hero hit.":"你已战败；接触荆棘在你的攻击命中前结算。",
 "A non-settlement operation changed the profile ledger.":"普通操作意外改变了跨局档案，已拒绝显示此结果；请读取实际存档。",
 "This journey is settled. Start a new journey to play again.":"这段旅程已结算；请明确新开一局继续游玩。",
 "Unsupported settlement outcome.":"不支持此结算结果。",

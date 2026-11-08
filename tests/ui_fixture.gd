@@ -32,7 +32,7 @@ class MemoryAdapter:
   var prior=replay(request,signature)
   if prior!=null:return prior
   if fail_before:fail_before=false;return failure("io_error")
-  if mode!="safe":return failure("invalid")
+  if mode not in ["safe","risk"]:return failure("invalid")
   if not record.is_empty() and record.get("status","active")=="active" and not replace:return failure("active_exists")
   var candidate=World.new(seed_value,layout,request,mode)
   if not candidate.generation_valid or not candidate.reward_eligible():return failure("invalid")
@@ -47,7 +47,7 @@ class MemoryAdapter:
   if record.get("status","active")!="active":return failure("conflict")
   if record.is_empty() or record.slot!=expected_slot or record.revision!=expected_revision or record.run_id!=run_id:return failure("conflict")
   var candidate=World.from_snapshot(snapshot)
-  if candidate==null or candidate.run_id!=run_id or not candidate.reward_eligible() or candidate.mode!="safe" or candidate.ended_reason!="":return failure("invalid")
+  if candidate==null or candidate.run_id!=run_id or not candidate.reward_eligible() or candidate.mode not in ["safe","risk"] or candidate.ended_reason!="":return failure("invalid")
   record.snapshot=snapshot.duplicate(true); record.revision+=1
   return remember(request,signature)
  func settle_run(expected_slot,expected_revision,run_id,outcome,request):
@@ -58,12 +58,28 @@ class MemoryAdapter:
   if fail_before:fail_before=false;return failure("io_error")
   if record.is_empty() or record.get("status","active")!="active" or record.slot!=expected_slot or record.revision!=expected_revision or record.run_id!=run_id:return failure("conflict")
   var candidate=World.from_snapshot(record.snapshot)
-  if candidate==null or candidate.run_id!=run_id or candidate.mode!="safe" or not candidate.reward_eligible() or not candidate.finish_run(outcome):return failure("invalid")
+  if candidate==null or candidate.run_id!=run_id or candidate.mode not in ["safe","risk"] or not candidate.reward_eligible() or not candidate.finish_run(outcome):return failure("invalid")
   var summary=candidate.settlement_summary(outcome)
   if not summary.get("ok",false):return failure("invalid")
   var settled=Profile.settle(profile,run_id,summary.summary)
   if not settled.ok:return failure(settled.status)
   # Publish archive and ledger together, only after every validation succeeds.
+  profile=settled.profile.duplicate(true)
+  record={"snapshot":candidate.save_data(),"run_id":run_id,"slot":expected_slot+1,"revision":expected_revision+1,"eligible":true,"status":"archived","receipt":settled.receipt.duplicate(true),"profile":profile.duplicate(true)}
+  return remember(request,signature)
+ func settle_death(expected_slot,expected_revision,run_id,delta:Vector2i,request):
+  if not World.valid_run_id(request) or request=="":return failure("invalid")
+  var signature=JSON.stringify(["death",expected_slot,expected_revision,run_id,[delta.x,delta.y]])
+  var prior=replay(request,signature)
+  if prior!=null:return prior
+  if fail_before:fail_before=false;return failure("io_error")
+  if record.is_empty() or record.get("status","active")!="active" or record.slot!=expected_slot or record.revision!=expected_revision or record.run_id!=run_id:return failure("conflict")
+  var candidate=World.from_snapshot(record.snapshot)
+  if candidate==null or candidate.run_id!=run_id or candidate.mode!="risk" or not candidate.reward_eligible() or not candidate.lethal_fight(delta):return failure("invalid")
+  var summary=candidate.settlement_summary("defeat")
+  if not summary.get("ok",false):return failure("invalid")
+  var settled=Profile.settle(profile,run_id,summary.summary)
+  if not settled.ok:return failure(settled.status)
   profile=settled.profile.duplicate(true)
   record={"snapshot":candidate.save_data(),"run_id":run_id,"slot":expected_slot+1,"revision":expected_revision+1,"eligible":true,"status":"archived","receipt":settled.receipt.duplicate(true),"profile":profile.duplicate(true)}
   return remember(request,signature)
@@ -75,7 +91,7 @@ static func bind(scene,world):
  serial+=1
  var data:Dictionary=world.save_data().duplicate(true)
  data.run_id="ui_fixture_%020d"%serial
- data.mode="safe";data.ended_reason=""
+ data.ended_reason="" # Preserve explicit safe/risk fixture mode.
  var candidate=World.from_snapshot(data)
  assert(candidate!=null,"Synthetic fixture must satisfy full World validation")
  var adapter=scene.session.adapter

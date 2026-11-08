@@ -1,5 +1,30 @@
 extends RefCounted
 const EXACT = {
+"B: review the fatal events (read-only)":"B：复盘致命事件（只读）",
+"yes":"是",
+"no":"否",
+"Hero strike":"英雄攻击",
+"Enemy counter":"敌方反击",
+"Enemy first strike":"敌方先制",
+"Duelist opening counter":"决斗装开局反击",
+"Contact thorns":"荆棘接触伤害",
+"Heavy strike bonus":"重击额外伤害",
+"Any other key: view the saved record":"其他按键：查看已保存记录",
+"RISK MODE":"风险模式",
+"SAFE MODE":"安全模式",
+"CHOOSE A NEW JOURNEY":"选择新旅程模式",
+"S: Safe mode. Lethal battles are refused.":"S：安全模式。拒绝会导致死亡的战斗。",
+"D: Risk mode. Confirmed lethal combat ends and records this run. No Undo after death.":"D：风险模式。确认致命战斗后，本局死亡即结束并记录，不能撤销。",
+"This choice applies only to the new run. The current run is not converted. Replacing it abandons its unfinished progress.":"模式只用于新局，不会改变当前旅程。替换新局会放弃当前未完成的进度。",
+"ENTER: create chosen mode / ESC: cancel":"回车：以所选模式开局 / Esc：取消",
+"LETHAL BATTLE: CONFIRM DEATH?":"致命战斗：确认冒险？",
+"Death ends and records this journey. It cannot be undone. No kill gold or after-battle healing is awarded.":"死亡会结束并记录本局，无法撤销。不会获得击杀金币或战后治疗。",
+"An armed skill consumes focus. Thorns deal contact damage before your strike; lethal contact prevents that strike.":"已备战技能会消耗专注。荆棘先造成接触伤害，若因此死亡，本次攻击不会出手。",
+"ENTER: fight to the fatal event / ESC: cancel":"回车：战斗至致命事件 / Esc：取消",
+"Journey ended in battle":"旅程在战斗中结束",
+"Only actual events up to death are shown. No victory or kill reward occurred.":"只显示死亡前实际发生的事件；没有胜利，也没有击杀奖励。",
+"Any key: view the saved record":"任意键：查看已保存记录",
+
 "Exploration retired":"探索已结束",
 "Chapter one complete":"首章已完成",
 "Final victory recorded":"最终胜利已记录",
@@ -383,6 +408,11 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["Focus %d / armed skill will consume: %s","当前专注 %d / 本场消耗备战技能：%s"],
+["Actual hero strikes %d / counters %d / HP lost %d","实际攻击 %d 次 / 反击 %d 次 / 损失生命 %d"],
+["[ / ]: events page %d / %d","[ / ]：战报第 %d / %d 页"],
+["%s: damage %d / HP %d / enemy HP %d","%s：伤害 %d / 生命 %d / 敌方生命 %d"],
+["Current HP %d / full fight forecast %d damage","当前生命 %d / 完整战斗预估损血 %d"],
 ["Pending first records: %s (only after saving)","待首次记录：%s（保存成功后才记入）"],
 ["New milestones: %s","本次首次记录：%s"],
 ["Recorded milestones: %s","累计里程碑：%s"],

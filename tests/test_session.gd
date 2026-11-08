@@ -69,6 +69,25 @@ class FakeStore:
   op=request;signature=sig;writes+=1
   if lost_ack:lost_ack=false;return failure("ack_lost",true)
   return response()
+ func settle_death(expected_slot,expected_revision,run_id,delta,request):
+  if delay: await Engine.get_main_loop().process_frame
+  var sig=JSON.stringify([expected_slot,expected_revision,run_id,[delta.x,delta.y],"death"])
+  if conflict:return failure("conflict")
+  if op==request:return response() if signature==sig else failure("conflict")
+  if fail_before:fail_before=false;return failure("io_error",true)
+  if record.is_empty() or expected_slot!=record.slot or expected_revision!=record.revision or run_id!=record.run_id or record.get("status","active")!="active":return failure("conflict")
+  var candidate=World.from_snapshot(record.snapshot)
+  if candidate==null or not candidate.lethal_fight(delta):return failure("invalid")
+  var derived=candidate.settlement_summary("defeat")
+  if not derived.ok:return failure("invalid")
+  var settled=Profile.settle(profile,run_id,derived.summary)
+  if not settled.ok:return failure("invalid")
+  profile=settled.profile
+  record.snapshot=candidate.save_data();record.revision+=1;record.slot+=1
+  record.status="archived";record.receipt=settled.receipt;record.profile=profile.duplicate(true)
+  op=request;signature=sig;writes+=1
+  if lost_ack:lost_ack=false;return failure("ack_lost",true)
+  return response()
 func check(ok:bool,label:String):
  checks+=1
  if not ok:failures+=1;push_error(label)
@@ -180,6 +199,7 @@ func run():
   broken_store.response_patch=patch
   check(not (await broken_session.action("hero_ranger")).ok and broken_session.world.save_data()==old and broken_session.history.is_empty(),"commit rejects wrong slot or non-CAS revision without publishing")
  await settlement_cases()
+ await death_cases()
  print("SESSION: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
  quit(0 if failures==0 else 1)
 
@@ -282,3 +302,73 @@ func settlement_cases():
  var saved_profile=preserve.profile.duplicate(true);var saved_end=preserve.world.save_data().duplicate(true)
  preserve_store.response_patch={"profile":Profile.fresh()}
  check(not (await preserve.new_run(42)).ok and preserve.profile==saved_profile and preserve.world.save_data()==saved_end and preserve.terminal,"new run acknowledgement cannot erase previous ledger")
+
+func lethal_fixture(store,session):
+ var probe=World.from_snapshot(session.world.save_data())
+ probe.hp=1
+ for y in range(1,10):
+  for x in range(1,10):
+   var point=Vector2i(x,y)
+   if not World.ENEMIES.has(probe.tile(point)):continue
+   if probe.battle_preview(probe.tile(point)).get("damage",0)<1:continue
+   for delta in [Vector2i.RIGHT,Vector2i.DOWN,Vector2i.LEFT,Vector2i.UP]:
+    var origin=point-delta
+    if probe.tile(origin)!=".":continue
+    probe.pos=origin
+    if World.from_snapshot(probe.save_data())==null:continue
+    store.record.snapshot=probe.save_data()
+    check((await session.open_current()).ok,"load fully valid low-HP controller fixture")
+    return delta
+ return Vector2i.ZERO
+func death_cases():
+ var safe_store=FakeStore.new();var safe=Session.new(safe_store)
+ check((await safe.new_run(0)).ok and safe.world.mode=="safe","old new_run call still defaults to safe")
+ var direction=await lethal_fixture(safe_store,safe)
+ check(direction!=Vector2i.ZERO,"adjacent predictable lethal enemy fixture exists")
+ var before=safe.world.save_data().duplicate(true)
+ check(not (await safe.confirm_lethal(direction,before)).ok and safe.world.save_data()==before and safe_store.profile.receipts.is_empty(),"safe never opts into death via confirm API")
+ var store=FakeStore.new();store.json_transport=true
+ var session=Session.new(store)
+ check((await session.new_run(0,2,false,"risk")).ok and session.world.mode=="risk","explicit risk new run")
+ direction=await lethal_fixture(store,session)
+ before=session.world.save_data().duplicate(true)
+ check(not (await session.step(direction)).ok and session.world.save_data()==before,"ordinary risk movement still never kills without confirmation")
+ check(not (await session.finish("defeat")).ok,"ordinary finish cannot manufacture defeat")
+ for delta in [Vector2i.ZERO,Vector2i(2,0),Vector2i(1,1)]:
+  check(not (await session.confirm_lethal(delta,before)).ok and session.world.save_data()==before,"invalid lethal direction rejected")
+ var stale=before.duplicate(true);stale.gold+=1
+ check((await session.confirm_lethal(direction,stale)).status=="stale_confirmation","full snapshot change rejects confirmation")
+ check((await session.action("arm")).ok,"risk skill arm remains ordinary committed action")
+ check((await session.confirm_lethal(direction,before)).status=="stale_confirmation","skill change after modal rejects stale preview")
+ before=session.world.save_data().duplicate(true)
+ var history=session.history.duplicate(true)
+ store.fail_before=true
+ check(not (await session.confirm_lethal(direction,before)).ok and not session.terminal and session.world.save_data()==before and session.history==history,"death IO failure keeps player alive and undo intact")
+ store.lost_ack=true
+ check(not (await session.retry_pending()).ok and session.world.save_data()==before and session.history==history,"death committed but ack lost remains unpublished")
+ var writes=store.writes
+ var result=await session.retry_pending()
+ check(result.ok and result.effect.operation=="death" and result.effect.input==direction and result.effect.token==World.from_snapshot(before).tile(Vector2i(before.x,before.y)+direction),"death retry returns exact original fight effect")
+ check(session.terminal and session.world.hp==0 and session.world.ended_reason=="death" and session.history.is_empty(),"death publishes terminal and clears undo only after acknowledgement")
+ check(session.receipt.summary.outcome=="defeat" and session.receipt.milestones.is_empty() and session.receipt.unlocked.is_empty(),"first-floor death issues receipt but no milestone reward")
+ check(store.writes==writes and store.profile.receipts.size()==1,"death retry grants no duplicate reward or revision")
+ check(session.world.kills==before.kills and session.world.gold==before.gold and session.world.keys==before.keys and session.world.floors==before.floors,"death gives no kill/loot/map reward")
+ check(session.world.focus==before.focus-1 and not session.world.skill_armed,"armed skill consumes focus once even if fatal")
+ check((await session.undo()).status=="terminal" and (await session.action("arm")).status=="terminal","dead run cannot resurrect through history or gameplay")
+ check(not (await session.retry_pending()).has("effect"),"death effect cannot be replayed after pending cleared")
+ var reloaded=Session.new(store)
+ check((await reloaded.open_current()).ok and reloaded.terminal and reloaded.world.hp==0,"death reload restores permanent ended state")
+ var id=reloaded.world.run_id
+ check((await reloaded.new_run(1,2,false,"safe")).ok and reloaded.world.run_id!=id and reloaded.world.mode=="safe" and reloaded.profile.receipts.size()==1,"new safe life has new identity and preserves receipt")
+ # A living risk journey can retire normally, without pretending it died.
+ check((await reloaded.new_run(2,2,true,"risk")).ok and (await reloaded.finish("withdrawn")).ok and reloaded.receipt.summary.outcome=="withdrawn","living risk retirement uses ordinary settlement")
+ # Reject an old death candidate if another writer advances/replaces the run.
+ var conflict_store=FakeStore.new();var conflict_session=Session.new(conflict_store)
+ await conflict_session.new_run(0,2,false,"risk")
+ direction=await lethal_fixture(conflict_store,conflict_session)
+ before=conflict_session.world.save_data().duplicate(true)
+ conflict_store.lost_ack=true
+ await conflict_session.confirm_lethal(direction,before)
+ await conflict_store.create_run(3,2,"safe",true,"replacement_risk_0123456789")
+ check(not (await conflict_session.retry_pending()).ok and conflict_session.read_only and conflict_session.world.save_data()==before,"newer run fences old death response without replacing visible world")
+ check((await conflict_session.reacquire_and_reload()).ok and not conflict_session.terminal and conflict_session.world.mode=="safe","explicit reload follows newer live identity")

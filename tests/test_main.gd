@@ -144,10 +144,11 @@ func run_tests():
 	event.keycode=KEY_N; scene._unhandled_input(event)
 	check(scene.world.seed_value==seed_before,"one N does not overwrite journey")
 	event.keycode=KEY_D; scene._unhandled_input(event)
+	check(scene.selected_run_mode=="risk" and scene.world.mode=="safe" and scene.world.seed_value==seed_before,"new-run risk selection does not convert current safe journey")
+	event.keycode=KEY_LEFT; scene._unhandled_input(event)
+	check(scene.world.moves==0 and scene.reset_armed,"mode confirmation blocks movement")
 	event.keycode=KEY_N; scene._unhandled_input(event)
-	check(scene.world.moves==1 and scene.world.seed_value==seed_before,"movement cancels armed new-run confirmation")
-	scene._unhandled_input(event)
-	check(scene.growth and scene.growth_tab==0 and scene.world.moves==0 and scene.world.seed_value>0,"confirmed new seed presents hero choices")
+	check(scene.growth and scene.world.mode=="risk" and scene.world.moves==0,"confirmed risk new seed presents hero choices")
 	await Fixture.bind(scene,load("res://scripts/world.gd").new(0,1)); scene.history.clear()
 	scene.growth=true; scene.growth_tab=0
 	await scene.save_game(false)
@@ -402,5 +403,63 @@ func run_tests():
 	check(scene.settlement_outcome()=="victory" and not scene.is_terminal(),"Z victory still awaits explicit settlement")
 	scene.request_finish();await scene.confirm_finish()
 	check(scene.is_terminal() and scene.session.receipt.summary.outcome=="victory","Z confirmation records final victory")
+	# Synthetic risk fixture is test-only; production must use explicit new-run selection.
+	var risk_world=load("res://scripts/world.gd").new(0,1,"","risk")
+	risk_world.hp=1; risk_world.defense=0; risk_world.pos=Vector2i(3,4)
+	# Locate a real enemy with an ordinary adjacent floor without altering map contents.
+	var lethal_direction:=Vector2i.ZERO
+	for yy in range(11):
+		for xx in range(11):
+			if risk_world.tile(Vector2i(xx,yy))!="s": continue
+			for dd in [Vector2i.RIGHT,Vector2i.LEFT,Vector2i.UP,Vector2i.DOWN]:
+				if risk_world.tile(Vector2i(xx,yy)-dd)==".": risk_world.pos=Vector2i(xx,yy)-dd; lethal_direction=dd
+	await Fixture.bind(scene,risk_world)
+	scene.growth=false;scene.reset_armed=false;scene.finish_pending=""
+	var alive=scene.world.save_data().duplicate(true)
+	var sound_before=scene.sound_event_count
+	await scene.move(lethal_direction)
+	check(not scene.lethal_snapshot.is_empty() and scene.world.save_data()==alive,"risk move previews lethal fight without mutating live world")
+	event.keycode=KEY_F2;scene._unhandled_input(event)
+	check(scene.lethal_snapshot==alive,"language switch preserves original confirmation snapshot")
+	event.keycode=KEY_UP;scene._unhandled_input(event)
+	check(scene.world.save_data()==alive,"lethal confirmation blocks movement")
+	event.keycode=KEY_ESCAPE;scene._unhandled_input(event)
+	check(scene.lethal_snapshot.is_empty() and scene.world.save_data()==alive,"cancel preserves the living run")
+	await scene.move(lethal_direction)
+	await scene.session.action("arm")
+	scene.world=scene.session.world
+	var changed_before=scene.world.save_data().duplicate(true)
+	await scene.confirm_lethal()
+	check(not scene.is_terminal() and scene.world.save_data()==changed_before and not scene.lethal_snapshot.is_empty(),"changed current state refuses frozen lethal confirmation instead of silently refreshing it")
+	scene.clear_lethal()
+	await Fixture.bind(scene,risk_world);scene.growth=false
+	alive=scene.world.save_data().duplicate(true);sound_before=scene.sound_event_count
+	await scene.move(lethal_direction)
+	scene.session.adapter.lost_ack=true
+	await scene.confirm_lethal()
+	check(not scene.is_terminal() and scene.world.save_data()==alive and scene.sound_event_count==sound_before,"lost death acknowledgement leaves live display and audio unchanged")
+	await scene.retry_save()
+	check(scene.is_terminal() and scene.world.hp==0 and scene.death_report and scene.battle_time==0,"retry publishes durable death report, never full victory replay")
+	check(scene.world.gold==alive.gold and scene.world.kills==alive.kills and scene.world.pos==Vector2i(alive.x,alive.y),"death does not grant kill gold, kills or advance into enemy")
+	check(scene.world.last_battle.fatal and scene.death_event_lines().size()==scene.world.last_battle.events.size(),"report uses actual fatal event prefix")
+	check(scene.sound_event_count==sound_before+1,"durable death has one impact sound")
+	await scene.retry_save()
+	check(scene.sound_event_count==sound_before+1,"duplicate retry cannot replay death effects")
+	await scene.load_game()
+	check(scene.is_terminal() and not scene.death_report and scene.session.receipt.summary.outcome=="defeat","reload restores defeat receipt without replay")
+	var archived_before=Fixture.snapshot(scene)
+	var archived_sound=scene.sound_event_count
+	event.keycode=KEY_B;scene._unhandled_input(event)
+	check(scene.death_report and not scene.death_event_lines().is_empty(),"B reopens reconstructed actual death events after L")
+	check(Fixture.snapshot(scene)==archived_before and scene.sound_event_count==archived_sound,"read-only death review neither writes nor replays sound")
+	for armed_hero in ["warden","ranger"]:
+		var armed_world=load("res://scripts/world.gd").new(0,1,"","risk")
+		armed_world.pos=risk_world.pos;armed_world.hp=1;armed_world.defense=0
+		armed_world.hero_id=armed_hero;armed_world.skill_armed=true;armed_world.focus=2
+		await Fixture.bind(scene,armed_world);scene.death_report=false;scene.growth=false
+		await scene.move(lethal_direction)
+		check(scene.lethal_preview.get("skill_consumed",false),"lethal confirmation uses actual armed "+armed_hero+" consumption, not survivor forecast flag")
+		await scene.confirm_lethal()
+		check(scene.is_terminal() and scene.world.focus==1 and not scene.world.skill_armed,"armed "+armed_hero+" death consumes exactly one focus")
 	print("UI integration: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
 	quit(0 if failures==0 else 1)
