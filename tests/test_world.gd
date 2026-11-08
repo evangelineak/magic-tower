@@ -66,10 +66,22 @@ func _init():
 	check(not w.loan_used and w.debt()==0,"baseline wins with no borrowing")
 	var return_world = World.new(0)
 	check(return_world.restore(before_boss),"restore later-growth state")
-	for i in range(2):
+	# A late optional boss requires a build, not merely vacuuming floor loot.
+	# Walk all the way back to the real merchant and pay with earned gold.
+	for i in range(4):
 		var path := find_path(return_world,Vector2i(1,1))
-		check(not path.is_empty(),"return stairs reachable")
-		for direction in path: check(return_world.step(direction),"return step legal")
+		check(not path.is_empty(),"merchant return stairs reachable")
+		for direction in path: check(return_world.step(direction),"merchant return step legal")
+	for direction in find_path(return_world,Vector2i(2,2)):
+		check(return_world.step(direction),"walk to merchant")
+	check(return_world.action("buy"),"earned gold buys real weapon for optional vault build")
+	for talent in ["keen_edge","trained_focus","giant_slayer"]:
+		check(return_world.action("talent_"+talent),"actual kills unlock build talent: "+talent)
+	for i in range(2):
+		var path := find_path(return_world,Vector2i(9,9))
+		check(not path.is_empty(),"vault return stairs reachable")
+		for direction in path: check(return_world.step(direction),"vault return step legal")
+	check(return_world.action("arm"),"remaining legitimate focus prepares vault skill")
 	check(return_world.floor_index==2,"returned to floor 3 after growth")
 	check(return_world.damage("V")>0 and return_world.damage("V")<return_world.hp,"late vault now beatable")
 	for goal in [Vector2i(8,3),Vector2i(9,3)]:
@@ -100,7 +112,7 @@ func find_path(w, goal: Vector2i) -> Array:
 			if visited.has(n): continue
 			var t: String=w.tile(n)
 			if t=="#" or (t=="~" and w.water_choice!="drain") or (t in ["<",">"] and n!=goal) or (t in ["B","K","V"] and n!=goal): continue
-			if t=="D": continue # safe route does not require optional doors
+			if t in ["D","L"]: continue # safe route does not require optional doors
 			if World.ENEMIES.has(t) and (w.damage(t)<0 or w.damage(t)>=w.hp): continue
 			visited[n]=true
 			var next: Array=item[1].duplicate(); next.append(d)

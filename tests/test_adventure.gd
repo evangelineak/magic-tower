@@ -70,8 +70,8 @@ func _init():
 	w=World.new(0)
 	check(w.action("quest_accept") and w.quest_state==1,"NPC quest accepted")
 	check(not w.action("quest_gold"),"quest reward requires sample")
-	w.enter_floor(2); w.pos=Vector2i(1,8)
-	check(w.step(Vector2i.RIGHT) and w.quest_state==2,"sample acquired through movement")
+	w.enter_floor(2); w.pos=Vector2i(2,7)
+	check(w.step(Vector2i.DOWN) and w.quest_state==2,"sample acquired through movement")
 	w.enter_floor(0); w.pos=Vector2i(1,1)
 	var gold_before: int=w.gold
 	check(w.action("quest_gold") and w.quest_state==3 and w.gold>gold_before,"returned sample pays chosen reward")

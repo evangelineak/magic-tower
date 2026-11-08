@@ -4,16 +4,16 @@ const Generator = preload("res://scripts/generation.gd")
 const Progression = preload("res://scripts/progression.gd")
 
 const MAPS = [
-["###########","#@.k..#..a#","#JM#..#...#","#h.#s.D.s.#","#..#..#...#","#..a..#h..#","#.###.###.#","#...s...k.#","#d..#..s..#","#...#....>#","###########"],
-["###########","#<....#.Ra#","#.##s.#~~~#","#k.#..D.b.#","#OC#..#...#","#h.d..#h..#","#.###.###.#","#...g...k.#","#a..#..s..#","#...#....>#","###########"],
-["###########","#<.hE.#..a#","#..#g.#..##","#k.#..D.VT#","#..#..#..##","#..a..#h..#","#.###.###.#","#...g...k.#","#dI.#..g..#","#...#....>#","###########"],
-["###########","#<.a..#..a#","#..#g.#...#","#N.#..D.g.#","#.X#..#...#","#h.F..#h..#","#.###.###.#","#...u...k.#","#a..#..g..#","#...#....>#","###########"],
+["###########","#@.k..#..a#","#JM#..#...#","#h.#s.D.s.#","#..#..#...#","#..a..#h..#","#.###.###.#","#...s.....#","##d.#..s..#","#$L.#....>#","###########"],
+["###########","#<....#.Ra#","#.##s.#~~~#","#k.#..D.b.#","#OC#..#...#","#h.d..#h..#","#.###.###.#","#...g.....#","#a..#..s..#","#...#....>#","###########"],
+["###########","#<.hE.#..a#","#..#g.#..##","#k.#..D.VT#","#..#..#..##","#..a..#h..#","#.###.###.#","#...g.....#","##Id#..g..#","#AL.#....>#","###########"],
+["###########","#<.a..#..a#","#..#g.#...#","#N.#..D.g.#","#.X#..#...#","#h.F..#h..#","#.###.###.#","#...u...k.#","##a.#..g..#","#PL.#....>#","###########"],
 ["###########","#<.a..#..a#","#..#g.#...#","#Q.#..D.K.#","#..#..#...#","#h.a..#h..#","#.###.###.#","#...g...k.#","#d..#..g..#","#...#.....#","###########"]]
 const ENEMIES = {
 "s": {"name":"Mossling", "hp":35, "atk":14, "def":3, "gold":8},
 "g": {"name":"Sentinel", "hp":75, "atk":25, "def":10, "gold":18},
-"u": {"name":"Veil Stalker", "hp":40, "atk":20, "def":4, "gold":12, "first_strike":true},
-"b": {"name":"Briar Sentinel", "hp":70, "atk":22, "def":8, "gold":16, "thorns":2},
+"u": {"name":"Veil Stalker", "hp":95, "atk":42, "def":14, "gold":12, "first_strike":true},
+"b": {"name":"Briar Sentinel", "hp":90, "atk":35, "def":12, "gold":16, "thorns":2},
 "V": {"name":"Vault Colossus", "hp":180, "atk":100, "def":65, "gold":30},
 "K": {"name":"Astral Regent", "hp":450, "atk":65, "def":40, "gold":100},
 "B": {"name":"Hollow King", "hp":220, "atk":42, "def":20, "gold":100}}
@@ -50,7 +50,7 @@ var checkpoints := 0
 var floors: Array = []
 var floor_index := 0
 var pos := Vector2i(1,1)
-var hp := 360
+var hp := 280
 var atk := 18
 var defense := 8
 var keys := 0
@@ -89,8 +89,8 @@ func step(direction: Vector2i) -> bool:
 		message="Flooded. The valve offers a route or healing, not both."
 		return false
 	if (t == ">" and floor_index >= MAPS.size()-1) or (t == "<" and floor_index == 0): return false
-	if t == "D" and keys == 0:
-		message = "Locked. A gold key is needed."
+	if t in ["D","L"] and keys < (2 if t=="L" else 1):
+		message = "Double lock: 2 gold keys required. Reward cages compete for keys." if t=="L" else "Locked. A gold key is needed."
 		return false
 	if ENEMIES.has(t):
 		var cost := damage(t)
@@ -108,6 +108,15 @@ func step(direction: Vector2i) -> bool:
 		gain_gold(ENEMIES[t].gold)
 		message = "%s defeated. -%d HP" % [ENEMIES[t].name, cost]
 		if t == "K": won = true
+	elif t == "$":
+		gain_gold(60)
+		message="Sealed treasury: +60 gold. Two keys spent, other cages remain."
+	elif t == "A":
+		atk+=5
+		message="Sealed edge: +5 ATK. A key investment in your next battle."
+	elif t == "P":
+		hp+=140; focus=mini(focus_cap,focus+1)
+		message="Sealed provisions: +140 HP / +1 focus up to capacity."
 	elif t == "I":
 		quest_state=2
 		message="Recovered survey: return to the cartographer on floor 1."
@@ -126,12 +135,12 @@ func step(direction: Vector2i) -> bool:
 	elif t == "k":
 		keys += 1
 		message = "A gold key. Every door is a decision."
-	elif t == "D":
-		keys -= 1
+	elif t in ["D","L"]:
+		keys -= 2 if t=="L" else 1
 		message = "The seal breaks."
 	elif t == "h":
-		hp += 100
-		message = "Spring water: +100 HP"
+		hp += 70
+		message = "Spring water: +70 HP"
 	elif t == "a":
 		atk += 5
 		message = "Ruby of resolve: +5 ATK"
@@ -157,8 +166,15 @@ func nearby(token: String) -> bool:
 	for d in [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
 		if tile(pos+d)==token: return true
 	return false
+func consume_nearby(token: String):
+	for direction in [Vector2i.ZERO,Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+		var target: Vector2i=pos+direction
+		if tile(target)==token:
+			floors[floor_index][target.y][target.x]="."
+			return
 func pay(amount: int):
-	var paid := mini(amount, debt())
+	if amount<=0: return
+	var paid := mini(mini(amount, debt()),gold)
 	gold -= paid
 	var part := mini(paid, fees)
 	fees -= part; paid -= part
@@ -167,9 +183,11 @@ func pay(amount: int):
 	principal -= paid
 	if debt()==0: overdue=false
 func gain_gold(amount: int):
+	if amount<=0: return
 	gold += amount
 	if overdue: pay(amount)
 func settle_checkpoint(number: int):
+	number=clampi(number,0,2)
 	if number <= checkpoints: return
 	for n in range(checkpoints+1, number+1):
 		if principal>0: interest += ceili(principal*0.1)
@@ -236,6 +254,7 @@ func action(id: String) -> bool:
 			if not nearby("R") or chest_claimed: return false
 			var choice:=id.trim_prefix("relic_")
 			chest_claimed=true; inventory.append(choice); equipped=choice
+			consume_nearby("R")
 			message="Relic chosen: %s. The other relic is sealed away." % Progression.GEAR[choice].name
 		"smuggler_sell","smuggler_buy":
 			if not nearby("X") or event_done or event_kind!="smuggler": return false
@@ -300,18 +319,19 @@ func action(id: String) -> bool:
 		"secret":
 			if not nearby("Q") or not clue or core_use!="elevator" or secret: return false
 			secret=true; hp+=80
+			consume_nearby("Q")
 			message="The bell rings! A forgotten traveler left +80 HP."
 		_: return false
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":3,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":4,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
 	"core":core,"core_use":core_use,"weapon":weapon,"secret":secret,"clue":clue,"principal":principal,"fees":fees,"interest":interest,"loan_used":loan_used,"overdue":overdue,"checkpoints":checkpoints}
 func restore(d: Dictionary) -> bool:
-	if d.get("version") != 3: return false
+	if d.get("version") != 4: return false
 	for key in ["floor","x","y","hp","atk","def","keys","gold","moves","principal","fees","interest","checkpoints","generation_attempts","focus","focus_cap","kills","quest_state"]:
 		if not d.has(key) or not (d[key] is float or d[key] is int): return false
 		if not is_finite(float(d[key])) or float(d[key])!=floor(float(d[key])) or d[key]<0 or d[key]>1000000: return false
@@ -356,7 +376,7 @@ func restore(d: Dictionary) -> bool:
 			if not row is Array or row.size()!=11: return false
 			for c in row:
 				if c=="C": cores_remaining+=1
-				if not c is String or not c in ["#",".","k","D","h","a","d","s","g","u","b","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">"]: return false
+				if not c is String or not c in ["#",".","k","D","L","$","A","P","h","a","d","s","g","u","b","B","K","V","T","M","C","E","F","N","Q","J","I","O","R","X","~","<",">"]: return false
 	if cores_remaining>1 or (cores_remaining>0 and (d.core or d.core_use!="")): return false
 	if d.floor >= MAPS.size() or d.x < 1 or d.x > 9 or d.y < 1 or d.y > 9 or d.hp <= 0 or d.atk <= 0: return false
 	if d.floors[int(d.floor)][int(d.y)][int(d.x)] == "#": return false

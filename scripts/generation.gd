@@ -9,8 +9,8 @@ const LOOT := ["a", "d", "h", "k", "s", "g", "u", "b"]
 const ENEMIES := {
 	"s": {"hp":35, "atk":14, "def":3},
 	"g": {"hp":75, "atk":25, "def":10},
-	"u": {"name":"Veil Stalker", "hp":40, "atk":20, "def":4, "first_strike":true},
-	"b": {"name":"Briar Sentinel", "hp":70, "atk":22, "def":8, "thorns":2},
+	"u": {"name":"Veil Stalker", "hp":95, "atk":42, "def":14, "first_strike":true},
+	"b": {"name":"Briar Sentinel", "hp":90, "atk":35, "def":12, "thorns":2},
 	"K": {"hp":450, "atk":65, "def":40}
 }
 const DIRS := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
@@ -93,7 +93,7 @@ static func path_to(grid: Array, start: Vector2i, goal: Vector2i, stats: Diction
 			var next: Vector2i=p+d
 			if parents.has(next): continue
 			var token := tile(grid,next)
-			if token in ["#","D","~","V","T","B"]: continue
+			if token in ["#","D","L","~","V","T","B"]: continue
 			if token in ["<",">","K"] and next!=goal: continue
 			if ENEMIES.has(token):
 				var cost := damage(token,stats)
@@ -107,14 +107,14 @@ static func execute(grid: Array, start: Vector2i, path: Array, stats: Dictionary
 	for d in path:
 		var next: Vector2i=pos+d
 		var token := tile(grid,next)
-		if token in ["#","D","~","V","T","B"]: return {"ok":false}
+		if token in ["#","D","L","~","V","T","B"]: return {"ok":false}
 		if ENEMIES.has(token):
 			var cost := damage(token,stats)
 			if cost<0 or cost>=stats.hp: return {"ok":false}
 			stats.hp-=cost
 		elif token=="a": stats.atk+=5
 		elif token=="d": stats.def+=4
-		elif token=="h": stats.hp+=100
+		elif token=="h": stats.hp+=70
 		if token in LOOT or token=="K": grid[next.y][next.x]="."
 		pos=next
 		route += "U" if d==Vector2i.UP else ("D" if d==Vector2i.DOWN else ("L" if d==Vector2i.LEFT else "R"))
@@ -127,7 +127,7 @@ static func validate(maps: Array) -> Dictionary:
 		for row in grid:
 			if not row is Array or row.size()!=11: return {"solvable":false,"reason":"Invalid row"}
 	var work := maps.duplicate(true)
-	var stats := {"hp":360,"atk":18,"def":8}
+	var stats := {"hp":280,"atk":18,"def":8}
 	var route := ""
 	for floor_index in work.size():
 		var grid: Array=work[floor_index]

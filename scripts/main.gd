@@ -14,8 +14,10 @@ var art: Texture2D
 var combat_art: Dictionary = {}
 const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","V":"colossus","K":"regent","B":"regent"}
 var history: Array = []
-var save_path := "user://journey-v3.json"
+var save_path := "user://journey-v4.json"
 var book := false
+var journal := false
+var journal_page := 0
 var growth := true
 var growth_tab := 0
 var reset_mode := ""
@@ -30,6 +32,7 @@ var battle_name := ""
 var battle_loss := 0
 var action_rows: Array = []
 var checkpoint_pending := Vector2i.ZERO
+var pending_reason := ""
 var reset_armed := false
 var hover := Vector2i(-1,-1)
 var tick := 0.0
@@ -44,7 +47,7 @@ func _ready():
 	for id in ["warden","ranger","scholar","mossling","sentinel","stalker","briar","colossus","regent"]:
 		var path := "res://assets/combat/%s.png" % id
 		if ResourceLoader.exists(path): combat_art[id]=load(path)
-	buttons = [Rect2(350,720,120,38),Rect2(482,720,120,38),Rect2(614,720,120,38),Rect2(746,720,143,38),Rect2(938,745,300,35),Rect2(36,710,272,38)]
+	buttons = [Rect2(350,720,120,38),Rect2(482,720,120,38),Rect2(614,720,120,38),Rect2(746,720,143,38),Rect2(938,745,300,35),Rect2(36,710,272,38),Rect2(36,66,272,30)]
 	queue_redraw()
 func _process(delta):
 	tick += delta
@@ -118,7 +121,7 @@ func _draw():
 	label_at(Vector2(938,699),"Click an adjacent tile to move",14,MUTED)
 	label_at(Vector2(938,734),"U  undo     L  load     H  guide",14,MUTED)
 	label_at(Vector2(350,711),world.message if world.message.length()<=68 else world.message.left(65)+"...",13,TEAL)
-	var titles := ["UNDO  U","SAVE  S*","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C"]
+	var titles := ["UNDO  U","SAVE  S*","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J"]
 	for i in buttons.size():
 		panel(buttons[i],Color("253748"))
 		label_at(buttons[i].position+Vector2(13,25),titles[i],14)
@@ -133,6 +136,7 @@ func _draw():
 		label_at(Vector2(420,392),"The final seal has fallen.",20)
 		label_at(Vector2(420,426),"%d HP left  /  %d moves  /  %d gold" % [world.hp,world.moves,world.gold],17,TEAL)
 		label_at(Vector2(420,475),"Press R twice to begin a new journey.",16,MUTED)
+	if journal: draw_journal()
 func draw_token(c: Vector2, t: String):
 	if ENEMY_ART.has(t) and combat_art.has(ENEMY_ART[t]):
 		draw_texture_rect(combat_art[ENEMY_ART[t]],Rect2(c-Vector2(24,24),Vector2(48,48)),false)
@@ -142,8 +146,17 @@ func draw_token(c: Vector2, t: String):
 	match t:
 		"k":
 			draw_circle(c+Vector2(-6,0),6,GOLD,false,3); draw_line(c,c+Vector2(13,0),GOLD,3); draw_line(c+Vector2(10,0),c+Vector2(10,6),GOLD,3)
-		"D":
+		"D","L":
 			draw_rect(Rect2(c-Vector2(15,19),Vector2(30,38)),Color("725735")); draw_rect(Rect2(c-Vector2(11,15),Vector2(22,30)),GOLD,false,2); draw_circle(c,3,Color("171d27"))
+			if t=="L":
+				draw_circle(c+Vector2(-6,0),3,Color("171d27")); draw_circle(c+Vector2(6,0),3,Color("171d27"))
+				label_at(c+Vector2(10,-12),"2",12,GOLD)
+		"$","A","P":
+			var chest_color: Color={"$":GOLD,"A":Color("f08598"),"P":TEAL}[t]
+			draw_rect(Rect2(c-Vector2(17,12),Vector2(34,28)),chest_color.darkened(0.65))
+			draw_rect(Rect2(c-Vector2(17,12),Vector2(34,28)),chest_color,false,2)
+			draw_line(c+Vector2(-17,-3),c+Vector2(17,-3),chest_color,2)
+			label_at(c+Vector2(-6,12),t,17,chest_color)
 		"a","d":
 			var col := Color("f08598") if t=="a" else Color("80b9f4")
 			draw_colored_polygon(PackedVector2Array([c+Vector2(0,-14),c+Vector2(10,0),c+Vector2(0,14),c+Vector2(-10,0)]),col)
@@ -187,12 +200,12 @@ func draw_book():
 		if kind=="u": mechanic_text="Strikes first, even if you one-shot it."
 		if kind=="b": mechanic_text="2 thorns / your hit, including final hit."
 		label_at(p+Vector2(48,47),mechanic_text,12,TEAL)
-	var lines := ["Exact forecasts include ambush, thorns, gear, skills and talents.","Thorns ignores DEF. Brace and total-loss reduction still apply.","C: hero / gear / talents. E: local choices, quests and ledger.","J: researcher / I: sample / O: valve / R: relic / X: encounter.","Interest: first entry to floors 4 and 5 only, never steps or waiting.","Grow stronger and revisit. U reverses the entire previous action.","H / Esc / click closes. Battles are cosmetic replays; any key skips."]
+	var lines := ["Exact forecasts include ambush, thorns, gear, skills and talents.","Thorns ignores DEF. Brace and total-loss reduction still apply.","C: hero / gear / talents. E: local choices, quests and ledger.","J: researcher / I: sample / O: valve / R: relic / X: encounter.","Interest: first entry to floors 4 and 5 only, never steps or waiting.","Grow stronger and revisit. U reverses the entire previous action.","L: 2-key lock / $: +60 gold / A: +5 ATK / P: +140 HP, +1 focus.","H / Esc / click closes. Battles are cosmetic replays; any key skips."]
 	for i in lines.size(): label_at(Vector2(265,505+i*27),lines[i],15,MUTED)
 func token_name(t: String) -> String:
 	if t=="~" and world.water_choice=="drain": return "Drained passage to the relic vault"
 	if t=="X": return world.event_title()
-	return {"M":"Merchant: trade & loans","C":"One core. Three choices.","E":"The old elevator","F":"Workshop: a lasting choice","T":"A treasure worth returning for","N":"An inscription. Read carefully.","Q":"A door with a secret","<":"Return to a lower floor",">":"Ascend: check your ledger","a":"Ruby: +5 attack","d":"Sapphire: +4 defense","h":"Spring water: +100 HP","k":"Gold key","D":"A locked shortcut","J":"A traveler with a request","I":"An unusual research sample","O":"Drain the route or keep the spring?","~":"Deep water blocks this route","R":"A choice of equipment","X":"A costly opportunity"}.get(t,"SCOUT BEFORE YOU STRIKE")
+	return {"M":"Merchant: trade & loans","C":"One core. Three choices.","E":"The old elevator","F":"Workshop: a lasting choice","T":"A treasure worth returning for","N":"An inscription. Read carefully.","Q":"A door with a secret","<":"Return to a lower floor",">":"Ascend: check your ledger","a":"Ruby: +5 attack","d":"Sapphire: +4 defense","h":"Spring water: +70 HP","k":"Gold key","D":"Gold door: costs 1 key","L":"Double lock: costs 2 keys","$":"Gold cache: +60 gold","A":"Blade relic: +5 attack","P":"Supplies: +140 HP / +1 focus","J":"A traveler with a request","I":"An unusual research sample","O":"Drain the route or keep the spring?","~":"Deep water blocks this route","R":"A choice of equipment","X":"A costly opportunity"}.get(t,"SCOUT BEFORE YOU STRIKE")
 func nearby(t: String) -> bool:
 	for d in [Vector2i.ZERO,Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 		if world.tile(world.pos+d)==t: return true
@@ -200,8 +213,9 @@ func nearby(t: String) -> bool:
 func available_actions() -> Array:
 	var rows: Array = []
 	if checkpoint_pending!=Vector2i.ZERO:
-		rows.append(["continue","Continue upstairs: settle interest now"])
-		rows.append(["cancel","Stay on this floor: no interest charged"])
+		rows.append(["continue","Spend keys and open this door" if pending_reason=="door" else "Continue upstairs: settle interest now"])
+		rows.append(["cancel","Cancel: keep all keys" if pending_reason=="door" else "Stay on this floor: no interest charged"])
+		if pending_reason=="door": return rows
 	if world.debt()>0: rows.append(["repay","Repay using available gold (fees, interest, principal)"])
 	if nearby("M"):
 		rows.append(["buy","Buy armor-breaker: 60 gold / +12 ATK (once)"])
@@ -231,6 +245,9 @@ func visible_actions() -> Array:
 	interaction_page=clampi(interaction_page,0,maxi(0,ceili(rows.size()/6.0)-1))
 	return rows.slice(interaction_page*6,interaction_page*6+6)
 func draw_interaction():
+	if pending_reason=="door":
+		draw_key_confirmation()
+		return
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
 	panel(Rect2(260,120,770,570),Color("0c1928"))
 	label_at(Vector2(290,158),world.event_title().to_upper() if nearby("X") and not world.event_done else "CHOICES & THE LEDGER",25,GOLD)
@@ -251,12 +268,29 @@ func draw_interaction():
 	if available_actions().size()>6:
 		label_at(Vector2(815,218),"Page %d   [ / ]" % (interaction_page+1),13,GOLD)
 	label_at(Vector2(290,672),"Click a choice or press its number. E / Esc closes without choosing.",14,MUTED)
+func draw_key_confirmation():
+	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
+	panel(Rect2(260,120,770,570),Color("0c1928"))
+	var cost := 2 if world.tile(world.pos+checkpoint_pending)=="L" else 1
+	label_at(Vector2(290,158),"SPEND KEYS?",25,GOLD)
+	label_at(Vector2(290,205),"%s: costs %d gold key%s" % ["Double lock" if cost==2 else "Gold door",cost,"s" if cost==2 else ""],22,INK)
+	label_at(Vector2(290,248),"Held: %d   /   Remaining after opening: %d" % [world.keys,world.keys-cost],20,TEAL)
+	label_at(Vector2(290,292),"Keys are limited. Each reward cage needs TWO keys.",17,GOLD)
+	label_at(Vector2(290,325),"A shortcut now can cost a treasure later. You can cancel or return.",16,MUTED)
+	var rows := available_actions()
+	for i in rows.size():
+		var r := Rect2(285,375+i*43,720,37)
+		panel(r,Color("253748"))
+		label_at(r.position+Vector2(12,24),"%d  %s" % [i+1,rows[i][1]],16)
+	label_at(Vector2(290,580),"U restores the opened door, your keys and your position together.",15,MUTED)
+	label_at(Vector2(290,640),"Nothing is spent until you confirm.",16,TEAL)
+	label_at(Vector2(290,672),"Click a choice / press 1-2. E / Esc cancels.",14,MUTED)
 func perform_action(id: String):
 	if id=="cancel":
-		checkpoint_pending=Vector2i.ZERO; interaction=false; return
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; return
 	if id=="continue":
 		var direction := checkpoint_pending
-		checkpoint_pending=Vector2i.ZERO; interaction=false
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false
 		move(direction,true)
 		return
 	reset_armed=false
@@ -271,9 +305,7 @@ func perform_action(id: String):
 func quest_hint() -> String:
 	return ["J: find the researcher's request","QUEST: seek the sample (I)","QUEST: return sample to J","QUEST COMPLETE"][clampi(world.quest_state,0,3)]
 func skill_description() -> String:
-	if "trained_focus" in world.talents:
-		return {"warden":"Spend 1 focus: reduce next battle total loss by 40.","ranger":"Spend 1 focus: ignore 14 enemy DEF for next battle.","scholar":"Spend 1 focus outside battle: recover 100 HP."}[world.hero_id]
-	return Progression.HEROES[world.hero_id].description
+	return Progression.skill_description(world.hero_id,world.talents)
 func growth_actions() -> Array:
 	var rows: Array=[]
 	match growth_tab:
@@ -290,7 +322,7 @@ func growth_actions() -> Array:
 			for id in Progression.talent_options(world.kills,world.talents): rows.append(["talent_"+id,Progression.TALENTS[id].name,Progression.TALENTS[id].description])
 	return rows
 func open_growth():
-	growth=not growth; interaction=false; book=false; checkpoint_pending=Vector2i.ZERO
+	growth=not growth; journal=false; interaction=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if growth: growth_tab=2 if not Progression.talent_options(world.kills,world.talents).is_empty() else 0
 func draw_growth():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
@@ -320,6 +352,78 @@ func draw_growth():
 	label_at(Vector2(225,610),"Focus is finite. First visits restore it; repeating floors cannot farm it.",15,MUTED)
 	label_at(Vector2(225,646),world.message.left(105),14,TEAL)
 	label_at(Vector2(225,697),"Choose 1-3. Tab changes section. Esc: keep default Warden." if world.moves==0 else "Click a card / press 1-3. Tab changes section. C / Esc closes.",15,MUTED)
+func open_journal():
+	journal=not journal
+	journal_page=0
+	book=false; growth=false; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+func floor_has(index: int, token: String) -> bool:
+	for row in world.floors[index]:
+		if token in row: return true
+	return false
+func journal_lines() -> Array:
+	var entries: Array=[]
+	entries.append("Seed %d / %s / floor %d / %d steps" % [world.seed_value,Progression.HEROES[world.hero_id].name,world.floor_index+1,world.moves])
+	entries.append("Gold %d / debt %d = principal %d + fee %d + interest %d" % [world.gold,world.debt(),world.principal,world.fees,world.interest])
+	if world.debt()==0:
+		entries.append("No outstanding debt. Walking and waiting never incur interest.")
+	elif world.checkpoints<2:
+		entries.append("Next interest: first entry to floor %d, +%d at current principal." % [4+world.checkpoints,ceili(world.principal*0.1)])
+	else:
+		entries.append("Debt is frozen. Future gold repays it until the balance is clear.")
+	if world.core:
+		entries.append("Core held: lift, forge (+8 DEF), or sale (+35 gold). Choose once.")
+	elif world.core_use!="":
+		entries.append({"elevator":"Core used for lift. Forge and sale are forgone.","forge":"Core forged: +8 DEF. Lift and sale are forgone.","sold":"Core sold: +35 gold. Lift and forge are forgone."}[world.core_use])
+	else: entries.append("No mechanism core in your pack.")
+	if world.floor_seen[1]:
+		entries.append({"":"Floor 2: the water decision is still open.","drain":"Floor 2 drained: relic route opened; spring healing forgone.","spring":"Floor 2 spring used: +120 HP; relic route remains flooded."}[world.water_choice])
+	entries.append(["No research task accepted.","Research task: find the sample and return to the researcher (J).","Research sample obtained: return to J and choose your reward.","Research task completed. Its other reward is no longer available."][world.quest_state])
+	if world.floor_seen[2]:
+		if floor_has(2,"V"): entries.append("Floor 3: a powerful guardian still watches the star vault.")
+		elif floor_has(2,"T"): entries.append("Floor 3: the guardian is defeated; its treasure is unclaimed.")
+		else: entries.append("Floor 3: the star vault treasure has been claimed.")
+	if world.floor_seen[3]:
+		entries.append("Floor 4: %s / %s" % [world.event_title(),"resolved" if world.event_done else "decision still open"])
+	for floor_index in [0,2,3]:
+		if not world.floor_seen[floor_index]: continue
+		var token: String={0:"$",2:"A",3:"P"}[floor_index]
+		if floor_has(floor_index,token):
+			var reward: String={"$":"60 gold","A":"+5 ATK","P":"+140 HP and +1 focus"}[token]
+			entries.append("Floor %d cache: %s / %s." % [floor_index+1,reward,"double lock needs 2 keys" if floor_has(floor_index,"L") else "unclaimed, lock already opened"])
+	if world.clue:
+		entries.append('Inscription: "The silent bell opens when the old lift runs."')
+		entries.append('"Seek it above."')
+	if world.secret: entries.append("The bell's secret has been found.")
+	var names: Array=[]
+	for id in world.talents: names.append(Progression.TALENTS[id].name)
+	entries.append("Talents: "+(", ".join(names) if not names.is_empty() else "none chosen"))
+	entries.append("Equipped: "+Progression.GEAR[world.equipped].name+". "+Progression.GEAR[world.equipped].description)
+	entries.append("Focus %d/%d: +1 on first entry to a floor; revisits give none." % [world.focus,world.focus_cap])
+	var lines: Array=[]
+	for entry in entries:
+		var remaining: String=entry
+		while remaining.length()>86:
+			var split_at: int=remaining.rfind(" ",86)
+			if split_at<1: split_at=86
+			lines.append(remaining.substr(0,split_at))
+			remaining="  "+remaining.substr(split_at).strip_edges()
+		lines.append(remaining)
+	return lines
+func draw_journal():
+	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
+	panel(Rect2(230,100,820,610),Color("0c1928"))
+	label_at(Vector2(260,144),"JOURNEY NOTES",26,GOLD)
+	label_at(Vector2(260,174),"Only what you have discovered. Reading spends nothing.",15,MUTED)
+	var lines := journal_lines()
+	var pages := maxi(1,ceili(lines.size()/12.0))
+	journal_page=clampi(journal_page,0,pages-1)
+	var visible := lines.slice(journal_page*12,journal_page*12+12)
+	for i in visible.size():
+		label_at(Vector2(260,213+i*34),visible[i],15,INK if i%2==0 else TEAL)
+	label_at(Vector2(260,680),"J / Esc: close    [ / ]: pages    %d / %d" % [journal_page+1,pages],14,MUTED)
+	if pages>1:
+		panel(Rect2(830,651,80,37),Color("253748")); label_at(Vector2(846,676),"PREV",14)
+		panel(Rect2(925,651,90,37),Color("253748")); label_at(Vector2(942,676),"NEXT",14)
 func battle_figure(id: String, center: Vector2, hero: bool):
 	if combat_art.has(id):
 		draw_texture_rect(combat_art[id],Rect2(center-Vector2(78,95),Vector2(156,156)),false)
@@ -375,6 +479,11 @@ func _unhandled_input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 		if battle_time>0.0: battle_time=0.0; return
 		if book: book=false; return
+		if journal:
+			if Rect2(830,651,80,37).has_point(get_global_mouse_position()): journal_page=maxi(0,journal_page-1)
+			elif Rect2(925,651,90,37).has_point(get_global_mouse_position()): journal_page+=1
+			elif not Rect2(230,100,820,610).has_point(get_global_mouse_position()): journal=false
+			return
 		if growth:
 			for i in 3:
 				if Rect2(225+i*270,175,250,40).has_point(get_global_mouse_position()): growth_tab=i; return
@@ -387,7 +496,7 @@ func _unhandled_input(event):
 			var rows := visible_actions()
 			for i in rows.size():
 				if Rect2(285,375+i*43,720,37).has_point(get_global_mouse_position()): perform_action(rows[i][0]); return
-			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; checkpoint_pending=Vector2i.ZERO
+			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 			return
 		for i in buttons.size():
 			if buttons[i].has_point(get_global_mouse_position()):
@@ -398,15 +507,21 @@ func _unhandled_input(event):
 					3: book=true
 					4: interaction=true; interaction_page=0
 					5: open_growth()
+					6: open_journal()
 				return
 		var diff: Vector2i = hover-world.pos
 		if absi(diff.x)+absi(diff.y)==1: move(diff)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if battle_time>0.0: battle_time=0.0; return
+		if event.keycode==KEY_J: open_journal(); return
 		if event.keycode==KEY_C: open_growth(); return
-		if event.keycode==KEY_H: book=not book; growth=false; interaction=false; checkpoint_pending=Vector2i.ZERO; return
-		if event.keycode==KEY_E: interaction=not interaction; interaction_page=0; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; return
-		if event.keycode==KEY_ESCAPE: book=false; growth=false; interaction=false; checkpoint_pending=Vector2i.ZERO; return
+		if event.keycode==KEY_H: book=not book; journal=false; growth=false; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_E: interaction=not interaction; interaction_page=0; journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if journal:
+			if event.keycode==KEY_BRACKETLEFT: journal_page=maxi(0,journal_page-1)
+			if event.keycode==KEY_BRACKETRIGHT: journal_page+=1
+			return
 		if growth:
 			if event.keycode==KEY_TAB: growth_tab=(growth_tab+1)%3; return
 			var index: int=event.keycode-KEY_1
@@ -433,15 +548,22 @@ func _unhandled_input(event):
 func request_restart(mode: String):
 	if reset_armed and reset_mode==mode:
 		world=World.new(world.seed_value if mode=="replay" else randi_range(1,2147483646))
-		history.clear(); reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; interaction=false; checkpoint_pending=Vector2i.ZERO
+		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; interaction=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 		save_game(false)
 	else:
 		reset_armed=true; reset_mode=mode
 		world.message="Press %s again: %s. Autosave will be replaced." % ["R" if mode=="replay" else "N","replay this seed" if mode=="replay" else "start a new seed"]
 func move(direction: Vector2i, confirmed:=false):
 	reset_armed=false
+	var target_token: String=world.tile(world.pos+direction)
+	var key_cost := 2 if target_token=="L" else 1
+	if not confirmed and target_token in ["D","L"] and world.keys>=key_cost and not world.won:
+		checkpoint_pending=direction; pending_reason="door"
+		interaction_page=0; interaction=true
+		world.message="Opening this door costs %d keys. Confirm or keep them for later." % key_cost
+		return
 	if not confirmed and world.tile(world.pos+direction)==">" and world.floor_index>=2 and world.checkpoints<world.floor_index-1 and world.debt()>0:
-		checkpoint_pending=direction
+		checkpoint_pending=direction; pending_reason="interest"
 		interaction_page=0
 		interaction=true
 		world.message="A new milestone settles interest. Repay first, continue, or cancel."
@@ -474,4 +596,6 @@ func load_game():
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
 	if not parsed is Dictionary or not world.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
 	history.clear()
+	journal=false; journal_page=0; interaction=false; growth=false; book=false
+	checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	battle_time=0.0

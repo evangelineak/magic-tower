@@ -6,7 +6,7 @@ extends RefCounted
 const FOCUS_START := 2
 const FOCUS_MAX := 3
 const HEROES := {
-	"warden": {"name":"Warden", "skill":"Brace", "description":"Spend 1 focus: reduce the next battle's total loss by 30."},
+	"warden": {"name":"Warden", "skill":"Brace", "description":"Spend 1 focus: block 35% of total battle loss (rounded down)."},
 	"ranger": {"name":"Ranger", "skill":"Precision", "description":"Spend 1 focus: ignore 10 enemy DEF for the next battle."},
 	"scholar": {"name":"Scholar", "skill":"Mend", "description":"Spend 1 focus outside battle: recover 80 HP."}
 }
@@ -26,7 +26,7 @@ const TALENTS := {
 	"clean_finish": {"name":"Clean finish", "tier":0, "description":"After a zero-loss victory, recover 15 HP."},
 	"last_stand": {"name":"Last stand", "tier":1, "description":"Below 200 HP before battle: +20% damage per hit (floor)."},
 	"sentinel_lore": {"name":"Sentinel lore", "tier":1, "description":"+4 effective DEF against Sentinels only."},
-	"trained_focus": {"name":"Trained focus", "tier":1, "description":"Brace blocks 40; Precision ignores 14 DEF; Mend heals 100."},
+	"trained_focus": {"name":"Trained focus", "tier":1, "description":"Brace blocks 45% (floor); Precision ignores 14 DEF; Mend heals 100."},
 	"giant_slayer": {"name":"Giant slayer", "tier":2, "description":"Against enemies with at least 180 HP: +10% hit damage (floor)."},
 	"battle_medic": {"name":"Battle medic", "tier":2, "description":"Recover 10 HP after a surviving victory."},
 	"unbroken": {"name":"Unbroken", "tier":2, "description":"At 400+ HP before battle: reduce total loss by 20."}
@@ -46,6 +46,16 @@ static func talent_options(kills: int, chosen: Array) -> Array:
 
 static func mend_heal(chosen: Array) -> int:
 	return 100 if "trained_focus" in chosen else 80
+
+static func brace_percent(chosen: Array) -> int:
+	return 45 if "trained_focus" in chosen else 35
+
+static func skill_description(hero: String, chosen: Array) -> String:
+	match hero:
+		"warden": return "Spend 1 focus: block %d%% of total battle loss (rounded down)." % brace_percent(chosen)
+		"ranger": return "Spend 1 focus: ignore %d enemy DEF for the next battle." % (14 if "trained_focus" in chosen else 10)
+		"scholar": return "Spend 1 focus outside battle: recover %d HP." % mend_heal(chosen)
+	return "Unknown hero."
 
 static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: String, skill: bool, equipment: String, talents: Array) -> Dictionary:
 	var result := {"valid":false, "survivable":false, "damage":-1, "hit":0, "rounds":0, "heal_after":0, "skill_consumed":false, "effective_atk":0, "effective_def":0, "enemy_def":0, "normal_damage":0, "first_strike_damage":0, "thorns_damage":0, "blocked_damage":0, "reason":"Invalid battle input."}
@@ -88,7 +98,9 @@ static func battle(attack: int, defense: int, hp: int, enemy: Dictionary, hero: 
 	var thorns_damage := rounds*int(thorns_value)
 	var raw_loss := normal_damage+first_strike_damage+thorns_damage
 	var loss := raw_loss
-	if skill and hero=="warden": loss=maxi(0,loss-(40 if "trained_focus" in talents else 30))
+	# Brace rounds the BLOCKED amount down, then Unbroken subtracts its flat
+	# shield. No minimum block: a one-damage battle still costs one HP.
+	if skill and hero=="warden": loss-=int(floor(float(raw_loss*brace_percent(talents))/100.0))
 	if "unbroken" in talents and hp>=400: loss=maxi(0,loss-20)
 	result.valid=true
 	result.hit=hit
