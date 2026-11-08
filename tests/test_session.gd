@@ -1,5 +1,6 @@
 extends SceneTree
 const Session=preload("res://scripts/session.gd")
+const Profile=preload("res://scripts/legacy_profile.gd")
 const World=preload("res://scripts/world.gd")
 var checks=0
 var failures=0
@@ -14,12 +15,15 @@ class FakeStore:
  var conflict=false
  var writes=0
  var delay=false
+ var json_transport=false
  var response_patch:Dictionary={}
+ var profile=Profile.fresh()
  func failure(status:String,retryable=false): return {"ok":false,"status":status,"reason":status,"retryable":retryable}
  func response():
-  var result=record.duplicate(true);result.ok=true;result.status="ok";result.reason=""
+  var result=record.duplicate(true);result.ok=true;result.status="archived" if record.get("status")=="archived" else "active";result.reason=""
+  result.profile=profile.duplicate(true)
   result.merge(response_patch,true)
-  return result
+  return JSON.parse_string(JSON.stringify(result)) if json_transport else result
  func read_active(): return failure("empty") if record.is_empty() else response()
  func reacquire_and_read(): conflict=false;return read_active()
  func create_run(seed_value,layout=2,mode="safe",replace=false,request=""):
@@ -28,7 +32,7 @@ class FakeStore:
   if op==request:
    return response() if signature==sig else failure("conflict")
   if fail_before:fail_before=false;return failure("io_error",true)
-  if not record.is_empty() and not replace:return failure("active_exists")
+  if not record.is_empty() and record.get("status", "active")=="active" and not replace:return failure("active_exists")
   var w=World.new(seed_value,layout,request,mode)
   record={"snapshot":w.save_data(),"run_id":request,"slot":record.get("slot",0)+1,"revision":0,"eligible":true}
   op=request;signature=sig;writes+=1
@@ -41,8 +45,28 @@ class FakeStore:
   if op==request:
    return response() if signature==sig else failure("conflict")
   if fail_before:fail_before=false;return failure("io_error",true)
+  if record.get("status", "active")!="active":return failure("archived")
   if record.is_empty() or expected_slot!=record.slot or expected_revision!=record.revision or run_id!=record.run_id:return failure("conflict")
   record.snapshot=snapshot.duplicate(true);record.revision+=1;op=request;signature=sig;writes+=1
+  if lost_ack:lost_ack=false;return failure("ack_lost",true)
+  return response()
+ func settle_run(expected_slot,expected_revision,run_id,outcome,request):
+  if delay: await Engine.get_main_loop().process_frame
+  var sig=JSON.stringify([expected_slot,expected_revision,run_id,outcome])
+  if conflict:return failure("conflict")
+  if op==request:return response() if signature==sig else failure("conflict")
+  if fail_before:fail_before=false;return failure("io_error",true)
+  if record.is_empty() or expected_slot!=record.slot or expected_revision!=record.revision or run_id!=record.run_id or record.get("status","active")!="active":return failure("conflict")
+  var candidate=World.from_snapshot(record.snapshot)
+  if candidate==null or not candidate.finish_run(outcome):return failure("invalid")
+  var derived=candidate.settlement_summary(outcome)
+  if not derived.ok:return failure("invalid")
+  var settled=Profile.settle(profile,run_id,derived.summary)
+  if not settled.ok:return failure("invalid")
+  profile=settled.profile
+  record.snapshot=candidate.save_data();record.revision+=1;record.slot+=1
+  record.status="archived";record.receipt=settled.receipt;record.profile=profile.duplicate(true)
+  op=request;signature=sig;writes+=1
   if lost_ack:lost_ack=false;return failure("ack_lost",true)
   return response()
 func check(ok:bool,label:String):
@@ -155,5 +179,106 @@ func run():
   var old=broken_session.world.save_data().duplicate(true)
   broken_store.response_patch=patch
   check(not (await broken_session.action("hero_ranger")).ok and broken_session.world.save_data()==old and broken_session.history.is_empty(),"commit rejects wrong slot or non-CAS revision without publishing")
+ await settlement_cases()
  print("SESSION: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
  quit(0 if failures==0 else 1)
+
+func settlement_cases():
+ var store=FakeStore.new();var session=Session.new(store)
+ check((await session.new_run(0)).ok,"settlement fixture creates new run")
+ # Synthetic but fully restore-valid visited-floor fixture; real-route tests live
+ # at the storage/World integration layer, not in this controller unit test.
+ store.record.snapshot.floor_seen=[true,true,true,false,false]
+ check((await session.open_current()).ok,"load visited floor fixture")
+ check((await session.action("hero_ranger")).ok,"history available before settlement")
+ var before=session.world.save_data().duplicate(true);var history=session.history.duplicate(true)
+ for invalid in ["retired","defeat","victory","chapter1",""]:
+  check(not (await session.finish(invalid)).ok and session.world.save_data()==before,"only presently legal safe outcomes allowed")
+ store.fail_before=true
+ var result=await session.finish("withdrawn")
+ check(not result.ok and not session.terminal and session.world.save_data()==before and session.history==history and store.profile.receipts.is_empty(),"settlement fault before write preserves live world and all history")
+ check((await session.action("arm")).status=="pending","no new gameplay while settlement pending")
+ store.lost_ack=true
+ result=await session.retry_pending()
+ check(not result.ok and not result.has("effect") and session.world.save_data()==before and session.history==history and store.profile.receipts.size()==1,"lost settlement ack cannot publish or erase undo")
+ var writes=store.writes;var committed_slot=store.record.slot;var committed_rev=store.record.revision
+ result=await session.retry_pending()
+ check(result.ok and result.effect=={"operation":"settle","input":"withdrawn"} and session.terminal and not session.read_only,"retry publishes terminal once after acknowledgement")
+ check(session.history.is_empty() and session.receipt.unlocked==["legacy_scout"] and session.profile.receipts.size()==1,"unique receipt and cleared history")
+ check(store.writes==writes and session.slot==committed_slot and session.revision==committed_rev,"retry doesn't increment profile or CAS counters twice")
+ for operation in ["save","undo"]:
+  check((await session.call(operation)).status=="terminal","terminal blocks "+operation)
+ check((await session.step(Vector2i.RIGHT)).status=="terminal" and (await session.action("expedition")).status=="terminal","terminal blocks movement and continuation")
+ check((await session.finish("withdrawn")).status=="terminal" and not (await session.retry_pending()).has("effect"),"terminal cannot claim/replay settlement again")
+ var loaded=Session.new(store)
+ result=await loaded.open_current()
+ check(result.ok and not result.committed and not result.has("effect") and loaded.terminal and loaded.receipt==session.receipt,"startup restores archived world without repeating effects")
+ var ended=session.world.save_data().duplicate(true)
+ var archived=store.record.duplicate(true)
+ for field in ["receipt","profile"]:
+  store.record=archived.duplicate(true);store.record[field]={}
+  if field=="profile":store.response_patch={"profile":{}}
+  check(not (await loaded.open_current()).ok and loaded.world.save_data()==ended and loaded.terminal,"malformed archive "+field+" preserves display")
+ store.response_patch={}
+ store.record=archived.duplicate(true);store.record.receipt.summary.moves+=1
+ check(not (await loaded.open_current()).ok,"receipt mismatching profile refused")
+ store.record=archived.duplicate(true)
+ var fake_profile=Profile.fresh()
+ var fake_summary=store.record.receipt.summary.duplicate();fake_summary.moves+=1
+ var fake=Profile.settle(fake_profile,store.record.run_id,fake_summary)
+ store.record.receipt=fake.receipt;store.response_patch={"profile":fake.profile}
+ check(not (await loaded.open_current()).ok,"valid profile with summary mismatching ended World refused")
+ store.response_patch={}
+ store.record=archived.duplicate(true);store.record.status="active"
+ check(not (await loaded.open_current()).ok,"ended snapshot cannot be revived by active label")
+ store.record=archived.duplicate(true);store.record.snapshot=before
+ check(not (await loaded.open_current()).ok,"archived label cannot accept live snapshot")
+ store.record=archived.duplicate(true)
+ check((await loaded.reacquire_and_reload()).ok and loaded.terminal,"valid archive explicitly recoverable")
+ var old_id=loaded.world.run_id
+ check((await loaded.new_run(42)).ok and not loaded.terminal and loaded.world.run_id!=old_id and loaded.receipt.is_empty() and loaded.profile.receipts.size()==1,"explicit new journey has new ID, clears receipt display and retains permanent profile")
+ check(store.profile.receipts.size()==1,"new journey doesn't erase permanent ledger")
+ # Pending old settlement cannot publish over another writer's newly created run.
+ check((await loaded.action("hero_ranger")).ok,"new active run usable")
+ store.lost_ack=true
+ check(not (await loaded.finish("withdrawn")).ok,"second settlement loses ack")
+ var live=loaded.world.save_data().duplicate(true)
+ check((await store.create_run(1,2,"safe",true,"another_run_0123456789")).ok,"another writer creates a new current run")
+ check(not (await loaded.retry_pending()).ok and loaded.read_only and loaded.world.save_data()==live,"old pending settle cannot overwrite newer active slot")
+ check((await loaded.reacquire_and_reload()).ok and not loaded.terminal and loaded.world.run_id=="another_run_0123456789","explicit reload follows newer run not old receipt")
+ # Bad acknowledgement of a committed settlement must not publish anything.
+ for patch in [{"slot":0},{"revision":0},{"eligible":false},{"receipt":{}},{"profile":{}}]:
+  var broken=FakeStore.new();var controller=Session.new(broken)
+  check((await controller.new_run(0)).ok,"bad-ack fixture active")
+  var original=controller.world.save_data().duplicate(true)
+  broken.response_patch=patch
+  check(not (await controller.finish("withdrawn")).ok and not controller.terminal and controller.world.save_data()==original,"invalid settlement acknowledgement leaves live view unchanged")
+
+ # A self-consistent but unrelated receipt must not sneak into the known ledger.
+ var injected_store=FakeStore.new();var injected=Session.new(injected_store)
+ check((await injected.new_run(0)).ok,"ledger injection fixture")
+ var final_candidate=World.from_snapshot(injected.world.save_data())
+ final_candidate.finish_run("withdrawn")
+ var expected=Profile.settle(Profile.fresh(),injected.world.run_id,final_candidate.settlement_summary("withdrawn").summary)
+ var extra=Profile.settle(expected.profile,"unrelated_run_0123456789",{"seed":1,"max_floor":8,"moves":12,"outcome":"victory"})
+ check(Profile.validate(extra.profile).ok,"malicious extra ledger is independently structurally valid")
+ injected_store.response_patch={"profile":extra.profile}
+ var old_live=injected.world.save_data().duplicate(true)
+ check(not (await injected.finish("withdrawn")).ok and injected.world.save_data()==old_live and not injected.terminal,"known baseline rejects unrelated but valid profile receipts")
+ for invalid_profile in [null,{},true,[]]:
+  var corrupt_store=FakeStore.new();var corrupt=Session.new(corrupt_store)
+  corrupt_store.response_patch={"profile":invalid_profile}
+  check(not (await corrupt.new_run(0)).ok and corrupt.world==null,"active acknowledgements require a valid full profile")
+
+ var json_store=FakeStore.new();json_store.json_transport=true
+ var json_session=Session.new(json_store)
+ check((await json_session.new_run(0)).ok,"JSON create canonicalizes integer metadata")
+ check((await json_session.action("hero_ranger")).ok,"JSON commit preserves full payload")
+ check((await json_session.finish("withdrawn")).ok and json_session.terminal,"JSON receipt matches integer summary and expected pure ledger")
+ check((await json_session.open_current()).ok and json_session.terminal,"JSON archive reload validates numeric receipt")
+
+ var preserve_store=FakeStore.new();var preserve=Session.new(preserve_store)
+ check((await preserve.new_run(0)).ok and (await preserve.finish("withdrawn")).ok,"profile retention fixture")
+ var saved_profile=preserve.profile.duplicate(true);var saved_end=preserve.world.save_data().duplicate(true)
+ preserve_store.response_patch={"profile":Profile.fresh()}
+ check(not (await preserve.new_run(42)).ok and preserve.profile==saved_profile and preserve.world.save_data()==saved_end and preserve.terminal,"new run acknowledgement cannot erase previous ledger")

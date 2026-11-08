@@ -2,6 +2,7 @@ class_name TowerSessionStorage
 extends RefCounted
 ## Unified async adapter. Only new schema-13 journeys; no legacy-slot imports.
 const World=preload("res://scripts/world.gd")
+const Profile=preload("res://scripts/legacy_profile.gd")
 const Native=preload("res://scripts/journey_store_native.gd")
 signal web_reply
 var owner:String=Crypto.new().generate_random_bytes(16).hex_encode()
@@ -23,7 +24,7 @@ func _init(test_path:String=""):
 func _result(ok:bool,status:String,reason:String="",snapshot:Dictionary={},slot:int=0,revision:int=0)->Dictionary:
  return {"ok":ok,"status":status,"reason":reason,"snapshot":snapshot.duplicate(true),"run_id":str(snapshot.get("run_id","")),"slot":slot,"revision":revision,"eligible":ok and snapshot.get("run_id","")!="" and status=="active","retryable":false,"readonly":not ok or status!="active"}
 func _failure(code:String)->Dictionary:
- var retryable=code in ["AMBIGUOUS_COMMIT","WRITE_FAILED","RENAME_FAILED","BACKUP_FAILED","STORE_LOCKED","INJECTED_BEFORE_TEMP","INJECTED_AFTER_TEMP","INJECTED_BEFORE_RENAME","WEB_IO","WEB_TIMEOUT","ACK_LOST","AbortError","UnknownError"]
+ var retryable=code in ["AMBIGUOUS_COMMIT","WRITE_FAILED","RENAME_FAILED","BACKUP_FAILED","STORE_LOCKED","INJECTED_AFTER_PROFILE","INJECTED_AFTER_ARCHIVE","INJECTED_AFTER_SLOT","INJECTED_BEFORE_TEMP","INJECTED_AFTER_TEMP","INJECTED_BEFORE_RENAME","WEB_IO","WEB_TIMEOUT","ACK_LOST","AbortError","UnknownError"]
  var conflict=code in ["WRITER_BUSY","STALE_WRITER","STALE_SLOT_REVISION","STALE_REVISION","NOT_ACTIVE_RUN","SUPERSEDED_OPERATION","REQUEST_CONFLICT","ACTIVE_RUN_EXISTS","ID_COLLISION"]
  var result=_result(false,"io_error" if retryable else ("conflict" if conflict else "invalid"),code)
  result.retryable=retryable;result.readonly=not retryable
@@ -74,8 +75,8 @@ func _claim(explicit:bool=false,for_write:bool=false)->Dictionary:
  var result:Dictionary=await _web("claim",{"owner":owner,"lease_ms":60000}) if use_web else native.claimWriter(owner,60000)
  if result.get("ok",false):auth=result.auth.duplicate(true)
  return result
-func _canonical(snapshot:Dictionary)->Dictionary:
- if snapshot.get("mode")!="safe" or snapshot.get("ended_reason")!="":return {}
+func _canonical(snapshot:Dictionary,allow_ended:bool=false)->Dictionary:
+ if snapshot.get("mode")!="safe" or (not allow_ended and snapshot.get("ended_reason")!=""):return {}
  var probe=World.from_snapshot(snapshot)
  return {} if probe==null else probe.save_data().duplicate(true)
 func _normalize(raw:Dictionary)->Dictionary:
@@ -84,12 +85,23 @@ func _normalize(raw:Dictionary)->Dictionary:
  if run==null:
   var empty=_result(false,"empty");empty.readonly=false;return empty
  if not run is Dictionary or not run.get("snapshot") is Dictionary:return _failure("INVALID_RESPONSE")
- var snapshot=_canonical(run.snapshot)
+ var snapshot=_canonical(run.snapshot,run.get("status")=="archived")
  if snapshot.is_empty() or snapshot.run_id!=run.get("id") or snapshot.run_id=="":return _failure("INVALID_RESPONSE")
  var status="active" if run.get("status")=="active" else "archived"
  var slot:int=int(raw.get("slotRevision",0))
  var result=_result(true,status,"",snapshot,slot,int(run.get("revision",0)))
- if status=="active":
+ var ledger=raw.get("profile",{})
+ if not Profile.validate(ledger).ok:return _failure("INVALID_PROFILE")
+ if status=="active" and ledger.receipts.has(snapshot.run_id):return _failure("INVALID_RECEIPT")
+ result.profile=ledger.duplicate(true)
+ if status=="archived":
+  var profile=raw.get("profile",{});var receipt=raw.get("receipt",{})
+  if not Profile.validate(profile).ok or profile.receipts.get(snapshot.run_id)!=receipt:return _failure("INVALID_RECEIPT")
+  var probe=World.from_snapshot(snapshot)
+  var summary=probe.settlement_summary(str(receipt.get("summary",{}).get("outcome","")))
+  if not summary.get("ok",false) or summary.summary!=Profile._summary(receipt.get("summary")):return _failure("INVALID_RECEIPT")
+  result.receipt=receipt.duplicate(true);result.profile=profile.duplicate(true);result.eligible=true
+ if status in ["active","archived"]:
   auth.expectedSlotRevision=slot
   if raw.has("leaseUntil"):auth.leaseUntil=raw.leaseUntil
  return result
@@ -98,7 +110,7 @@ func _read_raw()->Dictionary:
  var response:Dictionary=native.read()
  if not response.ok:return response
  var data:Dictionary=response.data;var id=data.slot.activeRunId
- return {"ok":true,"run":data.runs.get(id) if id!=null else null,"slotRevision":data.slot.revision}
+ return {"ok":true,"run":data.runs.get(id) if id!=null else null,"slotRevision":data.slot.revision,"profile":data.profile.profile,"receipt":data.profile.profile.receipts.get(id,{})}
 func read_active()->Dictionary:
  var claim=await _claim()
  if not claim.get("ok",false):return _failure(str(claim.get("code","WEB_IO")))
@@ -127,5 +139,25 @@ func commit_run(expected_slot:int,expected_revision:int,run_id:String,snapshot:D
  if not claim.get("ok",false):return _failure(str(claim.get("code","WEB_IO")))
  var supplied=auth.duplicate(true);supplied.expectedSlotRevision=expected_slot
  var raw:Dictionary=await _web("save",{"auth":supplied,"id":run_id,"expected":expected_revision,"snapshot":candidate,"request_id":request_id}) if use_web else native.save_journey(run_id,supplied,expected_revision,candidate,request_id)
+ if raw.get("ok",false) and test_drop_next_ack:test_drop_next_ack=false;return _failure("ACK_LOST")
+ return _normalize(raw)
+
+func settle_run(expected_slot:int,expected_revision:int,run_id:String,outcome:String,request_id:String="")->Dictionary:
+ if not World.valid_run_id(request_id) or request_id=="" or outcome not in ["withdrawn","chapter1","victory"]:return _failure("INVALID_OUTCOME")
+ var claim=await _claim(false,true)
+ if not claim.get("ok",false):return _failure(str(claim.get("code","WEB_IO")))
+ var supplied=auth.duplicate(true);supplied.expectedSlotRevision=expected_slot
+ var raw:Dictionary
+ if use_web:
+  var current=await _read_raw()
+  if not current.get("ok",false):return _failure(str(current.get("code","WEB_IO")))
+  var run=current.get("run",{})
+  if run.get("id")!=run_id:return _failure("SUPERSEDED_OPERATION")
+  var base=_canonical(run.get("snapshot",{}),run.get("status")=="archived")
+  if base.is_empty():return _failure("INVALID_SNAPSHOT")
+  var probe=World.from_snapshot(base)
+  if not probe.finish_run(outcome):return _failure("INVALID_OUTCOME")
+  raw=await _web("settle",{"auth":supplied,"id":run_id,"expected":expected_revision,"outcome":outcome,"request_id":request_id,"base":base,"ended":probe.save_data()})
+ else:raw=native.settle_journey(run_id,supplied,expected_revision,outcome,request_id)
  if raw.get("ok",false) and test_drop_next_ack:test_drop_next_ack=false;return _failure("ACK_LOST")
  return _normalize(raw)

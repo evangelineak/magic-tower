@@ -3,8 +3,8 @@
 if(globalThis.MagicTowerJourneys)return;
 /* Production IndexedDB implementation loaded by session_storage.gd.
  * Profile/receipt validation shares the proven prototype schema. The inherited
- * settlement implementation is intentionally NOT exposed by dispatch; this batch
- * permits only open/claim/renew/read/create/save, with no reward settlement.
+ * prototype settlement helper is not exposed. Production settleJourney validates
+ * the complete base and ended World payload and commits its profile atomically.
  */
 class StorageFault extends Error {
   constructor(code) { super(code); this.name = 'StorageFault'; this.code = code; }
@@ -13,7 +13,7 @@ const req = r => new Promise((ok, no) => { r.onsuccess = () => ok(r.result); r.o
 const must = (value, code) => { if (!value) throw new StorageFault(code); };
 const integer = (n, max = Number.MAX_SAFE_INTEGER) => Number.isSafeInteger(n) && n >= 0 && n <= max;
 function nextCounter(value) {
-  must(integer(value) && value < Number.MAX_SAFE_INTEGER, 'COUNTER_EXHAUSTED');
+  must(integer(value,10000000) && value < 10000000, 'COUNTER_EXHAUSTED');
   return value + 1;
 }
 const MAX_RUNS=4096;
@@ -21,7 +21,7 @@ const MAX_SNAPSHOT_BYTES=1048576;
 const IDS = ['legacy_scout', 'legacy_tactician', 'legacy_veteran'];
 const LEVELS = [3, 5, 8];
 const fresh = () => ({ revision: 1, milestones: [], receipts: {}, unlocked: [] });
-function snapshotCopy(snapshot) {
+function snapshotCopy(snapshot, allowEnded=false) {
   const s = structuredClone(snapshot);
   let encoded; try {encoded=JSON.stringify(s);}catch{throw new StorageFault('INVALID_SNAPSHOT');}
   must(typeof encoded==='string' && new TextEncoder().encode(encoded).length<=MAX_SNAPSHOT_BYTES,'SNAPSHOT_TOO_LARGE');
@@ -29,7 +29,7 @@ function snapshotCopy(snapshot) {
   must(!s.floor_seen.some((seen,i) => seen && s.floor_seen.slice(0,i).includes(false)), 'INVALID_SNAPSHOT');
   must(integer(s.floor) && s.floor < s.floor_seen.length && s.floor_seen[s.floor], 'INVALID_SNAPSHOT');
   must(typeof s.won === 'boolean' && Number.isSafeInteger(s.hp) && s.hp > 0 && integer(s.moves, 10000000) && integer(s.seed_value, 2147483647), 'INVALID_SNAPSHOT');
-  must(s.version===13 && validId(s.run_id) && s.mode==='safe' && s.ended_reason==='', 'INVALID_WORLD');
+  must(s.version===13 && validId(s.run_id) && s.mode==='safe' && (s.ended_reason==='' || (allowEnded && ['retired','victory'].includes(s.ended_reason))), 'INVALID_WORLD');
   must([1,2].includes(s.layout_revision) && Array.isArray(s.floors) && s.floors.length===s.floor_seen.length, 'INVALID_WORLD');
   must(integer(s.x,9)&&s.x>=1&&integer(s.y,9)&&s.y>=1&&integer(s.atk,1000000)&&s.atk>0&&integer(s.def,1000000), 'INVALID_WORLD');
   must(s.floors.every(grid=>Array.isArray(grid)&&grid.length===11&&grid.every(row=>Array.isArray(row)&&row.length===11&&row.every(t=>typeof t==='string'&&t.length===1))), 'INVALID_WORLD');
@@ -38,12 +38,15 @@ function snapshotCopy(snapshot) {
   return s;
 }
 function summaryOf(snapshot, outcome) {
-  const s = snapshotCopy(snapshot);
-  must(['withdrawn', 'chapter1', 'victory'].includes(outcome), 'INVALID_OUTCOME');
-  const max_floor = s.floor_seen.reduce((n, seen, i) => seen ? i + 1 : n, 0);
-  if (outcome === 'chapter1') must(s.won && s.floor_seen.length === 5 && max_floor === 5, 'NOT_CHAPTER1_WIN');
-  if (outcome === 'victory') must(s.won && s.floor_seen.length === 8 && max_floor === 8, 'NOT_FINAL_WIN');
-  return { seed: s.seed_value, max_floor, moves: s.moves, outcome };
+ const s=snapshotCopy(snapshot,true);
+ must(['withdrawn','chapter1','victory'].includes(outcome),'INVALID_OUTCOME');
+ const max_floor=s.floor_seen.filter(Boolean).length;
+ const count=token=>s.floors.reduce((n,g)=>n+g.flat().filter(t=>t===token).length,0);
+ must(s.ended_reason===(outcome==='victory'?'victory':'retired'),'INVALID_OUTCOME');
+ if(outcome==='withdrawn')must(!s.won,'INVALID_OUTCOME');
+ if(outcome==='chapter1')must(s.won&&!s.expedition_started&&s.floors.length===5&&max_floor===5&&count('K')===0,'INVALID_OUTCOME');
+ if(outcome==='victory')must(s.won&&s.expedition_started&&s.floors.length===8&&max_floor===8&&count('Z')===0,'INVALID_OUTCOME');
+ return {seed:s.seed_value,max_floor,moves:s.moves,outcome};
 }
 const keysExactly=(o,keys)=>o && typeof o==='object' && !Array.isArray(o) && Object.keys(o).length===keys.length && keys.every(k=>Object.hasOwn(o,k));
 function validSummary(x) { return keysExactly(x,['seed','max_floor','moves','outcome']) && integer(x.seed,2147483647) && integer(x.max_floor,8) && x.max_floor>=1 && integer(x.moves,10000000) && ['withdrawn','chapter1','victory','defeat'].includes(x.outcome) && (x.outcome!=='chapter1'||x.max_floor>=5) && (x.outcome!=='victory'||x.max_floor===8); }
@@ -79,7 +82,28 @@ const same = (a,b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(
 function canonical(x) { return Array.isArray(x) ? x.map(canonical) : x && typeof x==='object' ? Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])) : x; }
 const validId=id=>typeof id==='string' && /^[A-Za-z0-9_-]{16,64}$/.test(id);
 function validRun(r) {
-  try { if(r && validId(r.id) && integer(r.revision) && r.status==='abandoned' && r.snapshot===null && r.last_op && validId(r.last_op.request_id))return true; return r && validId(r.id) && integer(r.revision) && ['active','archived','abandoned'].includes(r.status) && r.snapshot?.run_id===r.id && r.last_op && validId(r.last_op.request_id) && ['create','save'].includes(r.last_op.kind) && integer(r.last_op.result_revision) && r.last_op.result_revision===r.revision && !!snapshotCopy(r.snapshot); } catch { return false; }
+ try {
+  if(!keysExactly(r,['id','revision','status','snapshot','last_op'])||!validId(r.id)||!integer(r.revision,10000000)||!['active','archived','abandoned'].includes(r.status))return false;
+  const op=r.last_op;
+  if(!keysExactly(op,['request_id','kind','expected_slot','expected_revision','hash','result_slot','result_revision'])||!validId(op.request_id)||!['create','save','settle'].includes(op.kind))return false;
+  if(!integer(op.expected_slot,10000000)||!Number.isSafeInteger(op.expected_revision)||op.expected_revision< -1||op.expected_revision>10000000||!integer(op.result_slot,10000000)||!integer(op.result_revision,10000000))return false;
+  if(typeof op.hash!=='string'||!/^[a-f0-9]{64}$/.test(op.hash)||op.result_revision!==r.revision)return false;
+  if(op.kind==='create'&&(op.request_id!==r.id||op.expected_revision!==-1||r.revision!==0||op.result_slot!==op.expected_slot+1))return false;
+  if(op.kind!=='create'&&(op.expected_revision<0||op.result_revision!==op.expected_revision+1||op.result_slot!==op.expected_slot+(op.kind==='settle'?1:0)))return false;
+  if((r.status==='archived')!==(op.kind==='settle'))return false;
+  if(r.status==='abandoned'&&r.snapshot===null)return true;
+  if(r.snapshot?.run_id!==r.id)return false;
+  snapshotCopy(r.snapshot,r.status==='archived');
+  return r.status!=='archived'||r.snapshot.ended_reason!=='';
+ }catch{return false;}
+}
+
+function checkRunLedger(run,profile){
+ if(!run)return;
+ must(validRun(run),'CORRUPT_RUN');
+ const receipt=profile.receipts[run.id];
+ if(run.status==='archived')must(receipt&&same(summaryOf(run.snapshot,receipt.summary.outcome),receipt.summary),'CORRUPT_RECEIPT');
+ else must(!receipt,'CLOSED_RECEIPT_ACTIVE');
 }
 async function loadProfile(stores) {
   const envelope=await req(stores('profiles').get('local')), indexes=await req(stores('receipts').getAll());
@@ -92,8 +116,8 @@ async function loadProfile(stores) {
 async function loadSlot(stores) {
   const slot=await req(stores('slots').get('active'));
   if(slot===undefined) {must(await req(stores('runs').count())===0,'CORRUPT_SLOT');return {id:'active',revision:0,activeRunId:null,lastFence:0,writer:null};}
-  must(slot && slot.id==='active' && integer(slot.revision) && integer(slot.lastFence) && (slot.activeRunId===null || validId(slot.activeRunId)),'CORRUPT_SLOT');
-  if(slot.writer!==null) must(slot.writer && typeof slot.writer.owner==='string' && slot.writer.owner.length>0 && slot.writer.owner.length<200 && integer(slot.writer.fence) && slot.writer.fence>0 && slot.writer.fence===slot.lastFence && integer(slot.writer.leaseUntil),'CORRUPT_SLOT');
+  must(slot && slot.id==='active' && integer(slot.revision,10000000) && integer(slot.lastFence,10000000) && (slot.activeRunId===null || validId(slot.activeRunId)),'CORRUPT_SLOT');
+  if(slot.writer!==null) must(slot.writer && typeof slot.writer.owner==='string' && slot.writer.owner.length>0 && slot.writer.owner.length<200 && integer(slot.writer.fence,10000000) && slot.writer.fence>0 && slot.writer.fence===slot.lastFence && integer(slot.writer.leaseUntil),'CORRUPT_SLOT');
   if(slot.activeRunId!==null) { const run=await req(stores('runs').get(slot.activeRunId));must(validRun(run),'CORRUPT_RUN'); }
   return slot;
 }
@@ -210,8 +234,9 @@ class JourneyStorage extends ProfileStorage {
     const op=run.last_op;
     must(op.kind===kind && op.hash===hash && op.expected_revision===expected && (kind==='create'||op.expected_slot===args.auth.expectedSlotRevision),'REQUEST_CONFLICT');
     must(slot.activeRunId===id && slot.revision===op.result_slot && run.revision===op.result_revision && run.status==='active','SUPERSEDED_OPERATION');
-    return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,duplicate:true};
+    return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile,duplicate:true};
    }
+   if(run?.status==='active')must(!Object.hasOwn(profile.receipts,id),'CLOSED_RECEIPT_ACTIVE');
    checkSlot(slot,args.auth);
    if(kind==='create'){
     must(!run&&!Object.hasOwn(profile.receipts,id),'ID_COLLISION');must(await req(s('runs').count())<MAX_RUNS,'RUNS_FULL');
@@ -219,24 +244,66 @@ class JourneyStorage extends ProfileStorage {
     // JS independently rejects partial stub, legacy identity and visibly progressed input.
     must(snapshot.moves===0 && snapshot.floor===0 && snapshot.floors.length===5 && snapshot.x===1 && snapshot.y===1 && !snapshot.won && snapshot.floor_seen.slice(1).every(v=>!v) && snapshot.inventory.length===1,'NOT_FRESH_RUN');
     const prior=slot.activeRunId?await req(s('runs').get(slot.activeRunId)):null;
+    checkRunLedger(prior,profile);
     if(prior?.status==='active'){must(args.replace===true,'ACTIVE_RUN_EXISTS');prior.status='abandoned';prior.snapshot=null;await req(s('runs').put(prior));}
     slot.activeRunId=id;slot.revision=nextCounter(slot.revision);
     const created={id,revision:0,status:'active',snapshot,last_op:{request_id:args.request_id,kind,expected_slot:args.auth.expectedSlotRevision,expected_revision:-1,hash,result_slot:slot.revision,result_revision:0}};
     slot.writer.leaseUntil=Date.now()+60000;await req(s('runs').add(created));await req(s('slots').put(slot));
-    return {ok:true,run:created,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil};
+    return {ok:true,run:created,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
    }
    must(slot.activeRunId===id && validRun(run)&&run.status==='active','NOT_ACTIVE_RUN');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
    run.snapshot=snapshot;run.revision=nextCounter(run.revision);
    run.last_op={request_id:args.request_id,kind,expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
-   slot.writer.leaseUntil=Date.now()+60000;await req(s('runs').put(run));await req(s('slots').put(slot));return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil};
+   slot.writer.leaseUntil=Date.now()+60000;await req(s('runs').put(run));await req(s('slots').put(slot));return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,profile};
+  });
+ }
+ async settleJourney(args) {
+  must(validId(args.request_id)&&['withdrawn','chapter1','victory'].includes(args.outcome),'INVALID_OUTCOME');
+  const base=snapshotCopy(args.base,true),ended=snapshotCopy(args.ended,true);
+  const hash=await digestSnapshot(ended);
+  must(base.run_id===args.id&&ended.run_id===args.id,'IDENTITY_MISMATCH');
+  const onlyEnd=structuredClone(base);onlyEnd.ended_reason=ended.ended_reason;
+  must(same(onlyEnd,ended),'INVALID_END_TRANSITION');
+  const expectedSummary=summaryOf(ended,args.outcome);
+  const fail=point=>{if(databaseName.startsWith('magic-tower-journeys-v1-test-')&&args.test_abort===point)throw new StorageFault('INJECTED_ABORT_'+point)};
+  return this.transaction(['slots','runs','profiles','receipts'],'readwrite',async s=>{
+   const slot=await loadSlot(s),envelope=await loadProfile(s);
+   checkSlot(slot,{...args.auth,expectedSlotRevision:slot.revision});
+   const run=await req(s('runs').get(args.id));must(validRun(run),'CORRUPT_RUN');
+   checkRunLedger(run,envelope.profile);
+   const last=run.last_op;
+   if(last.request_id===args.request_id){
+    must(last.kind==='settle'&&last.hash===hash&&last.expected_revision===args.expected&&last.expected_slot===args.auth.expectedSlotRevision,'REQUEST_CONFLICT');
+    const receipt=envelope.profile.receipts[args.id];
+    must(receipt&&same(receipt.summary,expectedSummary),'REQUEST_CONFLICT');
+    must(slot.activeRunId===args.id&&slot.revision===last.result_slot&&run.revision===last.result_revision&&run.status==='archived','SUPERSEDED_OPERATION');
+    must(same(run.snapshot,ended),'REQUEST_CONFLICT');
+    return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,receipt,profile:envelope.profile,duplicate:true};
+   }
+   checkSlot(slot,args.auth,args.id);
+   must(run.status==='active','RUN_NOT_ACTIVE');must(integer(args.expected)&&run.revision===args.expected,'STALE_REVISION');
+   must(run.snapshot.ended_reason===''&&same(run.snapshot,base),'STALE_BASE');
+   const authoritative=structuredClone(run.snapshot);authoritative.ended_reason=ended.ended_reason;
+   must(same(authoritative,ended),'INVALID_END_TRANSITION');
+   const summary=summaryOf(authoritative,args.outcome);
+   const decision=settleProfile(envelope.profile,args.id,summary);
+   must(decision.ok&&decision.status==='applied','PROFILE_'+decision.status.toUpperCase());
+   envelope.profile=decision.profile;envelope.commitRevision=nextCounter(envelope.commitRevision);
+   fail('before_writes');await req(s('profiles').put(envelope));fail('after_profile');
+   await req(s('receipts').add({id:args.id,receipt:decision.receipt}));fail('after_receipt');
+   run.snapshot=authoritative;run.status='archived';run.revision=nextCounter(run.revision);
+   slot.revision=nextCounter(slot.revision);slot.writer.leaseUntil=Date.now()+60000;
+   run.last_op={request_id:args.request_id,kind:'settle',expected_slot:args.auth.expectedSlotRevision,expected_revision:args.expected,hash,result_slot:slot.revision,result_revision:run.revision};
+   await req(s('runs').put(run));fail('after_archive');await req(s('slots').put(slot));fail('after_slot');
+   return {ok:true,run,slotRevision:slot.revision,leaseUntil:slot.writer.leaseUntil,receipt:decision.receipt,profile:decision.profile};
   });
  }
  async active() {
   return this.transaction(['slots','runs','profiles','receipts'],'readonly',async s=>{
    const slot=await loadSlot(s),profile=(await loadProfile(s)).profile;
    const run=slot.activeRunId?await req(s('runs').get(slot.activeRunId)):null;
-   if(run){must(validRun(run),'CORRUPT_RUN');must(!(run.status==='active'&&Object.hasOwn(profile.receipts,run.id)),'CLOSED_RECEIPT_ACTIVE');}
-   return {ok:true,run,slotRevision:slot.revision};
+   if(run){must(validRun(run),'CORRUPT_RUN');must(!(run.status==='active'&&Object.hasOwn(profile.receipts,run.id)),'CLOSED_RECEIPT_ACTIVE');if(run.status==='archived')must(profile.receipts[run.id]&&same(summaryOf(run.snapshot,profile.receipts[run.id].summary.outcome),profile.receipts[run.id].summary),'CORRUPT_RECEIPT');}
+   return {ok:true,run,slotRevision:slot.revision,profile,receipt:run?profile.receipts[run.id]||null:null};
   });
  }
 }
@@ -249,6 +316,7 @@ async function dispatch(operation,args){
  if(operation==='claim')return {ok:true,auth:await store.claimWriter(args.owner,args.lease_ms)};
  if(operation==='renew')return {ok:true,auth:await store.renewWriter(args.auth,args.lease_ms)};
  if(operation==='read')return store.active();
+ if(operation==='settle')return store.settleJourney(args);
  if(operation==='create'||operation==='save')return store.writeJourney(operation,args);
  throw new StorageFault('UNSUPPORTED_OPERATION');
 }

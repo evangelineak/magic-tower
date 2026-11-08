@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "472e49d4db084683ef1185108be035a3d02a094efcefa2918c996bb66864d255",
-  "bytes": 401532,
+  "output_sha256": "6c511dea6ca13405d3f70626b5ef63db0bcd2fde83f2fd56c52f97b867054684",
+  "bytes": 406528,
   "coverage": {
-    "mapped_codepoints": 1031,
-    "glyphs": 2047,
-    "required_codepoints": 873,
+    "mapped_codepoints": 1043,
+    "glyphs": 2069,
+    "required_codepoints": 885,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -46,7 +46,7 @@
     },
     {
       "path": "scripts/journey_store_native.gd",
-      "sha256": "cbd8dd073a21f70e4298b85e09a73f845b1599cef158c1d1cdb4f414de58105e"
+      "sha256": "b3b57adf7ebed0d21d8562181c1f1d1a519958e11fbdb6eb0dfd767d77dc7bd4"
     },
     {
       "path": "scripts/layout.gd",
@@ -70,15 +70,15 @@
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "eaafbab7aa171dc5f9b71abb81a8bc3f71fdef6af37baafd415f8c35071e7cef"
+      "sha256": "a5152d2f3f9285a27d39187d6191a8bb58315a36d362522c4ba8b9f8e43ef3af"
     },
     {
       "path": "scripts/localization_world.gd",
-      "sha256": "42b05fd68e2fa347ae8c2f1e2c07aaea28a0951d5be0169aabb4945d0099664d"
+      "sha256": "f99e40565fff20a75dff9905e70e66450fed4c9240a1282b1015354038a0a311"
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "874167653baea61a0f995c264e6b2ffe12dc47521565b1cf03023ca922297db4"
+      "sha256": "e3808bead7a04f291e237c7e0a2ff5dc915535c56f75b799ed8d40a4c4cc4751"
     },
     {
       "path": "scripts/navigation.gd",
@@ -94,11 +94,11 @@
     },
     {
       "path": "scripts/session.gd",
-      "sha256": "5d8d481469ccde01530136e78b883a2968ca5ff2fbe3e514c87ec93bc3f2631b"
+      "sha256": "b38fcc955b08c9da43d124770964dba221f0831ad08c139795f5dcfe8be8e493"
     },
     {
       "path": "scripts/session_storage.gd",
-      "sha256": "7a24f47e56b5d7ed643942e5bb3e77fadbfd4186e7974eab6f4b107d9146a503"
+      "sha256": "8acca83f53ac51d3cfc492fe186dcf47fcb596bc5220ef58962e61904c7f43fd"
     },
     {
       "path": "scripts/world.gd",

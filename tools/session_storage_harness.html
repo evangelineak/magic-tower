@@ -4,6 +4,7 @@
 <p id="context"></p><label>租约毫秒 <input id="ttl" value="1000" type="number"></label>
 <button id="claim">获取写权限</button><button id="read">读取当前完整存档</button><br>
 <button id="create">创建真实 A 新局</button><button id="retry_create">重复同请求创建 A</button><button id="save">保存 A 合法一步</button><button id="retry_save">重复同一步请求</button><button id="replace">明确替换为真实 B</button><br>
+<button id="settle">确认退役当前测试旅程</button><br>
 <button id="selftest">独立随机库生产桥自动测试</button><pre id="log">准备中…</pre>
 <script>
 const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDatabase=query.get('db')||'magic-tower-journeys-v1-test-manual';
@@ -25,6 +26,16 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
  const saveA=()=>rpc('save',{auth:{...auth,expectedSlotRevision:1},id,expected:0,snapshot:fixtures.first_after_step,request_id:saveId});
  click('#save',saveA);click('#retry_save',saveA);
  click('#replace',async()=>{const r=await rpc('create',{auth:{...auth,expectedSlotRevision:slot},snapshot:fixtures.second,replace:true,request_id:fixtures.second.run_id});if(r.ok){slot=r.slotRevision;auth.expectedSlotRevision=slot}return r});
+ let manualFinishArgs=null;
+ click('#settle',async()=>{
+  if(!manualFinishArgs){
+   const current=await rpc('read');if(!current.ok||!current.run)return current;
+   const base=current.run.snapshot;const ended=structuredClone(base);ended.ended_reason='retired';
+   manualFinishArgs={auth:{...auth,expectedSlotRevision:current.slotRevision},id:current.run.id,expected:current.run.revision,outcome:'withdrawn',request_id:crypto.randomUUID().replaceAll('-',''),base,ended};
+  }
+  const result=await rpc('settle',manualFinishArgs);
+  if(result.ok){slot=result.slotRevision;auth.expectedSlotRevision=slot}return result;
+ });
  click('#selftest',async()=>{
   // A fresh same-origin page creates an isolated production test namespace.
   const testDB='magic-tower-journeys-v1-test-auto-'+crypto.randomUUID();
@@ -50,6 +61,25 @@ const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDat
    const takeover=await rpc('claim',{owner:'other-owner-'+owner,lease_ms:60000});check(takeover.ok&&takeover.auth.fence>auth.fence,'new fence after real expiry');
    r=await rpc('create',{auth,snapshot:fixtures.first,replace:true,request_id:id});check(!r.ok&&r.code==='STALE_WRITER','old fence cannot replace new active run');
    r=await rpc('read');check(r.ok&&eq(r.run.snapshot,fixtures.second),'latest active payload stays exact');
+   auth=takeover.auth;
+   const finishArgs={auth:{...auth},id:fixtures.second.run_id,expected:0,outcome:'withdrawn',request_id:'ffffffffffffffffffffffffffffffff',base:fixtures.second,ended:fixtures.second_ended};
+   for(const point of ['before_writes','after_profile','after_receipt','after_archive','after_slot']){
+    r=await rpc('settle',{...finishArgs,test_abort:point});check(!r.ok&&r.code==='INJECTED_ABORT_'+point,'settlement abort '+point);
+    r=await rpc('read');check(r.ok&&r.slotRevision===2&&r.run.revision===0&&eq(r.run.snapshot,fixtures.second)&&Object.keys(r.profile.receipts).length===0,'atomic rollback '+point);
+   }
+   const changed=structuredClone(fixtures.second_ended);changed.gold+=1;
+   r=await rpc('settle',{...finishArgs,ended:changed});check(!r.ok&&r.code==='INVALID_END_TRANSITION','cannot grant arbitrary reward through ended candidate');
+   const staleBase=structuredClone(fixtures.second);staleBase.gold+=1;
+   const staleEnd=structuredClone(fixtures.second_ended);staleEnd.gold+=1;
+   r=await rpc('settle',{...finishArgs,base:staleBase,ended:staleEnd});check(!r.ok&&r.code==='STALE_BASE','full prepared base is checked inside transaction');
+   r=await rpc('settle',{...finishArgs,outcome:'victory'});check(!r.ok,'cannot claim false victory');
+   const finished=await rpc('settle',finishArgs);check(finished.ok&&finished.run.status==='archived'&&finished.run.revision===1&&finished.slotRevision===3&&eq(finished.run.snapshot,fixtures.second_ended),'one atomic full-world settlement');
+   check(finished.receipt.summary.max_floor===1&&finished.receipt.summary.outcome==='withdrawn'&&Object.keys(finished.profile.receipts).length===1,'receipt derived from actual base');
+   r=await rpc('settle',finishArgs);check(r.ok&&r.duplicate&&eq(r.receipt,finished.receipt)&&r.slotRevision===3,'lost settlement response retries once');
+   r=await rpc('read');check(r.ok&&r.run.status==='archived'&&eq(r.receipt,finished.receipt)&&eq(r.profile,finished.profile),'archived restart read includes receipt and full ledger');
+   auth.expectedSlotRevision=3;
+   r=await rpc('create',{auth,snapshot:fixtures.winner_fresh,replace:true,request_id:fixtures.winner_fresh.run_id});check(r.ok&&Object.keys(r.profile.receipts).length===1,'new active run preserves ledger');
+   r=await rpc('settle',finishArgs);check(!r.ok&&r.code==='SUPERSEDED_OPERATION','old finished request cannot revive superseded journey');
    parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:window.MagicTowerJourneysTestDatabase,scope:'Production JS callback protocol + real IndexedDB, not Godot WebGL/JavaScriptBridge runtime'}},location.origin);
   }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,checks,database:window.MagicTowerJourneysTestDatabase}},location.origin)}
  }

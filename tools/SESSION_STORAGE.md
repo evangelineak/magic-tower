@@ -2,8 +2,8 @@
 
 This is separate from the six-field profile prototype. The current game session
 uses `scripts/session_storage.gd`, `journey_store_native.gd` and
-`profile_storage_web.js`. Settlement, death rewards and legacy imports are not
-exposed by this adapter. The old `journey-v4` file is untouched.
+`profile_storage_web.js`. Atomic safe-mode retirement/chapter/final-victory settlement is exposed; death
+rewards and legacy imports are not. The old `journey-v4` file is untouched.
 
 ## Contract
 
@@ -17,7 +17,11 @@ without read-only mode; it is not an I/O failure.
 - `commit_run(expected_slot, expected_revision, run_id, snapshot, request_id)`
   validates the full World and commits using global writer fencing plus slot/run
   compare-and-swap.
-- `read_active()` reads the current registered run.
+- `settle_run(expected_slot, expected_revision, run_id, outcome, request_id)`
+  atomically finishes the authoritative stored World, applies its derived receipt,
+  archives it and increments both revisions. Only withdrawn/chapter1/victory
+  are supported.
+- `read_active()` reads the current registered active or archived run.
 - `reacquire_and_read()` explicitly obtains the current lease and reloads the
   actual stored state; it does not replay a stale candidate.
 
@@ -69,6 +73,45 @@ B's read returned the complete same World. The test page and server were closed;
 the test database was retained. This verifies the production JavaScript callback
 protocol, not the Godot JavaScriptBridge/WebGL runtime.
 
-The adapter and native container reject both risk-mode and nonempty-ended-reason
-payloads on write and read, even if otherwise valid under the World model.
-Changing this deliberate batch boundary requires a future storage/session change.
+The adapter and native container reject risk-mode and reject nonempty-ended-reason
+payloads on ordinary writes. Archived reads require a valid ended World and an exactly
+matching receipt in the validated profile. Risk mode remains unsupported.
+
+## Atomic settlement addition
+
+All successful active and archived responses include the complete validated
+profile ledger. Archived responses additionally include the exact receipt and
+remain eligible (a terminal result, not an active playable run). Ordinary save
+cannot seal or unseal a run. Native settlement uses World.restore/finish_run/
+settlement_summary on the stored payload. Web preparation validates in Godot;
+the IndexedDB transaction then requires exact full-base equality and allows only
+the ended_reason change, derives the summary from its actual state and atomically
+writes profile, receipt, archive, both revisions and operation metadata.
+
+`tests/test_session_settlement.gd` passes 72 checks covering seven rollback points,
+actual post-rename acknowledgement loss, repeated requests and restart recovery,
+malformed operation metadata, damaged archive/receipt pairs, writer takeover,
+and real legal K/Z routes. These are controlled failures, not power-loss tests.
+Archived full snapshots are retained as evidence. The earlier 100-run timing
+measurements apply to abandoned/tombstoned runs, NOT 100 archived full worlds;
+no cheap-4096-archive performance claim is made.
+
+The browser harness now additionally exercises five true IndexedDB abort points,
+full-base comparison, ended-field-only restrictions, ledger-preserving new runs
+and stale settlement replay. Its previous 14-check browser result is not evidence
+for these new settlement checks; the expanded browser run must be recorded after
+actual execution.
+
+`tools/test_session_storage_protocol.mjs` additionally passes 39 pure checks
+against the actual production JavaScript validation functions: exact operation
+metadata, safe counter exhaustion, real K/Z summaries and corrupt receipt pairs.
+The production counter limit is 10,000,000, matching native metadata validation;
+no increment beyond that limit is written. This pure test does not exercise IDB.
+
+Final production-browser settlement QA: 33 self-test checks passed in real Chrome,
+including all five controlled transaction abort points and exact rollback, then
+manual save/settle/duplicate followed by closing and reopening the test page
+preserved the archived World, receipt and profile. Screenshots
+`settlement-bridge-selftest.png` and `settlement-bridge-reopened.png`.
+This supersedes the pending-browser note above, but does not certify Godot WebGL
+or the engine's JavaScriptBridge runtime.

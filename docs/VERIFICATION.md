@@ -222,3 +222,18 @@
 - 最终安全边界收紧：生产原生及适配器和JS一致，只允许safe模式且ended_reason为空；10项新增读写/篡改负例通过，存储共35项。最终全套日志/tmp/tower-session-final.log，功能检查总数7848，Node269+9项。
 - 最终Linux/Windows导出成功，6项关键源码导出前后hash一致，记录scratch/session-export-code.sha。实际Linux独立包恢复同一13步344HP旅程，真实Down/U/L后身份资源保持，截图session-export-{game,journal}.png。Linux二进制SHA256 010c538c53fe51e11c41d4a5eca16994cd991f280e7ec65f77318061585cd671；Windows二进制8a6fd7757437cb2da07fe8fba64cca84d38ab33080c5f07f209bd0f67c7bf5f1，仅交叉导出。由正常Godot引擎挂载独立exe的实际embedded PCK后读取生产JS，20852字节、SHA e76f6d03fd9a4b97cd27564af14b740ed767b5e2dc97bda54610179b2f2f5e66与源一致；release exe忽略外部--script的尝试不算成功探针。未导出或发布新的Web包。
 - 提交后复核额外修复测试harness失败报告中的局部变量作用域错误；生产游戏代码未变。新增VM执行真实inline auto失败分支，分别模拟RPC抛错与ok:false，验证准确发出一次PASS:false、保留原错误/数据库/origin。桥静态与故障报告现17项通过（原9+8），不将该测试修补冒充游戏玩法变更。
+
+## 安全模式原子终局结算（开发分支，2026-11-08）
+
+- 全套tools/test_all.sh退出0，日志/tmp/tower-settlement-preflight.log：8760项Godot功能检查、269项跨语言向量、17项桥语法/失败报告和37项生产JS纯协议；随后针对JS计数上限补2项，协议39项通过。首章200种子178035项、远征200种子97863项，9条完整对抗路线/2568合法存档回放，导入与30帧启动通过。
+- Session控制器171项、生产原生结算72项、原有存储35项；真实路线764项以合法World动作分别到三层退役、K首章结算、K继续不领奖到Z结算。到访、击杀和资源不是人工注入；路线快照保持Session新身份并经同一生产CAS提交。终局Undo/动作被拒且磁盘不变，新Session恢复结算页、新局保留档案。
+- 终局World、profile、receipt、run/slot版本和last_op同一事务提交，丢失响应仅重试原操作。active及archived响应均严格校验完整profile，非结算操作不得改变账本，终局结果还与此前profile推导的唯一收据全量匹配。JSON传输的合法数字类型差异按值比较，不放松schema。
+- Native明确用完整World.settlement_summary覆盖旧六字段原型；JS先由Godot准备完整base/ended，事务内CAS并精确比对当前base及仅结束字段改变，再依据事务实际状态计算摘要。两平台last_op字段、hash、计数上限及状态关系一致；损坏收据/不匹配终态拒绝，不能靠重开绕过。
+- 本批只开放safe模式退役、首章和最终胜利结算；首次3/5/8里程碑仍仅是记录和解锁标识，没有属性或天赋效果。归档保留完整World以验证收据，不承诺大量已结算历史的旧100局abandoned性能；死亡风险模式、跨局抽选仍未启用，公开网页保持v0.17。
+- 字体885必需字缺0，本地化80项通过；406528字节，SHA256 6c511dea6ca13405d3f70626b5ef63db0bcd2fde83f2fd56c52f97b867054684。主界面125项检查包括明确确认、失败不展示奖励、F5重试、终局只读和新局保留档案。
+- 真实原生新局seed0合法实玩92步到3层，439HP/33ATK/16DEF/82金币，run f973b4ca741186506acb303dab0f036a；X明确确认退役后首次记录[3]。关闭真实进程后重启同store自动恢复终局，L不重复收据；N首次尝试因真实60秒闲置租约过期被拒，L重新取权后N二次确认生成新ID8872ffa0b74c4f2c1b3594b9c563398a，0步280HP，保留旧92步归档与profile[3]。K/Z只以合法路线/控制器验证，没有冒称GUI通关。
+- 亲自查看英文确认页和中英文结算页，初版终局错误沿用“Your journey resumes.”，已修为只显示真正busy/存储提示，不回退普通World消息，并加入回归；最终UI127项通过。JSON层数按整数展示，不改存储数据。截图settlement-gui-{confirm,confirm-en,terminal,reopened,next-run}.png；新重开中文页无溢出。
+- 真实Chrome生产JS扩展33项通过，涵盖五处受控事务abort/完整回滚、CAS、仅终止字段变化、幂等、新局后旧请求拒绝。另人工保存一步→退役→duplicate→关闭页面新标签读取，archived/receipt/profile一致。截图settlement-bridge-{selftest,reopened}.png；测试服务器与页面已关闭、数据库保留。这仍是生产JS/IndexedDB协议，不是Godot WebGL/JavaScriptBridge引擎链路实跑。
+- 最终全部源码冻结后再次执行tools/test_all.sh，/tmp/tower-settlement-final.log退出0：8762项Godot功能检查（含最终UI127）、Node269+17+39，400种子、9完整路线/2568合法存档全部通过；字体manifest所有源码hash一致。
+- 最终独立Linux包实跑：恢复新0步280HP旅程，X确认退役未新增里程碑，累计仍[3]。关闭并重启初见WRITER_BUSY，等待真实租约到期后L恢复成功，英文终局为本次[]/累计[3]；只读核对两局均archived、两张receipt，旧92步完整保留。截图settlement-export-{terminal,reopened-en}.png，store证据settlement-export-store-evidence.txt。这是实际独立exe，不是godot --path。
+- 导出前后5项核心源码hash一致，Linux二进制SHA e38db738abb8a8e3fc889e29b07a207e926867c249956b93b18b7a33c4d48992，Windows25d9b7f8f67044ea2561c9dd26dc8c7a94867ac9050c750c87d7a00068de91cc仅交叉导出。实际embedded PCK的生产JS为26080字节、SHA06cb854170f200485b115076399cee77b7180ec858f58453c005573dfedf96d8，与源码一致。首次probe漏XDG_CONFIG/CACHE产生环境编辑器目录警告，补全环境后重跑同probe无警告；不隐去初次失败事实。公开网页未改。

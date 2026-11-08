@@ -17,9 +17,12 @@ U 撤销；L 读档；M 静音；R 连按两次同种子重开；N 连按两次�
 每次动作保存成功才显示结果。保存期间请稍候；失败不预扣资源，重试不重复收益。
 旧 journey-v4.json 原样保留，但不自动导入；本版请新开局。
 其他窗口占用时只读，请关闭其他窗口并稍候，再按L读取，不能覆盖别人的更新。
-暂不启用真实死亡、跨局结算或永久天赋；当前仍保留致死保护。
+X打开明确退役确认，Enter后结束本局并记录首次到达3/5/8层的里程碑。
+结算保存成功后不能撤销；新局保留跨局记录，不携带物品。里程碑当前不增加属性。
+暂不启用真实死亡或永久天赋效果；当前仍保留致死保护。
 
-五层首章胜利可按1或点击主动继续三层远征，一次补120生命，不自动续章。
+五层首章胜利按1主动继续三层远征并补120生命，或按2打开首章结算确认。
+最终胜利按2打开结算确认；不自动结算，L恢复终局也不重复领奖。
 六层营地药剂与专注各限两份，工程80金币开放三座桥；可回旧塔取宝。
 图鉴按 [ / ] 或点击页钮翻页，装备页同样可翻页。
 七层救出米拉后，务必在击败最后首领Z前回J领弩，或到U选择营地帮助。
@@ -86,3 +89,10 @@ T：安全快旅（续章后、最后胜利前）。只到实际到访地标，�
 技能基础10级、训练+4、词条最多+2，目前最高16；不是已有完整20级成长。
 World内部schema13；新版Session不自动导入旧文件，不把旧档补成可领奖身份。
 公开网页仍按其BUILD独立发布，不随开发分支自动更新。
+
+Settlement: X opens a retirement confirmation; Enter permanently ends this run.
+At chapter-one victory, 1 continues the expedition, or 2 opens settlement.
+At final victory, 2 opens settlement. No automatic awards before saving succeeds.
+Undo cannot reopen a settled run. New journeys retain milestone records, not items.
+First visits to floors 3/5/8 are recorded once; these records currently add no stats.
+True death and permanent talent effects are not enabled in this build.

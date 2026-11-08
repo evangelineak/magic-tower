@@ -1,5 +1,23 @@
 extends RefCounted
 const EXACT = {
+"Exploration retired":"探索已结束",
+"Chapter one complete":"首章已完成",
+"Final victory recorded":"最终胜利已记录",
+"X: retire this journey / record milestones":"X：结束本局 / 记录里程碑",
+"2  Finish chapter one and record":"2  结束首章并记录",
+"2  Settle final victory":"2  结算最终胜利",
+"Nothing is settled until you explicitly confirm.":"明确确认之前，不会进行终局结算。",
+"END THIS JOURNEY?":"要结束这次旅程吗？",
+"This permanently ends this run. Undo will no longer be available. Your current items do not carry into a new run.":"确认后本局永久结束，不能再撤销；当前物品不会带入下一局。",
+"Only newly reached floor milestones 3 / 5 / 8 are recorded. Records and unlock identifiers provide no stat bonuses in this version.":"只记录首次达到的第3 / 5 / 8层里程碑；本版本的记录及解锁标识不提供属性加成。",
+"ENTER: end and record":"回车：结束并记录",
+"ESC: keep exploring":"Esc：继续探索",
+"This journey is archived and read-only. Undo and further moves are unavailable.":"本局已归档，只能查看；不能撤销或继续行动。",
+"Records and unlock identifiers provide no stat bonuses in this version.":"本版本的记录及解锁标识不提供属性加成。",
+"JOURNEY RECORDED":"旅程已记录",
+"N twice: new journey":"连按N两次：开启新局",
+"L: reload record / F2: language":"L：重新读取记录 / F2：切换语言",
+
 "L: Reload current journey / F5: Retry save":"L：重新读取当前旅程 / F5：重试保存",
 "Saving safely. Please wait.":"正在安全保存，请稍候。",
 "Read-only: L reloads the current stored journey.":"只读状态：按L重新读取当前已保存旅程。",
@@ -365,6 +383,9 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+["Pending first records: %s (only after saving)","待首次记录：%s（保存成功后才记入）"],
+["New milestones: %s","本次首次记录：%s"],
+["Recorded milestones: %s","累计里程碑：%s"],
 ["ATK %s / DEF %s / skill levels +%d", "攻击 %s / 防御 %s / 技能等级 +%d"],
 ["Skill level %d = base %d + training %d + equipment %d", "技能等级 %d = 基础 %d + 训练 %d + 装备 %d"],
 ["Candidate skill level: %d", "候选技能等级：%d"],

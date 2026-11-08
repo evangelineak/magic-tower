@@ -15,6 +15,7 @@ const Session = preload("res://scripts/session.gd")
 var session = null # Explicit dependency injection; production uses the durable adapter.
 var world = null
 var ui_notice := ""
+var finish_pending := ""
 var walk_generation := 0
 var font = ThemeDB.fallback_font
 var art: Texture2D
@@ -194,6 +195,8 @@ func _draw():
 	if travel_menu: draw_travel()
 	if attuning: draw_attunement()
 	if not modal_open(): draw_tooltip()
+	if finish_pending!="": draw_finish_confirmation()
+	if is_terminal(): draw_terminal()
 	if session!=null and (session.busy or session.read_only):
 		panel(Rect2(210,15,1020,44),Color("182738"))
 		label_at(Vector2(225,44),"Saving safely. Please wait." if session.busy else "Read-only: L reloads the current stored journey.",18,GOLD)
@@ -217,9 +220,12 @@ func draw_sidebar():
 	var titles := ["UNDO  U","SAVE (CLICK)","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J","SAFE TRAVEL  T"]
 	for i in buttons.size():
 		panel(buttons[i],Color("253748")); label_at(buttons[i].position+Vector2(12,26),titles[i],15)
-	label_at(Vector2(768,750),"WASD / arrows: manual actions. R / N twice: restart.",13,MUTED)
+	panel(Rect2(768,738,476,32),Color("253748"))
+	label_at(Vector2(780,760),"X: retire this journey / record milestones",14,GOLD)
+	# Manual controls remain available by keyboard.
+	# label_at(Vector2(768,750),"WASD / arrows: manual actions. R / N twice: restart.",13,MUTED)
 func modal_open() -> bool:
-	return attuning or book or growth or interaction or journal or comparison or travel_menu or battle_time>0.0 or world.won
+	return finish_pending!="" or is_terminal() or attuning or book or growth or interaction or journal or comparison or travel_menu or battle_time>0.0 or (world!=null and world.won)
 func wrapped_lines(source: String, width: float, size: int) -> Array[String]:
 	var result: Array[String]=[]
 	var remaining: String=display(source)
@@ -481,7 +487,7 @@ func draw_comparison():
 func chapter_button() -> Rect2:
 	return Rect2(395,465,490,55)
 func draw_victory():
-	panel(Rect2(365,265,550,340),Color("0c1928"))
+	panel(Rect2(365,245,550,430),Color("0c1928"))
 	label_at(Vector2(395,310),"THE SKY IS OPEN" if not world.expedition_started else "THE EXPEDITION IS COMPLETE",25,GOLD)
 	label_at(Vector2(395,352),"The final seal has fallen.",18)
 	label_at(Vector2(395,389),"%d HP left  /  %d moves  /  %d gold" % [world.hp,world.moves,world.gold],17,TEAL)
@@ -492,7 +498,9 @@ func draw_victory():
 		label_at(Vector2(408,498),"1  Continue: 3 more floors / +120 HP",18,GOLD)
 		label_at(Vector2(395,550),"Keep your hero, gold and old floors. No new loan.",15,MUTED)
 	else: label_at(Vector2(395,480),"Both chapters are complete. Your journey is saved.",16,TEAL)
-	label_at(Vector2(395,582),"R twice: replay / J: journal / U: undo",15,MUTED)
+	panel(Rect2(395,575,490,48),Color("253748"))
+	label_at(Vector2(408,606),"2  Finish chapter one and record" if not world.expedition_started else "2  Settle final victory",18,GOLD)
+	label_at(Vector2(395,650),"Nothing is settled until you explicitly confirm.",15,MUTED)
 func draw_token(c: Vector2, t: String):
 	if MAP_ENEMY_ART.has(t) and map_art.has(MAP_ENEMY_ART[t]):
 		draw_texture_rect(map_art[MAP_ENEMY_ART[t]],Rect2(c-Vector2(30,30),Vector2(60,60)),false)
@@ -1049,8 +1057,23 @@ func _unhandled_input(event):
 	if session!=null and session.busy: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode==KEY_F5: retry_save(); return
-		if event.keycode==KEY_L and (world==null or session.read_only or not modal_open()): load_game(); return
+		if event.keycode==KEY_L and (world==null or session.read_only or is_terminal() or not modal_open()): load_game(); return
 	if world==null: return
+	if is_terminal():
+		if event is InputEventKey and event.pressed and not event.echo:
+			if event.keycode==KEY_N: request_restart("new")
+			elif event.keycode==KEY_R: request_restart("replay")
+		elif event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
+			if Rect2(250,595,350,48).has_point(get_global_mouse_position()): request_restart("new")
+		return
+	if finish_pending!="":
+		if event is InputEventKey and event.pressed and not event.echo:
+			if event.keycode==KEY_ESCAPE: finish_pending=""
+			elif event.keycode==KEY_ENTER: confirm_finish()
+		elif event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
+			if Rect2(250,525,350,48).has_point(get_global_mouse_position()): confirm_finish()
+			elif Rect2(650,525,350,48).has_point(get_global_mouse_position()): finish_pending=""
+		return
 	if event is InputEventMouseMotion:
 		hover = Vector2i(((get_global_mouse_position()-ORIGIN)/CELL).floor())
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
@@ -1103,6 +1126,8 @@ func _unhandled_input(event):
 				if Rect2(285,375+i*43,720,37).has_point(get_global_mouse_position()): perform_action(rows[i][0]); return
 			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 			return
+		if world.won and Rect2(395,575,490,48).has_point(get_global_mouse_position()): request_finish(); return
+		if Rect2(768,738,476,32).has_point(get_global_mouse_position()): request_finish(); return
 		if world.won and chapter_button().has_point(get_global_mouse_position()) and not world.chapter_offers().is_empty():
 			perform_action(world.chapter_offers()[0][0]); return
 		for i in buttons.size():
@@ -1180,6 +1205,7 @@ func _unhandled_input(event):
 			return
 		if world.won and event.keycode==KEY_1 and not world.chapter_offers().is_empty():
 			perform_action(world.chapter_offers()[0][0]); return
+		if event.keycode==KEY_X or (world.won and event.keycode==KEY_2): request_finish(); return
 		match event.keycode:
 			KEY_W,KEY_UP: move(Vector2i.UP)
 			KEY_S,KEY_DOWN: move(Vector2i.DOWN)
@@ -1190,7 +1216,7 @@ func _unhandled_input(event):
 			KEY_R: request_restart("replay")
 			KEY_N: request_restart("new")
 func request_restart(mode: String):
-	if not can_mutate(): return
+	if session==null or world==null or session.busy or session.read_only: return
 	close_attunement()
 	cancel_walk()
 	close_travel()
@@ -1243,7 +1269,7 @@ func save_game(_announce:=true):
 	apply_session_result(await session.save())
 func load_game():
 	if session==null or session.busy: return
-	close_attunement(); cancel_walk(); close_travel()
+	close_attunement(); cancel_walk(); close_travel(); finish_pending=""
 	var result: Dictionary=await session.reacquire_and_reload()
 	if result.get("status")=="empty" and world==null:
 		result=await session.new_run(initial_seed())
@@ -1259,7 +1285,7 @@ func status_message() -> String:
 	if session!=null and session.busy: return "Saving safely. Please wait."
 	return ui_notice if ui_notice!="" else (world.message if world!=null else "Opening journey storage...")
 func can_mutate() -> bool:
-	return session!=null and world!=null and not session.busy and not session.read_only
+	return session!=null and world!=null and not session.busy and not session.read_only and not is_terminal()
 func apply_session_result(result: Dictionary):
 	if result.get("ok",false):
 		world=session.world; history=session.history; ui_notice=""
@@ -1286,7 +1312,71 @@ func dispatch_committed_effect(effect: Dictionary):
 		"action": action_effect(str(effect.get("input","")))
 		"walk": play_sound("move")
 		"undo": battle_time=0.0
+		"settle":
+			finish_pending=""; cancel_walk(); battle_time=0.0; play_sound("victory")
 		"create":
+			finish_pending=""
 			close_attunement(); close_travel(); comparison=false; journal=false; book=false
 			reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0
 			interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+
+func is_terminal() -> bool:
+	return session!=null and session.get("terminal")==true
+func settlement_outcome() -> String:
+	if world.won: return "victory" if world.expedition_started else "chapter1"
+	return "withdrawn"
+func request_finish():
+	if not can_mutate(): return
+	cancel_walk(); close_attunement(); close_travel()
+	book=false; growth=false; interaction=false; journal=false; comparison=false; battle_time=0.0
+	finish_pending=settlement_outcome(); reset_armed=false
+func confirm_finish():
+	if finish_pending=="" or not can_mutate(): return
+	apply_session_result(await session.finish(finish_pending))
+func draw_finish_confirmation():
+	panel(Rect2(210,180,860,440),Color("101c2a"))
+	label_at(Vector2(245,225),"END THIS JOURNEY?",26,GOLD)
+	draw_wrapped(Vector2(245,270),"This permanently ends this run. Undo will no longer be available. Your current items do not carry into a new run.",770,19,INK,3)
+	draw_wrapped(Vector2(245,355),"Only newly reached floor milestones 3 / 5 / 8 are recorded. Records and unlock identifiers provide no stat bonuses in this version.",770,18,TEAL,3)
+	label_at(Vector2(245,440),"Pending first records: %s (only after saving)" % str(pending_milestones()),17,GOLD)
+	draw_wrapped(Vector2(245,475),settlement_notice(),770,15,MUTED,2)
+	panel(Rect2(250,525,350,48),Color("34463d"));panel(Rect2(650,525,350,48),Color("253748"))
+	label_at(Vector2(265,555),"ENTER: end and record",19,GOLD)
+	label_at(Vector2(665,555),"ESC: keep exploring",19,INK)
+func pending_milestones() -> Array:
+	var pending: Array=[]
+	for floor_number in [3,5,8]:
+		if world.floor_seen.size()>=floor_number and world.floor_seen[floor_number-1]:
+			var found:=false
+			for recorded in session.profile.get("milestones",[]):
+				if recorded==floor_number: found=true
+			if not found: pending.append(floor_number)
+	return pending
+func terminal_lines() -> Array[String]:
+	var receipt: Dictionary=session.receipt
+	var profile: Dictionary=session.profile
+	return [display({"withdrawn":"Exploration retired","chapter1":"Chapter one complete","victory":"Final victory recorded"}.get(receipt.get("summary",{}).get("outcome",""),"JOURNEY RECORDED")),"This journey is archived and read-only. Undo and further moves are unavailable.",
+		"New milestones: %s" % milestone_text(receipt.get("milestones",[])),
+		"Recorded milestones: %s" % milestone_text(profile.get("milestones",[])),
+		"Records and unlock identifiers provide no stat bonuses in this version."]
+func draw_terminal():
+	panel(Rect2(210,150,860,530),Color("101c2a"))
+	label_at(Vector2(245,200),"JOURNEY RECORDED",28,GOLD)
+	label_at(Vector2(245,242),"%d HP left  /  %d moves  /  %d gold" % [world.hp,world.moves,world.gold],18,TEAL)
+	var y:=285.0
+	for line in terminal_lines():
+		var wrapped=wrapped_lines(line,770,18)
+		for text_line in wrapped: label_at(Vector2(245,y),text_line,18,INK);y+=26
+		y+=12
+	draw_wrapped(Vector2(245,530),settlement_notice(),770,15,MUTED,2)
+	panel(Rect2(250,595,350,48),Color("253748"))
+	label_at(Vector2(265,625),"N twice: new journey",19,GOLD)
+	label_at(Vector2(650,625),"L: reload record / F2: language",16,MUTED)
+
+func settlement_notice() -> String:
+	if session!=null and session.busy: return "Saving safely. Please wait."
+	return ui_notice
+func milestone_text(values: Array) -> String:
+	var floors: Array[int]=[]
+	for value in values: floors.append(int(value))
+	return str(floors)

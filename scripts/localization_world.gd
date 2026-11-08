@@ -3,6 +3,15 @@ extends RefCounted
 # Display-only catalog. Keys remain the model's original English strings;
 # IDs, save data, arithmetic and action authorization are never translated.
 const EXACT = {
+"A non-settlement operation changed the profile ledger.":"普通操作意外改变了跨局档案，已拒绝显示此结果；请读取实际存档。",
+"This journey is settled. Start a new journey to play again.":"这段旅程已结算；请明确新开一局继续游玩。",
+"Unsupported settlement outcome.":"不支持此结算结果。",
+"This journey cannot settle with that outcome.":"当前旅程不符合此结算条件。",
+"Journey settlement summary is invalid.":"旅程结算摘要未通过校验。",
+"Settlement acknowledgement does not match the pending journey.":"结算确认与当前旅程不符，请读取实际存档；未重复领奖。",
+"Settlement rewards do not match the current profile ledger.":"结算结果与跨局档案不符，请读取实际存档；未重复领奖。",
+"INVALID_OUTCOME":"结算条件无效，本次未更改旅程或档案。",
+"INVALID_RECEIPT":"结算收据未通过校验，未清空档案或重复发放记录。",
 "Storage unavailable.":"存储暂不可用。",
 "WRITER_BUSY":"另一个游戏窗口正在使用存档；请先关闭该窗口，再按 L 重新读取。",
 "STALE_WRITER":"写入权已过期或被其他窗口取得，请按 L 读取最新进度。",

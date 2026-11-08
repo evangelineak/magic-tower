@@ -1,17 +1,21 @@
 extends RefCounted
 # Test-only storage injection. Never selected by the production factory.
 const Session=preload("res://scripts/session.gd")
+const Profile=preload("res://scripts/legacy_profile.gd")
 const World=preload("res://scripts/world.gd")
 static var serial:int=0
 class MemoryAdapter:
  extends RefCounted
  var record:Dictionary={}
+ var profile:Dictionary=Profile.fresh()
+ var lost_ack=false
+ var fail_before=false
  var receipts:Dictionary={}
  var writes:int=0
  var last_request:String=""
- func failure(status:String): return {"ok":false,"status":status,"reason":status,"retryable":false}
+ func failure(status:String): return {"ok":false,"status":status,"reason":status,"retryable":status in ["ack_lost","io_error"]}
  func response():
-  var result=record.duplicate(true); result.ok=true; result.status="ok"; result.reason=""; return result
+  var result=record.duplicate(true); result.profile=profile.duplicate(true); result.ok=true; result.status=record.get("status","active"); result.reason=""; result.readonly=result.status=="archived";result.retryable=false; return result
  func read_active(): return failure("empty") if record.is_empty() else response()
  func reacquire_and_read(): return read_active()
  func replay(request:String,signature:String):
@@ -19,24 +23,49 @@ class MemoryAdapter:
   return receipts[request].result.duplicate(true) if last_request==request and receipts[request].signature==signature else failure("conflict")
  func remember(request:String,signature:String):
   last_request=request
-  var result=response(); receipts[request]={"signature":signature,"result":result.duplicate(true)}; writes+=1; return result
+  var result=response(); receipts[request]={"signature":signature,"result":result.duplicate(true)}; writes+=1
+  if lost_ack:lost_ack=false;return failure("ack_lost")
+  return result
  func create_run(seed_value,layout=2,mode="safe",replace=false,request=""):
+  if not World.valid_run_id(request) or request=="":return failure("invalid")
   var signature=JSON.stringify(["create",seed_value,layout,mode,replace])
   var prior=replay(request,signature)
   if prior!=null:return prior
-  if not record.is_empty() and not replace:return failure("active_exists")
+  if fail_before:fail_before=false;return failure("io_error")
+  if mode!="safe":return failure("invalid")
+  if not record.is_empty() and record.get("status","active")=="active" and not replace:return failure("active_exists")
   var candidate=World.new(seed_value,layout,request,mode)
   if not candidate.generation_valid or not candidate.reward_eligible():return failure("invalid")
   record={"snapshot":candidate.save_data(),"run_id":request,"slot":record.get("slot",0)+1,"revision":0,"eligible":true}
   return remember(request,signature)
  func commit_run(expected_slot,expected_revision,run_id,snapshot,request):
+  if not World.valid_run_id(request) or request=="":return failure("invalid")
   var signature=JSON.stringify(["commit",expected_slot,expected_revision,run_id,snapshot])
   var prior=replay(request,signature)
   if prior!=null:return prior
+  if fail_before:fail_before=false;return failure("io_error")
+  if record.get("status","active")!="active":return failure("conflict")
   if record.is_empty() or record.slot!=expected_slot or record.revision!=expected_revision or record.run_id!=run_id:return failure("conflict")
   var candidate=World.from_snapshot(snapshot)
-  if candidate==null or candidate.run_id!=run_id or not candidate.reward_eligible():return failure("invalid")
+  if candidate==null or candidate.run_id!=run_id or not candidate.reward_eligible() or candidate.mode!="safe" or candidate.ended_reason!="":return failure("invalid")
   record.snapshot=snapshot.duplicate(true); record.revision+=1
+  return remember(request,signature)
+ func settle_run(expected_slot,expected_revision,run_id,outcome,request):
+  if not World.valid_run_id(request) or request=="" or not outcome in ["withdrawn","chapter1","victory"]:return failure("invalid")
+  var signature=JSON.stringify(["settle",expected_slot,expected_revision,run_id,outcome])
+  var prior=replay(request,signature)
+  if prior!=null:return prior
+  if fail_before:fail_before=false;return failure("io_error")
+  if record.is_empty() or record.get("status","active")!="active" or record.slot!=expected_slot or record.revision!=expected_revision or record.run_id!=run_id:return failure("conflict")
+  var candidate=World.from_snapshot(record.snapshot)
+  if candidate==null or candidate.run_id!=run_id or candidate.mode!="safe" or not candidate.reward_eligible() or not candidate.finish_run(outcome):return failure("invalid")
+  var summary=candidate.settlement_summary(outcome)
+  if not summary.get("ok",false):return failure("invalid")
+  var settled=Profile.settle(profile,run_id,summary.summary)
+  if not settled.ok:return failure(settled.status)
+  # Publish archive and ledger together, only after every validation succeeds.
+  profile=settled.profile.duplicate(true)
+  record={"snapshot":candidate.save_data(),"run_id":run_id,"slot":expected_slot+1,"revision":expected_revision+1,"eligible":true,"status":"archived","receipt":settled.receipt.duplicate(true),"profile":profile.duplicate(true)}
   return remember(request,signature)
 static func attach(scene):
  scene.session=Session.new(MemoryAdapter.new())
@@ -67,4 +96,4 @@ static func sync(scene):
  scene.apply_session_result(await scene.session.open_current())
  scene.session.history=history;scene.history=scene.session.history
 static func snapshot(scene)->Dictionary:
- return {"record":scene.session.adapter.record.duplicate(true),"writes":scene.session.adapter.writes}
+ return {"record":scene.session.adapter.record.duplicate(true),"writes":scene.session.adapter.writes,"profile":scene.session.adapter.profile.duplicate(true)}
