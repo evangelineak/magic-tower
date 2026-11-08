@@ -1,0 +1,62 @@
+name: Stable Web preview on GitHub Pages
+on:
+  push:
+    branches: ['pages/playtest']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: magic-tower-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Install checksum-verified official Godot and single-thread Web template
+        shell: bash
+        run: |
+          set -euo pipefail
+          fetch_asset() {
+            if ! curl --fail --location --connect-timeout 20 --max-time 300 --retry 2 -H 'Accept: application/octet-stream' -o "$2" "https://api.github.com/repos/godotengine/godot-builds/releases/assets/$1"; then
+              curl --fail --location --connect-timeout 20 --max-time 300 --retry 2 -o "$2" "$3"
+            fi
+          }
+          fetch_asset 425484901 /tmp/godot.zip https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          echo 'd0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3  /tmp/godot.zip' | sha256sum --check
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.6.3-stable_linux.x86_64
+          echo 'GODOT_BIN=/tmp/godot/Godot_v4.6.3-stable_linux.x86_64' >> "$GITHUB_ENV"
+          fetch_asset 425482597 /tmp/templates.tpz https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz
+          echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
+          unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
+      - name: Import, smoke test and export stable game
+        run: |
+          "$GODOT_BIN" --headless --path . --editor --import --quit
+          "$GODOT_BIN" --headless --path . --quit-after 30
+          mkdir -p export/web
+          "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/web/index.html
+          cp assets/fonts/LICENSE-OFL.txt export/web/FONT-LICENSE.txt
+          "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/web/GODOT-LICENSES.txt
+          printf 'Magic Tower v0.17 usability web preview\nGame source: 612199af7fda9d5600711ffc150f031c301c1f50\nWeb deployment source: %s\nSaves remain in this browser, not on a server.\n' "$GITHUB_SHA" > export/web/BUILD.txt
+          touch export/web/.nojekyll
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: export/web
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy public preview
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
