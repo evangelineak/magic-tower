@@ -1,0 +1,58 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>生产 Session JS 桥测试</title>
+<style>body{font:16px system-ui;background:#15232c;color:#e5f1ee;max-width:1000px;margin:20px auto}button,input{font:inherit;margin:5px;padding:8px}pre{white-space:pre-wrap;max-height:500px;overflow:auto;background:#07121c;padding:15px}</style>
+<h1>生产 Session 桥 · 完整 World 测试</h1><p>直接加载生产 JS；仅独立 test 数据库。没有 WebGL，不冒称已验证 Godot JavaScriptBridge。</p>
+<p id="context"></p><label>租约毫秒 <input id="ttl" value="1000" type="number"></label>
+<button id="claim">获取写权限</button><button id="read">读取当前完整存档</button><br>
+<button id="create">创建真实 A 新局</button><button id="retry_create">重复同请求创建 A</button><button id="save">保存 A 合法一步</button><button id="retry_save">重复同一步请求</button><button id="replace">明确替换为真实 B</button><br>
+<button id="selftest">独立随机库生产桥自动测试</button><pre id="log">准备中…</pre>
+<script>
+const query=new URL(location.href).searchParams;window.MagicTowerJourneysTestDatabase=query.get('db')||'magic-tower-journeys-v1-test-manual';
+</script><script src="session_storage_runtime.js"></script>
+<script>
+(async()=>{
+ const fixtures=await (await fetch('session_bridge_fixtures.json')).json();
+ const owner=crypto.randomUUID();let auth,slot=0,revision=0,serial=0;
+ const id=fixtures.first.run_id;const saveId='cccccccccccccccccccccccccccccccc';
+ const log=value=>document.querySelector('#log').textContent=JSON.stringify(value,null,2);
+ const rpc=(operation,args={})=>new Promise((resolve,reject)=>{const request=++serial;const timeout=setTimeout(()=>reject(Error('HARNESS_TIMEOUT')),10000);MagicTowerJourneys.request(JSON.stringify({request,operation,args}),encoded=>{const answer=JSON.parse(encoded);clearTimeout(timeout);if(answer.request!==request)reject(Error('REQUEST_MISMATCH'));else resolve(answer.result)})});
+ const short=r=>r.run?{...r,run:{...r.run,snapshot:{...r.run.snapshot,floors:`${r.run.snapshot.floors?.length} complete maps retained; omitted only from display`}}}:r;
+ const click=(id,fn)=>document.querySelector(id).onclick=async()=>{try{log(short(await fn()))}catch(e){log({error:e.message})}};
+ document.querySelector('#context').textContent='DB: '+MagicTowerJourneys.databaseName+' / owner '+owner;
+ click('#claim',async()=>{const r=await rpc('claim',{owner,lease_ms:Number(document.querySelector('#ttl').value)});if(r.ok){auth=r.auth;slot=auth.expectedSlotRevision}return r});
+ click('#read',async()=>{const r=await rpc('read');if(r.ok){slot=r.slotRevision;revision=r.run?.revision||0}return r});
+ const createA=async()=>{const r=await rpc('create',{auth,snapshot:fixtures.first,replace:false,request_id:id});if(r.ok){slot=r.slotRevision;revision=r.run.revision;auth.expectedSlotRevision=slot}return r};
+ click('#create',createA);click('#retry_create',createA);
+ const saveA=()=>rpc('save',{auth:{...auth,expectedSlotRevision:1},id,expected:0,snapshot:fixtures.first_after_step,request_id:saveId});
+ click('#save',saveA);click('#retry_save',saveA);
+ click('#replace',async()=>{const r=await rpc('create',{auth:{...auth,expectedSlotRevision:slot},snapshot:fixtures.second,replace:true,request_id:fixtures.second.run_id});if(r.ok){slot=r.slotRevision;auth.expectedSlotRevision=slot}return r});
+ click('#selftest',async()=>{
+  // A fresh same-origin page creates an isolated production test namespace.
+  const testDB='magic-tower-journeys-v1-test-auto-'+crypto.randomUUID();
+  const iframe=document.createElement('iframe');iframe.style.display='none';iframe.src='session_storage_harness.html?db='+testDB+'&auto=1';document.body.append(iframe);
+  return await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('SELFTEST_TIMEOUT')),20000);const listener=e=>{if(e.source===iframe.contentWindow&&e.data?.type==='session-results'){clearTimeout(timer);removeEventListener('message',listener);resolve(e.data.result);iframe.remove()}};addEventListener('message',listener)});
+ });
+ if(query.get('auto')==='1'){
+  const checks=[];const check=(value,label)=>{if(!value)throw Error('FAIL '+label);checks.push(label)};
+  const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  try{
+   let r=await rpc('claim',{owner,lease_ms:60000});check(r.ok,'claim global writer');auth=r.auth;
+   const created=await rpc('create',{auth,snapshot:fixtures.first,replace:false,request_id:id});check(created.ok&&eq(created.run.snapshot,fixtures.first),'create full real World payload');
+   const dupCreate=await rpc('create',{auth,snapshot:fixtures.first,replace:false,request_id:id});check(dupCreate.ok&&dupCreate.duplicate&&dupCreate.run.id===id&&dupCreate.run.revision===0,'lost-create-ack retry stable identity');auth.expectedSlotRevision=created.slotRevision;
+   const saved=await saveA();check(saved.ok&&saved.run.revision===1&&eq(saved.run.snapshot,fixtures.first_after_step),'save full legal step and complete map/gear data');
+   const dupSave=await saveA();check(dupSave.ok&&dupSave.duplicate&&dupSave.run.revision===1,'lost-save-ack retry no double step');
+   const bad=structuredClone(fixtures.first_after_step);bad.run_id=fixtures.second.run_id;
+   r=await rpc('save',{auth,id,expected:1,snapshot:bad,request_id:'dddddddddddddddddddddddddddddddd'});check(!r.ok&&r.code==='IDENTITY_MISMATCH','reject identity graft');
+   r=await rpc('save',{auth,id,expected:0,snapshot:fixtures.first,request_id:'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'});check(!r.ok&&r.code==='STALE_REVISION','reject stale revision');
+   r=await rpc('read');check(r.ok&&eq(r.run.snapshot,fixtures.first_after_step),'read retains all World fields');
+   const replacement=await rpc('create',{auth,snapshot:fixtures.second,replace:true,request_id:fixtures.second.run_id});check(replacement.ok&&replacement.slotRevision===2,'explicit replacement only once');
+   r=await saveA();check(!r.ok&&r.code==='SUPERSEDED_OPERATION','old retry cannot reactivate abandoned run');
+   auth.expectedSlotRevision=2;r=await rpc('renew',{auth,lease_ms:60});check(r.ok,'short lease for expiry test');await new Promise(r=>setTimeout(r,100));
+   const takeover=await rpc('claim',{owner:'other-owner-'+owner,lease_ms:60000});check(takeover.ok&&takeover.auth.fence>auth.fence,'new fence after real expiry');
+   r=await rpc('create',{auth,snapshot:fixtures.first,replace:true,request_id:id});check(!r.ok&&r.code==='STALE_WRITER','old fence cannot replace new active run');
+   r=await rpc('read');check(r.ok&&eq(r.run.snapshot,fixtures.second),'latest active payload stays exact');
+   parent.postMessage({type:'session-results',result:{PASS:true,count:checks.length,checks,database:window.MagicTowerJourneysTestDatabase,scope:'Production JS callback protocol + real IndexedDB, not Godot WebGL/JavaScriptBridge runtime'}},location.origin);
+  }catch(e){parent.postMessage({type:'session-results',result:{PASS:false,error:e.message,checks,database:testDB}},location.origin)}
+ }
+ log({ready:true,database:MagicTowerJourneys.databaseName});
+})();
+</script></html>

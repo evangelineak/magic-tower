@@ -1,6 +1,7 @@
 extends SceneTree
 # Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
 # New layout-2 behavior is covered by test_usability and both generator suites.
+const Fixture=preload("res://tests/ui_fixture.gd")
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -61,7 +62,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema7-"+name+".json"))
   check(w.restore(old) and w.oath_state=="fresh","real old schema7 state upgrades with fresh oath: "+name)
   var now=state(w); now.erase("oath_state"); now.version=7
-  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices"]: now.erase(field)
+  for field in ["travel_anchors","audit_puzzle","audit_read","audit_solved","audit_reward","winch_choice","maul_claimed","layout_revision","attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason"]: now.erase(field)
   check(JSON.parse_string(JSON.stringify(now))==old,"migration preserves all old resources, maps, NPC choices, inventory: "+name)
   restore_check(w)
   if name=="supplies": check(w.camp_medicine_left==3 and w.camp_focus_left==3,"old earned camp expansion is not clamped to two")
@@ -80,7 +81,7 @@ func run_tests():
    check(preview.valid and preview.oath_active and w.battle_preview(kind,gear)==preview and state(w)==before,"owned override inherits identical live context: "+gear+kind)
    check(not w.battle_preview(kind,"missing").valid and state(w)==before,"unowned comparison cannot borrow gear")
    check(w.step(Vector2i.RIGHT) and w.hp==1500-int(preview.damage)+int(preview.heal_after) and w.focus==int(before.focus)-1,"oath gear actual loss/focus equals preview: "+gear+kind)
- w=World.new(0,1); w.enter_floor(3); w.pos=Vector2i(1,3); w.skill_armed=true
+ w=World.new(0,1); w.floor_seen=[true,true,true,true,false]; w.enter_floor(3); w.pos=Vector2i(1,3); w.skill_armed=true
  var before=state(w)
  check(w.action("oath_accept") and w.oath_state=="active","bind only at inscription")
  restore_check(w); reject(w,"oath_accept")
@@ -113,18 +114,19 @@ func run_tests():
  check(travel(w,3) and walk(w,Vector2i(1,3)) and w.action("oath_renounce"),"real return to N permanently releases oath")
  check(travel(w,7) and walk(w,Vector2i(8,3)) and w.won and w.oath_state=="spent","released oath route returns to Z and wins")
  print("OATH REAL ROUTE: ",w.moves," moves; ",w.hp," HP")
- var scene=load("res://main.tscn").instantiate(); root.add_child(scene); await process_frame
- scene.save_path="user://oath-readonly-test.json"; scene.growth=false
+ var scene=load("res://main.tscn").instantiate(); Fixture.prepare(scene); root.add_child(scene); await process_frame
+ scene.growth=false
  scene.world=World.new(0,1); scene.world.inventory=["balanced","buckler"]; scene.world.chest_claimed=true; scene.world.oath_state="active"; scene.world.skill_armed=true
  scene.world.atk=50; scene.world.defense=15; scene.world.hp=500; scene.hover=Vector2i(4,3)
- scene.save_game(); var disk=FileAccess.get_file_as_string(scene.save_path); before=state(scene.world); var events=scene.sound_event_count; var history=scene.history.duplicate(true)
+ await Fixture.bind(scene,scene.world)
+ await scene.save_game(); var disk=Fixture.snapshot(scene); before=state(scene.world); var events=scene.sound_event_count; var history=scene.history.duplicate(true)
  key(scene,KEY_V)
  check(scene.comparison and scene.comparison_rows().size()==2,"V opens only real hovered enemy and owned equipment")
  for row in scene.comparison_rows():
   check(row.preview==scene.world.battle_preview("s",row.id) and row.preview.oath_active,"V uses exactly live oath and armed preview")
  for code in [KEY_UP,KEY_DOWN,KEY_LEFT,KEY_RIGHT,KEY_1,KEY_U,KEY_R,KEY_L,KEY_E,KEY_C,KEY_H,KEY_J,KEY_SPACE]: key(scene,code)
  key(scene,KEY_F2)
- check(scene.comparison and state(scene.world)==before and scene.history==history and scene.sound_event_count==events and FileAccess.get_file_as_string(scene.save_path)==disk,"comparison modal blocks gameplay with no state/history/save/audio changes; F2 keeps it open")
+ check(scene.comparison and state(scene.world)==before and scene.history==history and scene.sound_event_count==events and Fixture.snapshot(scene)==disk,"comparison modal blocks gameplay with no state/history/save/audio changes; F2 keeps it open")
  key(scene,KEY_ESCAPE); check(not scene.comparison,"Esc closes forecast")
  scene.hover=Vector2i(2,2); key(scene,KEY_V); check(not scene.comparison,"empty tile cannot open fabricated enemy comparison")
  scene.hover=Vector2i(4,3); scene.world.atk=1; key(scene,KEY_V)
@@ -132,12 +134,13 @@ func run_tests():
  scene.world.atk=80; scene.world.hp=1; scene.world.oath_state="fresh"; scene.world.skill_armed=false; scene.world.talents=["iron_skin","trained_focus","battle_medic"]
  scene.compare_pos=Vector2i(4,3); scene.world.floors[0][3][4]="H"
  check(scene.comparison_rows()[0].preview.valid and not scene.comparison_rows()[0].preview.survivable and scene.comparison_rows()[0].after_hp==-1,"lethal forecast cannot apply post-victory recovery to survive")
- # Loading a real earned v7 reward must back it up before migration to schema8.
+ # Legacy files are kept untouched. L reads only the registered active slot.
  var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema7-supplies.json")
- var backup=scene.save_path.get_basename()+".pre-schema8.json"
- if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
- var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.camp_medicine_left==3 and scene.world.oath_state=="fresh" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path )).version==12,"schema7 reward backup preserves exact bytes and finite expanded supplies")
+ var legacy_path="user://oath-readonly-test.json"
+ var file=FileAccess.open(legacy_path,FileAccess.WRITE); file.store_string(old_text); file.close()
+ await scene.load_game()
+ check(FileAccess.get_file_as_string(legacy_path)==old_text and state(scene.world)==before,"L reloads registered active slot without importing or rewriting schema7 file")
+ var old_world=World.new(); check(old_world.restore(JSON.parse_string(old_text)) and old_world.camp_medicine_left==3 and old_world.oath_state=="fresh" and not old_world.reward_eligible(),"World keeps legacy finite supplies and original oath without eligible identity")
  scene.queue_free(); await process_frame
  print("OATH: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

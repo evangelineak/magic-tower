@@ -28,6 +28,9 @@ const ENEMIES = {
 "H": {"name":"Ferry Warden", "hp":180, "atk":62, "def":30, "gold":60, "first_strike":true},
 "Z": {"name":"Ashen Castellan", "hp":720, "atk":65, "def":45, "gold":160},
 "B": {"name":"Hollow King", "hp":220, "atk":42, "def":20, "gold":100}}
+var run_id := ""
+var mode := "safe"
+var ended_reason := ""
 var layout_revision := 2
 var seed_value := 0
 var generation_attempts := 0
@@ -93,7 +96,12 @@ var camp_focus_left := 2
 var won := false
 var moves := 0
 var message := "Find the keys. Read your enemies. Ascend."
-func _init(run_seed: int = 0, run_layout: int = 2):
+func _init(run_seed: int = 0, run_layout: int = 2, session_run_id: String = "", run_mode: String = "safe", restore_only: bool = false):
+	if restore_only:
+		generation_valid=false
+		return
+	run_id=session_run_id
+	mode=run_mode
 	layout_revision=run_layout if Layout.valid_revision(run_layout) else Layout.CURRENT
 	seed_value=clampi(run_seed,0,2147483647)
 	gear_offers=_new_gear_offers(seed_value)
@@ -103,8 +111,57 @@ func _init(run_seed: int = 0, run_layout: int = 2):
 	floors=generated.maps
 	generation_attempts=generated.attempts
 	generation_fallback=generated.fallback
-	generation_valid=bool(generated.validation.solvable) and Layout.valid_revision(run_layout)
+	generation_valid=bool(generated.validation.solvable) and Layout.valid_revision(run_layout) and valid_run_id(run_id) and mode in ["safe","risk"]
 	if not generation_valid: message="Map validation failed. This run is blocked; choose another seed."
+static func from_snapshot(snapshot: Dictionary) -> TowerWorld:
+	# No generation, but no usable world until the entire restore validates.
+	var instance:=TowerWorld.new(0,2,"","safe",true)
+	if not instance.restore(snapshot): return null
+	return instance
+# Identity is assigned only by the external new-run session. Loading a legacy
+# save never borrows this instance's identity. Risk mode does not enable death yet.
+static func valid_run_id(value) -> bool:
+	if not value is String: return false
+	if value=="": return true
+	if value.length()<16 or value.length()>64: return false
+	for c in value:
+		if not c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-": return false
+	return true
+func reward_eligible() -> bool:
+	return run_id!="" and valid_run_id(run_id)
+func highest_seen_floor() -> int:
+	if floor_seen.size()!=floors.size() or not floor_seen.size() in [5,8]: return 0
+	var peak:=0
+	var gap:=false
+	for seen in floor_seen:
+		if not seen is bool: return 0
+		if seen:
+			if gap: return 0
+			peak+=1
+		else: gap=true
+	return peak
+func _finish_outcome() -> String:
+	if ended_reason=="victory": return "victory"
+	if ended_reason=="retired": return "chapter1" if won else "withdrawn"
+	return ""
+func _outcome_legal(outcome: String) -> bool:
+	if not generation_valid or hp<=0 or highest_seen_floor()==0: return false
+	match outcome:
+		"withdrawn": return not won
+		"chapter1": return won and not expedition_started and floors.size()==5 and highest_seen_floor()==5 and _count_token("K")==0
+		"victory": return won and expedition_started and floors.size()==8 and highest_seen_floor()==8 and _count_token("Z")==0
+	return false
+func finish_run(outcome: String) -> bool:
+	# Session calls this on a clone, persists settlement atomically, then publishes.
+	if not _outcome_legal(outcome): return false
+	if ended_reason!="": return _finish_outcome()==outcome
+	ended_reason="victory" if outcome=="victory" else "retired"
+	return true
+func settlement_summary(outcome: String) -> Dictionary:
+	if not reward_eligible(): return {"ok":false,"reason":"INELIGIBLE"}
+	if ended_reason=="" or _finish_outcome()!=outcome or not _outcome_legal(outcome):
+		return {"ok":false,"reason":"INVALID_OUTCOME"}
+	return {"ok":true,"summary":{"seed":seed_value,"max_floor":highest_seen_floor(),"moves":moves,"outcome":outcome}}
 func _new_gear_offers(run_seed:int)->Dictionary:
 	var result:Dictionary={}
 	for gear in ATTUNABLE_GEAR: result[gear]=Attunement.offers(run_seed,gear)
@@ -123,7 +180,7 @@ func mend_heal()->int:
 	return Progression.mend_heal(talents,gear_attunement())
 func attunement_offers(gear_id:String="")->Array:
 	var gear:=equipped if gear_id=="" else gear_id
-	if not generation_valid or won or not gear in ATTUNABLE_GEAR or gear_choices.has(gear): return []
+	if ended_reason!="" or not generation_valid or won or not gear in ATTUNABLE_GEAR or gear_choices.has(gear): return []
 	var result:Array=[]
 	for id in gear_offers[gear]: result.append(["attune_"+gear+"_"+id,Attunement.TEMPLATES[id].name])
 	result.append(["attune_"+gear+"_none","Keep original equipment"])
@@ -153,7 +210,7 @@ func floor_count() -> int:
 func floor_title() -> String:
 	return ["THE ROOTS","THE WARDENS","THE VAULT","THE FORGE","THE CROWN","THE ASH CAMP","THE BROKEN ROAD","THE LAST WATCH"][floor_index]
 func chapter_offers() -> Array:
-	if won and not expedition_started and floors.size()==5 and _count_token("K")==0:
+	if ended_reason=="" and won and not expedition_started and floors.size()==5 and _count_token("K")==0:
 		return [["expedition","Continue expedition: 3 more floors / +120 HP once"]]
 	return []
 func _navigation_state() -> Dictionary:
@@ -171,7 +228,7 @@ func _register_anchor(token: String):
 		if travel_anchors.size()<64 and Navigation.anchor_valid(_navigation_state(),record): travel_anchors.append(record)
 		return
 func travel_available() -> bool:
-	return generation_valid and expedition_started and not won
+	return ended_reason=="" and generation_valid and expedition_started and not won
 func travel_options() -> Array:
 	var options: Array=[]
 	if not travel_available(): return options
@@ -255,10 +312,10 @@ func tile(p: Vector2i) -> String:
 	if p.x < 0 or p.y < 0 or p.x >= 11 or p.y >= 11: return "#"
 	return floors[floor_index][p.y][p.x]
 func safe_walk_path(target: Vector2i) -> Array[Vector2i]:
-	if not generation_valid or won: return []
+	if ended_reason!="" or not generation_valid or won: return []
 	return Navigation.walk_path(floors[floor_index],pos,target)
 func safe_walk_step(next: Vector2i, expected_floor: int, expected_pos: Vector2i) -> bool:
-	if not generation_valid or won or floor_index!=expected_floor or pos!=expected_pos: return false
+	if ended_reason!="" or not generation_valid or won or floor_index!=expected_floor or pos!=expected_pos: return false
 	if absi(next.x-pos.x)+absi(next.y-pos.y)!=1 or tile(next)!=".": return false
 	pos=next; moves+=1
 	message="Safe step. No interaction or resources changed."
@@ -372,7 +429,7 @@ func enter_floor(number: int):
 		floor_seen[number]=true
 		focus=mini(focus_cap,focus+1)
 func step(direction: Vector2i) -> bool:
-	if not generation_valid or won or absi(direction.x)+absi(direction.y)!=1: return false
+	if ended_reason!="" or not generation_valid or won or absi(direction.x)+absi(direction.y)!=1: return false
 	var target := pos + direction
 	var t := tile(target)
 	if t == "#": return false
@@ -537,6 +594,7 @@ func event_offers() -> Array:
 		"oath": return [["oath_power","Surrender ALL focus (at least 2) for +7 ATK"],["oath_renew","Pay 60 HP to restore 2 focus (up to capacity)"],["bargain_leave","Decline this encounter permanently"]]
 	return [["bargain_blood","Blood bargain: pay 80 HP / gain +6 ATK"],["bargain_gold","Ward bargain: pay 25 gold / gain +5 DEF"],["bargain_leave","Decline this encounter permanently"]]
 func action(id: String) -> bool:
+	if ended_reason!="": return false
 	if id.begins_with("fast_travel_"):
 		if not travel_available(): return false
 		var requested:=id.trim_prefix("fast_travel_")
@@ -567,7 +625,7 @@ func action(id: String) -> bool:
 		moves+=1
 		message="Expedition begun: +120 HP once. Old floors and all earlier choices remain."
 		return true
-	if not generation_valid or won: return false
+	if ended_reason!="" or not generation_valid or won: return false
 	if id.begins_with("attune_"):
 		for gear in ATTUNABLE_GEAR:
 			var prefix:String="attune_"+gear+"_"
@@ -824,7 +882,7 @@ func action(id: String) -> bool:
 	moves+=1
 	return true
 func save_data() -> Dictionary:
-	return {"version":12,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
+	return {"version":13,"run_id":run_id,"mode":mode,"ended_reason":ended_reason,"attunement_version":attunement_version,"gear_offers":gear_offers.duplicate(true),"gear_choices":gear_choices.duplicate(true),"layout_revision":layout_revision,"winch_choice":winch_choice,"maul_claimed":maul_claimed,"audit_puzzle":audit_puzzle,"audit_read":audit_read,"audit_solved":audit_solved,"audit_reward":audit_reward,"travel_anchors":travel_anchors,"oath_state":oath_state,"expedition_revision":expedition_revision,"rescue_state":rescue_state,"rescue_reward":rescue_reward,"expedition_started":expedition_started,"expedition_bridge":expedition_bridge,"camp_medicine_left":camp_medicine_left,"camp_focus_left":camp_focus_left,"seal_version":Riddle.VERSION,"seal_clues":seal_clues,"seal_input":seal_input,"seal_solved":seal_solved,"seal_reward":seal_reward,"floors":floors,"floor":floor_index,"x":pos.x,"y":pos.y,"hp":hp,"atk":atk,"def":defense,"keys":keys,"gold":gold,"won":won,"moves":moves,
 	"seed_value":seed_value,"generation_attempts":generation_attempts,"generation_fallback":generation_fallback,
 	"hero_id":hero_id,"focus":focus,"focus_cap":focus_cap,"skill_armed":skill_armed,"equipped":equipped,"inventory":inventory,"talents":talents,"kills":kills,"floor_seen":floor_seen,
 	"quest_state":quest_state,"bridge_built":bridge_built,"event_done":event_done,"event_kind":event_kind,"water_choice":water_choice,"chest_claimed":chest_claimed,
@@ -832,7 +890,13 @@ func save_data() -> Dictionary:
 func restore(d: Dictionary) -> bool:
 	var save_version = d.get("version")
 	if not (save_version is int or save_version is float): return false
-	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12): return false
+	if not is_finite(float(save_version)) or (save_version!=4 and save_version!=5 and save_version!=6 and save_version!=7 and save_version!=8 and save_version!=9 and save_version!=10 and save_version!=11 and save_version!=12 and save_version!=13): return false
+	var saved_run_id := ""
+	var saved_mode := "safe"
+	var saved_end := ""
+	if save_version>=13:
+		if not valid_run_id(d.get("run_id")) or not d.get("mode") in ["safe","risk"] or not d.get("ended_reason") in ["","retired","victory"]: return false
+		saved_run_id=d.run_id; saved_mode=d.mode; saved_end=d.ended_reason
 	var saved_layout := 1
 	if save_version>=11:
 		var revision=d.get("layout_revision")
@@ -925,6 +989,12 @@ func restore(d: Dictionary) -> bool:
 	for seen in d.floor_seen:
 		if not seen is bool: return false
 	if not d.floor_seen[0]: return false
+	if save_version>=13:
+		var unseen:=false
+		for seen in d.floor_seen:
+			if seen and unseen: return false
+			if not seen: unseen=true
+
 	if not d.get("water_choice") in ["","drain","spring"]: return false
 	if int(d.focus_cap) not in [3,4] or d.focus>d.focus_cap or d.quest_state>4: return false
 	if d.hero_id=="scholar" and d.skill_armed: return false
@@ -1039,6 +1109,9 @@ func restore(d: Dictionary) -> bool:
 	if position_token=="n" and saved_winch!="rescue": return false
 	if position_token=="e" and saved_winch!="armory": return false
 	if not d.floor_seen[int(d.floor)]: return false
+	if saved_end=="victory" and (not d.won or not saved_expedition or not d.floor_seen[7]): return false
+	if saved_end=="retired" and d.won and (saved_expedition or not d.floor_seen[4] or first_boss_remaining!=0): return false
+	run_id=saved_run_id; mode=saved_mode; ended_reason=saved_end
 	layout_revision=saved_layout
 	attunement_version=Attunement.REVISION; gear_offers=saved_gear_offers; gear_choices=saved_gear_choices
 	seed_value=int(d.seed_value); generation_attempts=int(d.generation_attempts); generation_fallback=d.generation_fallback
@@ -1068,5 +1141,6 @@ func restore(d: Dictionary) -> bool:
 	expedition_started=saved_expedition; expedition_bridge=saved_bridge
 	camp_medicine_left=saved_medicine; camp_focus_left=saved_focus_stock
 	won = d.won
+	generation_valid=true
 	message = "Your journey resumes."
 	return true

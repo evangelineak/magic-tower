@@ -1,6 +1,21 @@
 extends SceneTree
+const Fixture=preload("res://tests/ui_fixture.gd")
 # Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
 # New layout-2 behavior is covered by test_usability and both generator suites.
+class ControlledStore extends Fixture.MemoryAdapter:
+	var delayed := false
+	var fail := false
+	var conflict := false
+	var lose_ack := false
+	func commit_run(slot,revision,run_id,data,request):
+		if delayed: await Engine.get_main_loop().process_frame
+		if conflict: return {"ok":false,"status":"conflict","reason":"conflict","retryable":false}
+		if fail: return {"ok":false,"status":"io_error","reason":"io_error","retryable":true}
+		var result=await super.commit_run(slot,revision,run_id,data,request)
+		if lose_ack:
+			lose_ack=false
+			return {"ok":false,"status":"ack_lost","reason":"ack_lost","retryable":true}
+		return result
 var failures := 0
 var checks := 0
 func check(ok: bool, message: String):
@@ -10,10 +25,11 @@ func _initialize():
 	call_deferred("run_tests")
 func run_tests():
 	var scene = load("res://main.tscn").instantiate()
+	Fixture.attach(scene)
 	root.add_child(scene)
-	scene.save_path="user://integration-test.json"
 	scene.language="en" # Preserve English-contract UI assertions; default Chinese has its own suite.
-	scene.world=load("res://scripts/world.gd").new(0,1)
+	await Fixture.bind(scene,load("res://scripts/world.gd").new(0,1))
+	scene.growth=true; scene.growth_tab=0
 	var event := InputEventKey.new()
 	event.pressed=true
 	await process_frame
@@ -23,14 +39,14 @@ func run_tests():
 	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	check(not scene.growth and scene.world.hero_id=="warden","Escape accepts default Warden without spending move")
 	check(scene.world.pos==Vector2i(1,1),"initial position")
-	scene.move(Vector2i.RIGHT)
-	scene.move(Vector2i.RIGHT)
+	await scene.move(Vector2i.RIGHT)
+	await scene.move(Vector2i.RIGHT)
 	check(scene.world.keys==1,"input controller collects key")
 	check(scene.history.size()==2,"controller keeps undo snapshots")
-	scene.undo()
+	await scene.undo()
 	check(scene.world.keys==0 and scene.world.pos==Vector2i(2,1),"undo restores inventory and position")
 	scene.world.hp=1
-	scene.load_game()
+	await scene.load_game()
 	check(scene.world.hp==280 and scene.history.is_empty(),"load restores persisted state and clears undo")
 	event.keycode=KEY_H
 	scene._unhandled_input(event)
@@ -49,43 +65,46 @@ func run_tests():
 	check(scene.growth and scene.growth_tab==0,"replay automatically reopens hero selection")
 	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	scene.world.pos=Vector2i(2,1)
-	scene.perform_action("borrow")
+	await Fixture.sync(scene)
+	await scene.perform_action("borrow")
 	check(scene.world.debt()==42 and scene.world.gold==40,"UI borrowing updates ledger")
-	scene.undo()
+	await scene.undo()
 	check(scene.world.debt()==0 and scene.world.gold==0 and not scene.world.loan_used,"UI undo reverses full loan")
-	scene.perform_action("borrow")
+	await scene.perform_action("borrow")
 	scene.world.gold=60
-	scene.perform_action("buy")
+	await Fixture.sync(scene)
+	await scene.perform_action("buy")
 	check(scene.world.weapon and scene.world.gold==0,"UI purchase")
-	scene.undo()
+	await scene.undo()
 	check(not scene.world.weapon and scene.world.atk==18 and scene.world.gold==60 and scene.world.debt()==42,"UI purchase undo keeps matching gold and debt")
-	scene.world.enter_floor(2); scene.world.pos=Vector2i(8,9); scene.world.gold=22
+	scene.world.enter_floor(1); scene.world.enter_floor(2); scene.world.pos=Vector2i(8,9); scene.world.gold=22
+	await Fixture.sync(scene)
 	var steps_before: int=scene.world.moves
-	scene.move(Vector2i.RIGHT)
+	await scene.move(Vector2i.RIGHT)
 	check(scene.interaction and scene.pending_reason=="interest" and scene.checkpoint_pending==Vector2i.RIGHT and scene.world.floor_index==2 and scene.world.debt()==42,"interest transition asks before changing state")
 	event.keycode=KEY_D; scene._unhandled_input(event)
 	check(scene.world.moves==steps_before,"modal prevents movement")
-	scene.perform_action("cancel")
+	await scene.perform_action("cancel")
 	check(not scene.interaction and scene.checkpoint_pending==Vector2i.ZERO and scene.world.debt()==42 and scene.world.floor_index==2,"cancel leaves interest uncharged")
-	scene.move(Vector2i.RIGHT)
+	await scene.move(Vector2i.RIGHT)
 	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	check(not scene.interaction and scene.checkpoint_pending==Vector2i.ZERO and scene.world.floor_index==2,"escape cancels pending ascent")
-	scene.move(Vector2i.RIGHT)
-	scene.perform_action("repay")
+	await scene.move(Vector2i.RIGHT)
+	await scene.perform_action("repay")
 	check(scene.world.debt()==20 and scene.world.gold==0 and scene.checkpoint_pending==Vector2i.RIGHT,"repay while pending reduces remaining principal")
-	scene.perform_action("continue")
+	await scene.perform_action("continue")
 	check(scene.world.floor_index==3 and scene.world.debt()==22 and scene.world.interest==2 and not scene.interaction,"confirmed ascent uses current principal")
-	scene.undo()
+	await scene.undo()
 	check(scene.world.floor_index==2 and scene.world.debt()==20 and scene.world.checkpoints==0,"undo crossing restores interest node and debt together")
-	scene.move(Vector2i.RIGHT); scene.perform_action("continue")
+	await scene.move(Vector2i.RIGHT); await scene.perform_action("continue")
 	# Restart uses the new layout; fourth-floor stairs now stay at (9,9).
-	scene.move(Vector2i.LEFT); scene.move(Vector2i.RIGHT)
+	await scene.move(Vector2i.LEFT); await scene.move(Vector2i.RIGHT)
 	check(scene.world.floor_index==2 and scene.world.checkpoints==1,"descend retains settled milestone")
-	scene.move(Vector2i.LEFT); scene.move(Vector2i.RIGHT)
+	await scene.move(Vector2i.LEFT); await scene.move(Vector2i.RIGHT)
 	check(scene.world.floor_index==3 and not scene.interaction and scene.world.interest==2,"revisit ascent does not charge or prompt twice")
-	scene.load_game()
+	await scene.load_game()
 	check(scene.world.floor_index==3 and scene.world.debt()==22 and scene.history.is_empty(),"UI autosave preserves ledger and milestones")
-	scene.world=load("res://scripts/world.gd").new(0,1); scene.history.clear()
+	await Fixture.bind(scene,load("res://scripts/world.gd").new(0,1)); scene.history.clear()
 	event.keycode=KEY_C; scene._unhandled_input(event)
 	check(scene.growth and scene.growth_actions().size()==3,"C offers three heroes before first move")
 	event.keycode=KEY_D; scene._unhandled_input(event)
@@ -99,21 +118,23 @@ func run_tests():
 	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	check(not scene.growth,"escape closes skill panel")
 	scene.world.pos=Vector2i(5,3)
+	await Fixture.sync(scene)
 	var before_combat: Dictionary=scene.world.save_data().duplicate(true)
 	var predicted_loss: int=scene.world.damage("s")
-	scene.move(Vector2i.LEFT)
+	await scene.move(Vector2i.LEFT)
 	check(scene.battle_time>0 and scene.battle_loss==predicted_loss and scene.world.kills==1,"battle presentation matches committed combat")
 	var after_combat: Dictionary=scene.world.save_data().duplicate(true)
 	event.keycode=KEY_D; scene._unhandled_input(event)
 	check(scene.battle_time==0 and scene.world.save_data()==after_combat,"skip animation does not repeat combat or move")
-	scene.undo()
+	await scene.undo()
 	check(scene.world.save_data()==before_combat and scene.battle_time==0,"combat undo restores enemy, focus, hero and stats together")
 	scene.world.kills=3
+	await Fixture.sync(scene)
 	event.keycode=KEY_C; scene._unhandled_input(event)
 	check(scene.growth_tab==2 and scene.growth_actions().size()==3,"unlocked talent tier opens three mutually exclusive choices")
 	event.keycode=KEY_1; scene._unhandled_input(event)
 	check(scene.world.talents.size()==1 and not scene.growth,"talent key commits one choice")
-	scene.undo()
+	await scene.undo()
 	check(scene.world.talents.is_empty(),"talent selection reversible via whole-state undo")
 	var seed_before: int=scene.world.seed_value
 	event.keycode=KEY_R; scene._unhandled_input(event); scene._unhandled_input(event)
@@ -127,18 +148,18 @@ func run_tests():
 	check(scene.world.moves==1 and scene.world.seed_value==seed_before,"movement cancels armed new-run confirmation")
 	scene._unhandled_input(event)
 	check(scene.growth and scene.growth_tab==0 and scene.world.moves==0 and scene.world.seed_value>0,"confirmed new seed presents hero choices")
-	scene.world=load("res://scripts/world.gd").new(0,1); scene.history.clear()
+	await Fixture.bind(scene,load("res://scripts/world.gd").new(0,1)); scene.history.clear()
 	scene.growth=true; scene.growth_tab=0
-	scene.save_game(false)
+	await scene.save_game(false)
 	var readonly_before: Dictionary=scene.world.save_data().duplicate(true)
-	var file_before: String=FileAccess.get_file_as_string(scene.save_path)
+	var file_before: Dictionary=Fixture.snapshot(scene)
 	event.keycode=KEY_J; scene._unhandled_input(event)
 	check(scene.journal and not scene.growth and not scene.book and not scene.interaction,"J opens exclusive read-only journal")
 	var initial_notes: String="\n".join(scene.journal_lines())
 	check(not "Floor 2" in initial_notes and not "Floor 3" in initial_notes and not "Floor 4" in initial_notes and not "Inscription:" in initial_notes,"journal hides unvisited water, vault, event and unlearned clue")
 	for key in [KEY_D,KEY_1,KEY_U,KEY_R,KEY_L]:
 		event.keycode=key; scene._unhandled_input(event)
-	check(scene.world.save_data()==readonly_before and scene.history.is_empty() and FileAccess.get_file_as_string(scene.save_path)==file_before,"journal blocks movement, choices, undo, restart and loading without changing save")
+	check(scene.world.save_data()==readonly_before and scene.history.is_empty() and Fixture.snapshot(scene)==file_before,"journal blocks movement, choices, undo, restart and loading without changing save")
 	event.keycode=KEY_BRACKETRIGHT; scene._unhandled_input(event)
 	await process_frame
 	check(scene.world.save_data()==readonly_before,"journal pagination spends no resources or moves")
@@ -151,61 +172,69 @@ func run_tests():
 		event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	check(scene.world.save_data()==readonly_before,"switching journal panels remains read-only")
 	scene.world.enter_floor(1)
+	await Fixture.sync(scene)
 	var notes: String="\n".join(scene.journal_lines())
 	check("Floor 2" in notes and not "Floor 3" in notes and not "Floor 4" in notes,"visited floor unlocks only its own notes")
 	scene.world.enter_floor(2)
+	await Fixture.sync(scene)
 	notes="\n".join(scene.journal_lines())
 	check("powerful guardian" in notes,"journal records unresolved visited vault")
 	scene.world.floors[2][3][8]="."
+	await Fixture.sync(scene)
 	notes="\n".join(scene.journal_lines())
 	check("treasure is unclaimed" in notes,"journal distinguishes defeated guard from claimed treasure")
 	scene.world.floors[2][3][9]="."
+	await Fixture.sync(scene)
 	notes="\n".join(scene.journal_lines())
 	check("treasure has been claimed" in notes,"journal records claimed vault")
 	scene.world.enter_floor(3); scene.world.pos=Vector2i(1,2); scene.world.step(Vector2i.DOWN)
+	await Fixture.sync(scene)
 	check("Inscription:" in "\n".join(scene.journal_lines()),"journal retains learned clue")
-	scene.save_game(false)
+	await scene.save_game(false)
 	event.keycode=KEY_J; scene._unhandled_input(event)
-	scene.load_game()
+	await scene.load_game()
 	check(not scene.journal and scene.journal_page==0,"successful load closes journal and resets page")
 	event.keycode=KEY_J; scene._unhandled_input(event)
 	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	check(not scene.journal,"Escape dismisses journal")
 	event.keycode=KEY_R; scene._unhandled_input(event); scene._unhandled_input(event)
 	check(not scene.journal and scene.growth and scene.journal_page==0,"replay leaves journal closed and opens hero selection")
-	scene.world=load("res://scripts/world.gd").new(0,1); scene.history.clear(); scene.growth=false
+	await Fixture.bind(scene,load("res://scripts/world.gd").new(0,1)); scene.history.clear(); scene.growth=false
 	scene.world.pos=Vector2i(3,9); scene.world.keys=2
+	await Fixture.sync(scene)
 	var gate_before: Dictionary=scene.world.save_data().duplicate(true)
 	check("2 keys" in scene.token_name("L") and "70" in scene.token_name("h") and "140" in scene.token_name("P"),"updated gate and recovery hover descriptions")
 	check("Floor 1 cache:" in "\n".join(scene.journal_lines()) and not "Floor 3 cache:" in "\n".join(scene.journal_lines()),"journal lists visited reward cage but hides unvisited cage")
-	scene.move(Vector2i.LEFT)
+	await scene.move(Vector2i.LEFT)
 	check(scene.interaction and scene.pending_reason=="door" and scene.world.save_data()==gate_before,"attempting double lock asks before spending keys")
 	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	check(not scene.interaction and scene.checkpoint_pending==Vector2i.ZERO and scene.world.save_data()==gate_before,"Escape cancels key spending without moving")
-	scene.move(Vector2i.LEFT); scene.perform_action("continue")
+	await scene.move(Vector2i.LEFT); await scene.perform_action("continue")
 	check(scene.world.keys==0 and scene.world.tile(Vector2i(2,9))=="." and not scene.interaction,"confirmed double lock spends exactly two keys")
 	check("unclaimed, lock already opened" in "\n".join(scene.journal_lines()),"journal distinguishes opened cage from claimed reward")
-	scene.move(Vector2i.LEFT)
+	await scene.move(Vector2i.LEFT)
 	check(scene.world.gold==60 and not "Floor 1 cache:" in "\n".join(scene.journal_lines()),"claiming cache updates reward and journal")
-	scene.undo(); scene.undo()
+	await scene.undo(); await scene.undo()
 	check(scene.world.save_data()==gate_before,"UI undo restores reward gate keys and whole state together")
 	scene.world.keys=1
-	scene.move(Vector2i.LEFT)
+	await Fixture.sync(scene)
+	await scene.move(Vector2i.LEFT)
 	check(not scene.interaction and scene.world.keys==1 and scene.world.pos==Vector2i(3,9),"insufficient keys blocks double lock without confirmation")
 	scene.world.pos=Vector2i(5,3)
-	scene.move(Vector2i.RIGHT)
+	await Fixture.sync(scene)
+	await scene.move(Vector2i.RIGHT)
 	check(scene.interaction and scene.pending_reason=="door" and scene.available_actions().size()==2,"ordinary door offers only confirm/cancel, not interest actions")
-	scene.perform_action("cancel")
+	await scene.perform_action("cancel")
 	check(scene.world.keys==1 and scene.world.pos==Vector2i(5,3) and scene.pending_reason=="","ordinary door cancellation clears reason without charge")
-	scene.move(Vector2i.RIGHT); scene.perform_action("continue")
+	await scene.move(Vector2i.RIGHT); await scene.perform_action("continue")
 	check(scene.world.keys==0 and scene.world.tile(Vector2i(6,3))==".","ordinary door spends exactly one key")
-	scene.move(Vector2i.LEFT); scene.move(Vector2i.RIGHT)
+	await scene.move(Vector2i.LEFT); await scene.move(Vector2i.RIGHT)
 	check(scene.world.keys==0 and not scene.interaction and scene.world.pos==Vector2i(6,3),"already opened door never reconfirms or charges twice")
 	# Attunement is a read-only modal until a separate explicit confirmation.
-	scene.world=load("res://scripts/world.gd").new(0,2); scene.history.clear(); scene.growth=false
-	scene.save_game(false)
+	await Fixture.bind(scene,load("res://scripts/world.gd").new(0,2)); scene.history.clear(); scene.growth=false
+	await scene.save_game(false)
 	var pristine: Dictionary=scene.world.save_data().duplicate(true)
-	var attune_file_before: String=FileAccess.get_file_as_string(scene.save_path)
+	var attune_file_before: Dictionary=Fixture.snapshot(scene)
 	var attune_audio_before: int=scene.sound_event_count
 	scene.start_walk(Vector2i(1,2))
 	event.keycode=KEY_G; scene._unhandled_input(event)
@@ -218,40 +247,97 @@ func run_tests():
 	event.keycode=KEY_ENTER; scene._unhandled_input(event)
 	event.keycode=KEY_RIGHT; scene._unhandled_input(event)
 	check(scene.world.save_data()==pristine and scene.history.is_empty(),"unowned confirmation and movement are blocked")
-	check(FileAccess.get_file_as_string(scene.save_path)==attune_file_before and scene.sound_event_count==attune_audio_before,"preview never saves or plays action sounds")
+	check(Fixture.snapshot(scene)==attune_file_before and scene.sound_event_count==attune_audio_before,"preview never saves or plays action sounds")
 	event.keycode=KEY_ESCAPE; scene._unhandled_input(event)
 	check(scene.attuning and scene.attune_pending=="","Escape first backs out of confirmation")
 	scene.cycle_attunement(1)
 	check(scene.attune_gear=="duelist" and scene.attunement_rows().size()==4,"all non-traveler gear can be previewed before acquisition")
 	scene.close_attunement(); scene.world.inventory.append("buckler"); scene.world.equipped="buckler"; scene.world.chest_claimed=true
+	await Fixture.sync(scene)
 	var owned_before: Dictionary=scene.world.save_data().duplicate(true)
 	scene.open_attunement(); scene.select_attunement(0)
 	check(scene.world.save_data()==owned_before,"owned selection still requires separate confirmation")
-	scene.confirm_attunement()
+	await scene.confirm_attunement()
 	check(scene.world.gear_choices.has("buckler") and scene.attunement_rows().is_empty() and scene.history.size()==1,"confirmed selection locks only this gear with one undo snapshot")
 	var locked: Dictionary=scene.world.save_data().duplicate(true)
-	scene.confirm_attunement()
+	await scene.confirm_attunement()
 	check(scene.world.save_data()==locked,"repeat confirmation cannot apply twice")
-	scene.undo()
+	await scene.undo()
 	check(not scene.attuning and scene.world.save_data()==owned_before,"undo closes modal and restores actual offers and choices")
-	scene.open_attunement(); scene.select_attunement(3); scene.confirm_attunement()
+	scene.open_attunement(); scene.select_attunement(3); await scene.confirm_attunement()
 	check(scene.world.gear_choices.get("buckler")=="none" and scene.attunement_rows().is_empty(),"keeping original is an explicit locked choice")
-	scene.load_game()
+	await scene.load_game()
 	check(not scene.attuning,"load closes attunement modal")
-	# Byte-preserving schema 11 migration gets its own backup, not the old 10->11 name.
-	scene.save_path="user://attune-schema11-test.json"
-	var old: Dictionary=pristine.duplicate(true); old.version=11
-	for key in ["attunement_version","gear_offers","gear_choices"]: old.erase(key)
-	var original_bytes: String=JSON.stringify(old)
-	var backup: String=scene.save_path.get_basename()+".pre-schema12.json"
-	if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
-	var old_file=FileAccess.open(scene.save_path,FileAccess.WRITE); old_file.store_string(original_bytes); old_file.close()
-	scene.load_game()
-	check(FileAccess.file_exists(backup) and FileAccess.get_file_as_string(backup)==original_bytes,"schema11 preserved byte-for-byte before upgrade")
-	check(JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==12,"schema11 upgrades to12")
-	DirAccess.remove_absolute(backup); DirAccess.remove_absolute(scene.save_path)
-	scene.save_path="user://integration-test.json"
-	# Only remove the test-specific file generated above, never a player's journey.
-	DirAccess.remove_absolute(scene.save_path)
+	# Legacy file is not a second writer path: L only reads the new active slot.
+	var legacy_path="user://journey-v4.json"
+	var existed=FileAccess.file_exists(legacy_path)
+	var prior_bytes=FileAccess.get_file_as_bytes(legacy_path) if existed else PackedByteArray()
+	var original_bytes="legacy fixture must remain untouched"
+	var old_file=FileAccess.open(legacy_path,FileAccess.WRITE); old_file.store_string(original_bytes); old_file.close()
+	var active_id: String=scene.world.run_id
+	await scene.load_game()
+	check(FileAccess.get_file_as_string(legacy_path)==original_bytes,"L leaves legacy bytes untouched")
+	check(scene.world.run_id==active_id and scene.world.reward_eligible(),"L reads only the eligible active slot, never grafts legacy")
+	if existed:
+		old_file=FileAccess.open(legacy_path,FileAccess.WRITE);old_file.store_buffer(prior_bytes);old_file.close()
+	else: DirAccess.remove_absolute(legacy_path)
+	# Delayed durable commits never publish speculative world/history/effects.
+	var slow=ControlledStore.new()
+	scene.session=load("res://scripts/session.gd").new(slow)
+	await scene.initialize_session()
+	scene.apply_session_result(await scene.session.new_run(0,1,true))
+	scene.growth=false
+	var before_delayed=scene.world.save_data().duplicate(true)
+	var sounds_before=scene.sound_event_count
+	slow.delayed=true
+	scene.move(Vector2i.RIGHT)
+	check(scene.session.busy and scene.world.save_data()==before_delayed and scene.history.is_empty(),"inflight step does not publish candidate or undo history")
+	check(scene.sound_event_count==sounds_before,"inflight step has no speculative audio")
+	await scene.move(Vector2i.RIGHT)
+	await process_frame; await process_frame
+	check(scene.world.moves==1 and slow.writes==3,"busy repeated input commits only once")
+	slow.delayed=false; slow.fail=true
+	var stable=scene.world.save_data().duplicate(true)
+	var history_before=scene.history.duplicate(true)
+	await scene.move(Vector2i.RIGHT)
+	check(scene.world.save_data()==stable and scene.history==history_before,"IO failure preserves live world and history")
+	check(scene.ui_notice=="io_error","storage failure uses UI-local notice")
+	await scene.perform_action("arm")
+	check(scene.world.save_data()==stable,"pending save prevents a different action from replacing candidate")
+	slow.fail=false
+	await scene.retry_save()
+	check(scene.world.moves==2 and scene.world.keys==1,"retry commits the same held candidate")
+	slow.conflict=true
+	stable=scene.world.save_data().duplicate(true)
+	await scene.move(Vector2i.LEFT)
+	check(scene.session.read_only and scene.world.save_data()==stable,"fence conflict enters readonly without speculative movement")
+	await scene.move(Vector2i.LEFT)
+	check(scene.world.save_data()==stable,"readonly cannot overwrite current slot")
+	slow.conflict=false
+	await scene.load_game()
+	check(not scene.session.read_only and scene.history.is_empty(),"explicit reload reacquires and discards stale history")
+	scene.growth=false; slow.delayed=true
+	scene.start_walk(Vector2i(1,1))
+	scene.advance_walk(0.2)
+	scene.cancel_walk()
+	await process_frame; await process_frame
+	check(scene.walk_route.is_empty(),"manual cancellation during await cannot resume automatic route")
+	# Lost acknowledgements commit on disk once, but effects wait for successful retry.
+	slow.delayed=false
+	scene.world.pos=Vector2i(5,3)
+	await Fixture.sync(scene)
+	scene.battle_time=0.0
+	var battle_before=scene.world.save_data().duplicate(true)
+	var effect_before=scene.sound_event_count
+	var writes_before=slow.writes
+	slow.lose_ack=true
+	await scene.move(Vector2i.LEFT)
+	check(scene.world.save_data()==battle_before and scene.sound_event_count==effect_before and scene.battle_time==0.0,"lost combat acknowledgement has no speculative effects")
+	await scene.retry_save()
+	check(scene.world.kills==1 and scene.battle_time>0 and scene.sound_event_count==effect_before+1,"retried combat publishes exactly one battle and impact")
+	check(slow.writes==writes_before+1,"retry never executes combat or storage mutation twice")
+	var final_battle=scene.world.save_data().duplicate(true)
+	await scene.retry_save()
+	check(scene.world.save_data()==final_battle and scene.sound_event_count==effect_before+1,"extra F5 cannot replay successful effects")
 	print("UI integration: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
 	quit(0 if failures==0 else 1)

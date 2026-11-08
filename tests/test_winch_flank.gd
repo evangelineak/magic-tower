@@ -1,6 +1,7 @@
 extends SceneTree
 # Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
 # New layout-2 behavior is covered by test_usability and both generator suites.
+const Fixture=preload("res://tests/ui_fixture.gd")
 const World=preload("res://scripts/world.gd")
 const Generator=preload("res://scripts/generation.gd")
 const Expedition=preload("res://scripts/expedition.gd")
@@ -60,7 +61,7 @@ func run_tests():
   var old=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/schema9-"+reward+".json"))
   check(w.restore(old) and w.expedition_revision==2 and w.winch_choice=="" and not w.maul_claimed,"old begun revision2 gains no new room or reward")
   var upgraded=state(w); upgraded.erase("winch_choice"); upgraded.erase("maul_claimed"); upgraded.erase("layout_revision"); upgraded.version=9
-  for field in ["attunement_version","gear_offers","gear_choices"]: upgraded.erase(field)
+  for field in ["attunement_version","gear_offers","gear_choices","run_id","mode","ended_reason"]: upgraded.erase(field)
   check(JSON.parse_string(JSON.stringify(upgraded))==old,"migration conserves solved audit/anchors/oath/NPC resources: "+reward)
   reject(w,"winch_rescue"); reject(w,"winch_armory"); restore_check(w)
  w=World.new(0,1)
@@ -136,19 +137,21 @@ func run_tests():
  w.expedition_revision=2
  check(not w.battle_preview("H","",target).flank_active,"old chapter revision has no new positional rule")
  # Two-step UI confirmation; cancellation, F2 and modal behavior cannot spend choice.
- var scene=load("res://main.tscn").instantiate(); root.add_child(scene); await process_frame
- scene.save_path="user://winch-flank-test.json"; scene.growth=false; scene.world.restore(at_winch)
+ var scene=load("res://main.tscn").instantiate(); Fixture.prepare(scene); root.add_child(scene); await process_frame
+ scene.growth=false
+ await Fixture.bind(scene,World.from_snapshot(at_winch))
  var before=state(scene.world)
- scene.perform_action("winch_armory")
+ await scene.perform_action("winch_armory")
  check(scene.winch_pending=="winch_armory" and state(scene.world)==before,"winch first click only requests confirmation")
  key(scene,KEY_F2)
  check(scene.winch_pending=="winch_armory" and state(scene.world)==before,"F2 preserves pending irreversible choice")
- scene.perform_action("winch_cancel")
+ await scene.perform_action("winch_cancel")
  check(scene.winch_pending=="" and state(scene.world)==before,"cancel commits nothing")
- scene.perform_action("winch_rescue"); scene.perform_action("winch_confirm")
+ await scene.perform_action("winch_rescue"); await scene.perform_action("winch_confirm")
  check(scene.world.winch_choice=="rescue" and scene.history.size()==1,"explicit confirmation commits exactly one reversible history entry")
- scene.undo(); check(state(scene.world)==before,"controller undo restores original winch state")
- scene.world.restore(begun); scene.world.pos=target+Vector2i.RIGHT; scene.world.atk=100; scene.world.hp=1000; scene.hover=target; scene.interaction=false; scene.battle_time=0
+ await scene.undo(); check(state(scene.world)==before,"controller undo restores original winch state")
+ scene.world=World.from_snapshot(begun); scene.world.pos=target+Vector2i.RIGHT; scene.world.atk=100; scene.world.hp=1000; scene.hover=target; scene.interaction=false; scene.battle_time=0
+ await Fixture.bind(scene,scene.world)
  scene.open_comparison()
  check(scene.comparison_rows()[0].preview.flank_active,"V passes actual hovered position into shared preview")
  # Presentation-only five-row fixture exercises paging without claiming five gear sources are legal.
@@ -158,12 +161,15 @@ func run_tests():
  check(scene.compare_page==1 and scene.comparison and scene.comparison_rows().size()==5,"comparison paging and F2 retain the fifth presented equipment row")
  scene.world.inventory=original_inventory
  scene.comparison=false; var forecast=scene.world.battle_preview("H","",target)
- scene.move(Vector2i.LEFT)
+ await scene.move(Vector2i.LEFT)
  check(scene.battle_details.flank_active and scene.battle_details.damage==forecast.damage and scene.world.last_battle.damage==forecast.damage,"animation snapshots actual resolved position, not post-move recomputation")
- var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema9-retrain.json"); var backup=scene.save_path.get_basename()+".pre-schema10.json"
- if FileAccess.file_exists(backup): DirAccess.remove_absolute(backup)
- var file=FileAccess.open(scene.save_path,FileAccess.WRITE); file.store_string(old_text); file.close(); scene.load_game()
- check(FileAccess.get_file_as_string(backup)==old_text and scene.world.expedition_revision==2 and scene.world.audit_reward=="retrain" and JSON.parse_string(FileAccess.get_file_as_string(scene.save_path)).version==12,"schema9 backup preserves actual old audit/anchor run without spawning new rooms")
+ var active_snapshot=state(scene.world)
+ var old_text=FileAccess.get_file_as_string("res://tests/fixtures/schema9-retrain.json")
+ var legacy_path="user://winch-flank-test.json"
+ var file=FileAccess.open(legacy_path,FileAccess.WRITE); file.store_string(old_text); file.close()
+ await scene.load_game()
+ check(FileAccess.get_file_as_string(legacy_path)==old_text and state(scene.world)==active_snapshot,"L preserves schema9 bytes and reads current registered run instead")
+ var old_world=World.new(); check(old_world.restore(JSON.parse_string(old_text)) and old_world.expedition_revision==2 and old_world.audit_reward=="retrain" and not old_world.reward_eligible(),"World legacy audit migration does not spawn new rooms or award identity")
  scene.queue_free(); await process_frame
  print("WINCH FLANK: ","PASS" if failures==0 else "FAIL"," (",checks," checks)")
  quit(0 if failures==0 else 1)

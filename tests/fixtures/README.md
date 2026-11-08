@@ -120,3 +120,38 @@ or user progress. They compare GDScript and JavaScript validation/settlement sem
 including duplicate/conflict, JSON numeric normalization and malformed profiles.
 Human-readable error wording is not part of the protocol. The browser storage harness
 uses these fixtures without requiring WebGL; passing them does not prove game integration.
+
+## Schema 12 real attunement migration fixtures
+
+`schema12-layout2.json` and `schema12-layout1.json` were generated with the actual
+World from local source commit `142435dcf34c9afb5121d4b0723a9944b0413743`, isolated
+via `git archive`. They are synthetic gameplay only, not user saves. No source
+from the schema-13 working tree was used to produce their state.
+
+Reproduction from the current repository (Godot 4.6.3):
+
+```sh
+mkdir -p /tmp/tower-schema12-source /tmp/tower-schema12-output
+git archive 142435dcf34c9afb5121d4b0723a9944b0413743 | tar -x -C /tmp/tower-schema12-source
+cp tests/fixtures/generate_schema12.gd /tmp/tower-schema12-source/tests/fixtures/
+godot --headless --path /tmp/tower-schema12-source --script tests/fixtures/generate_schema12.gd
+```
+
+The generator restores the existing genuine schema-11 fixtures through the old
+World API, then calls `save_data()`. Layout 2 preserves an ongoing eight-floor
+expedition without attunement: 242 moves / 277 HP. Layout 1 owns maul and repeater
+through the prior legitimate reward path; it selects the first actual offered
+non-none attunement for each item via `action()`: maul `edge_deep`, repeater
+`edge_light`, resulting in 604 moves / 375 HP. Equipment, offers, positions,
+resources and version numbers are never assigned or rewritten. Both outputs
+also round-trip through that same historical World's restore/save API unchanged.
+
+These real schema-12 records contain no future schema-13 identity/eligibility
+fields. Migration should preserve that legacy provenance, not manufacture an
+eligible new-run identity. Current schema-13 migration behavior is tested
+separately; generation here verifies historical authenticity only.
+
+SHA256:
+- generate_schema12.gd: `16eabaa2354c75bd1bd6376b9cf914ed872e926f05f379e99593d21078450897`
+- schema12-layout2.json: `5a4377130e26ee4ea575dfdd5dd7c9bedcb37c20d77cb0bda738d5c98205b1e6`
+- schema12-layout1.json: `82e1786cb87c2f5a39eead2bc847cb83c6dd93090b8815ce726c39ac50414d6b`

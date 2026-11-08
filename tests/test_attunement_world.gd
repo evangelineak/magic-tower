@@ -29,7 +29,7 @@ func offer(w,gear:String,id:String):
 	w.gear_offers[gear]=ids
 func _init():
 	var w=World.new(42)
-	check(w.save_data().version==12 and w.attunement_version==1 and w.gear_choices.is_empty(),"new schema starts unselected and original")
+	check(w.save_data().version==13 and w.attunement_version==1 and w.gear_choices.is_empty(),"new schema starts unselected and original")
 	check(w.gear_offers.size()==4 and not w.gear_offers.has("balanced"),"only four nonbaseline gear catalogs")
 	check(w.gear_offers==World.new(42).gear_offers,"catalog is deterministic")
 	for gear in World.ATTUNABLE_GEAR:
@@ -52,6 +52,7 @@ func _init():
 		var old:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/"+name+".json"))
 		w=fixture(name)
 		check(w.gear_choices.is_empty() and w.attunement_version==1,"migration grants no attunement or locked choice")
+		check(w.run_id=="" and w.mode=="safe" and w.ended_reason=="" and not w.reward_eligible(),"legacy gains no session identity or terminal state")
 		var migrated:=snapshot(w)
 		for field in old:
 			if field=="version": continue

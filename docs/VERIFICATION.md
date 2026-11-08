@@ -208,3 +208,16 @@
 - 原生单容器原型88项通过，包含SHA校验、备份、临时写入/rename前失败、rename后结果不明查收据、坏主档拒绝而不自动回退旧备份、遗留锁拒绝、4096局上限和全局单槽fence。真实OS.create_process两Godot竞争同一版本，单赢家；独立复跑一次败方STORE_LOCKED，另一次STALE_REVISION，最终revision恰为1。日志/tmp/native-store-test.log及总回归日志保留独立目录和双方JSON。
 - Native与JS返回形状目前不同，必须由后续显式适配器统一。两者只验6字段有界模拟快照，尚未验证完整World状态，也未实现JavaScriptBridge、原生恢复UI、心跳、结算界面、风险死亡或天赋抽选。不能将受控abort说成真进程kill或硬件断电测试；Godot flush不承诺跨平台fsync。
 - 当前journey-v4.json、公开网页v0.17、可玩开发版v0.18规则均未改。无原生run_id的旧旅程将可继续原玩法但不能参加跨局领奖；不随机补ID，也不允许把旧快照嫁接到新eligible run。
+
+## 统一 Session 与生产存档接入（开发分支，2026-11-08）
+
+- 全套 tools/test_all.sh 退出0，日志 /tmp/tower-session-preflight3.log：7838项Godot功能检查，另269项跨语言向量；首章200种子178035项、远征200种子97863项、9条实际对抗路线及2568个合法存档回放。随后新增生产桥静态回归9项通过，覆盖JS与HTML内联语法、同源runtime及导出include配置。初次全回归发现reward_gates合成测试跳层漏标连续到访，已修测试构造而非放松存档验证。
+- World schema13的584项新检查涵盖独立身份、连续到访、终局摘要和真正旧schema12夹具；Session115项覆盖候选隔离、忙时拒绝、失败不展示/不播放效果、撤销持久化、丢失响应重试及严格返回验证。25项真实原生适配器检查涵盖全快照、空库启动、冲突、写入故障、租约续期和桥超时。
+- 每步写入成功后才发布World及战斗/拾取反馈；F5重试原操作不重复收益。空库与读取失败明确区分，读取失败不得默默新建。L显式重取写入权并载入最新；活跃写入续租60秒，无后台心跳，闲置过期或其他窗口占用时须L。关闭窗口不会强夺尚未到期租约。
+- 原生旧完整塔积累曾使100局后每提交约308–375ms，改为只保留当前完整塔、旧局保留身份/状态/最后操作摘要后，10局约14–17ms，100局约27–34ms。保留所有身份和收据，不承诺4096局上限时相同性能。真实经过时间测试使用OS计时，避免headless首帧delta让计时器测试虚假等待。
+- 原生journeys-v1与Web magic-tower-journeys-v1独立于旧journey-v4；旧文件不改、不导入、不嫁接可领奖身份。纯模块的结算接口未暴露给游戏，本批没有死亡、结算按钮、永久天赋或轮回效果。网页稳定版保持v0.17。
+- 字体873必需字符缺0，401532字节，SHA256 472e49d4db084683ef1185108be035a3d02a094efcefa2918c996bb66864d255；本地化80项通过。Windows实际运行、Godot WebGL/JavaScriptBridge整机链路及真实断电恢复仍不能视为已验。
+- 真实原生GUI独立新库实玩13步/1场战斗：seed0，344HP/28ATK/8DEF/8金币/1钥匙，run ID cdab1557a4594375122c1e4ed4b9c70d。真实苔藓战斗350→344；保存、U撤拾钥、L一致。第二窗口显示WRITER_BUSY；关闭第一窗口并自然等待租约后L接管完整状态。第三窗口带--seed123仍恢复同一seed0身份资源；旧窗口行动STALE_WRITER被拒且只读，磁盘仍为13步。隔离目录起终均无journey-v4，故不冒称测了既有旧文件SHA。截图session-gui-{new,battle,conflict,reloaded,stale-writer}.png。
+- 真实Chrome生产JS完整World桥自测14项通过；人工双标签验证A成功保存/相同请求duplicate、B写入权忙但可读取完整状态。截图session-bridge-{selftest,busy}.png。首次HTML内联漏闭合及成功报告变量作用域错误均先暴露后修复，新增9项静态回归。测试页、进程及自行启动服务器已关闭，测试数据库保留。这是生产JS+IndexedDB+JSON回调验收，仍不是Godot WebGL整机运行。
+- 最终安全边界收紧：生产原生及适配器和JS一致，只允许safe模式且ended_reason为空；10项新增读写/篡改负例通过，存储共35项。最终全套日志/tmp/tower-session-final.log，功能检查总数7848，Node269+9项。
+- 最终Linux/Windows导出成功，6项关键源码导出前后hash一致，记录scratch/session-export-code.sha。实际Linux独立包恢复同一13步344HP旅程，真实Down/U/L后身份资源保持，截图session-export-{game,journal}.png。Linux二进制SHA256 010c538c53fe51e11c41d4a5eca16994cd991f280e7ec65f77318061585cd671；Windows二进制8a6fd7757437cb2da07fe8fba64cca84d38ab33080c5f07f209bd0f67c7bf5f1，仅交叉导出。由正常Godot引擎挂载独立exe的实际embedded PCK后读取生产JS，20852字节、SHA e76f6d03fd9a4b97cd27564af14b740ed767b5e2dc97bda54610179b2f2f5e66与源一致；release exe忽略外部--script的尝试不算成功探针。未导出或发布新的Web包。

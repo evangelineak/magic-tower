@@ -11,7 +11,11 @@ const INK := Color("e5ebee")
 const MUTED := Color("7e96a4")
 const GOLD := Color("e9bd6d")
 const TEAL := Color("65dac4")
-var world = initial_world()
+const Session = preload("res://scripts/session.gd")
+var session = null # Explicit dependency injection; production uses the durable adapter.
+var world = null
+var ui_notice := ""
+var walk_generation := 0
 var font = ThemeDB.fallback_font
 var art: Texture2D
 var combat_art: Dictionary = {}
@@ -22,7 +26,7 @@ var sound_event_count := 0
 var last_sound_event := ""
 const ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"regent","Z":"archivist","H":"stalker","W":"sentinel"}
 var history: Array = []
-var save_path := "user://journey-v4.json"
+
 var travel_menu := false
 var travel_page := 0
 var travel_rows: Array=[]
@@ -66,11 +70,11 @@ var walk_origin := Vector2i(-1,-1)
 var walk_timer := 0.0
 var map_art: Dictionary = {}
 const MAP_ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"gate_brute","Z":"archivist","H":"ferryman","W":"jailer"}
-func initial_world():
+func initial_seed() -> int:
 	var seed_number := randi_range(1,2147483646)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--seed=") and arg.substr(7).is_valid_int(): seed_number=int(arg.substr(7))
-	return World.new(seed_number)
+	return seed_number
 func play_sound(id: String):
 	# Instrument committed events separately from device playback for deterministic QA.
 	sound_event_count+=1
@@ -102,6 +106,7 @@ func _ready():
 		var path := "res://assets/map_icons/%s.png" % id
 		if ResourceLoader.exists(path): map_art[id]=load(path)
 	buttons = [Rect2(768,636,148,40),Rect2(932,636,148,40),Rect2(1096,636,148,40),Rect2(1014,536,230,40),Rect2(768,586,230,40),Rect2(768,536,230,40),Rect2(1014,586,230,40),Rect2(768,686,476,40)]
+	await initialize_session()
 	queue_redraw()
 func _process(delta):
 	tick += delta
@@ -122,6 +127,10 @@ func style(color: Color) -> StyleBoxFlat:
 func _draw():
 	draw_rect(Rect2(0,0,1280,800),Color("080f1b"))
 	label_at(Vector2(24,42),"MAGIC TOWER",27,INK)
+	if world==null:
+		draw_wrapped(Vector2(100,200),ui_notice,1000,22,TEAL)
+		label_at(Vector2(100,310),"L: Reload current journey / F5: Retry save",18,GOLD)
+		return
 	label_at(Vector2(310,42),world.floor_title(),22,GOLD)
 	label_at(Vector2(752,30),"FLOOR %d / %d" % [world.floor_index+1,world.floor_count()],18,GOLD)
 	label_at(Vector2(930,30),"SEED %d" % world.seed_value,15,TEAL)
@@ -185,6 +194,9 @@ func _draw():
 	if travel_menu: draw_travel()
 	if attuning: draw_attunement()
 	if not modal_open(): draw_tooltip()
+	if session!=null and (session.busy or session.read_only):
+		panel(Rect2(210,15,1020,44),Color("182738"))
+		label_at(Vector2(225,44),"Saving safely. Please wait." if session.busy else "Read-only: L reloads the current stored journey.",18,GOLD)
 func draw_sidebar():
 	panel(Rect2(752,72,504,704),Color("101c2a"))
 	if combat_art.has(world.hero_id): draw_texture_rect(combat_art[world.hero_id],Rect2(766,82,72,72),false)
@@ -196,10 +208,11 @@ func draw_sidebar():
 		panel(Rect2(p,Vector2(148,60)),Color("203343"))
 		label_at(p+Vector2(10,21),values[i][0],13,MUTED)
 		label_at(p+Vector2(10,48),values[i][1],23,values[i][2])
+	if ui_notice!="": label_at(Vector2(768,422),"F5: retry pending save / L: reload stored journey",13,MUTED)
 	label_at(Vector2(768,326),"Kills %d  /  Talents %d" % [world.kills,world.talents.size()],16,GOLD)
 	label_at(Vector2(768,354),"NEW TALENT AVAILABLE  [C]" if not Progression.talent_options(world.kills,world.talents).is_empty() else "C: hero, equipment and skills",15,TEAL)
 	draw_wrapped(Vector2(768,388),quest_hint(),460,16,GOLD,2)
-	draw_wrapped(Vector2(768,441),world.message,460,15,TEAL,3)
+	draw_wrapped(Vector2(768,441),status_message(),460,15,TEAL,3)
 	label_at(Vector2(768,512),"Walking safely... Any key or click stops." if not walk_route.is_empty() else "Click clear floor to walk. Other objects: inspect only.",14,MUTED)
 	var titles := ["UNDO  U","SAVE (CLICK)","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J","SAFE TRAVEL  T"]
 	for i in buttons.size():
@@ -246,26 +259,27 @@ func draw_tooltip():
 	panel(rect,Color("07111f")); draw_rect(rect,TEAL,false,1.5)
 	for i in lines.size(): label_at(rect.position+Vector2(14,22+i*20),lines[i],15,GOLD if i==0 else INK)
 func cancel_walk():
+	walk_generation+=1
 	walk_route.clear(); walk_floor=-1; walk_origin=Vector2i(-1,-1); walk_timer=0.0
 func start_walk(target: Vector2i):
+	if not can_mutate(): return
 	cancel_walk()
 	if modal_open() or world.tile(target)!=".": return
 	walk_route=world.safe_walk_path(target)
 	walk_floor=world.floor_index; walk_origin=world.pos; walk_timer=0.0
 func advance_walk(delta: float):
-	if walk_route.is_empty(): return
+	if walk_route.is_empty() or session==null or session.busy: return
 	if modal_open() or world.floor_index!=walk_floor or world.pos!=walk_origin:
 		cancel_walk(); return
 	walk_timer+=delta
 	if walk_timer<0.12: return
 	walk_timer=0.0
-	var before: Dictionary=world.save_data().duplicate(true)
-	var next: Vector2i=walk_route[0]
-	if not world.safe_walk_step(next,walk_floor,walk_origin): cancel_walk(); return
+	var generation := walk_generation
+	var result: Dictionary=await session.safe_walk(walk_route[0],walk_floor,walk_origin)
+	apply_session_result(result)
+	if not result.get("committed",false): cancel_walk(); return
+	if generation!=walk_generation: return
 	walk_route.pop_front(); walk_origin=world.pos
-	history.append(before)
-	if history.size()>100: history.pop_front()
-	play_sound("move"); save_game(false)
 func close_travel():
 	travel_menu=false
 	travel_pending=""
@@ -298,7 +312,7 @@ func confirm_travel():
 			var action_id: String="fast_travel_"+row.id
 			var before_moves: int=world.moves
 			close_travel()
-			perform_action(action_id)
+			await perform_action(action_id)
 			if world.moves==before_moves:
 				travel_menu=true; refresh_travel()
 			return
@@ -363,7 +377,7 @@ func confirm_attunement():
 		if row[0]==attune_pending: valid=true
 	if not valid: attune_pending=""; return
 	if not world.attunement_preview(attunement_id(attune_pending),attune_gear).get("can_choose",false): return
-	perform_action(attune_pending)
+	await perform_action(attune_pending)
 	attune_pending=""
 func attunement_click(mouse: Vector2):
 	if not Rect2(195,70,890,660).has_point(mouse): close_attunement(); return
@@ -714,7 +728,7 @@ func draw_interaction():
 		var r := Rect2(285,375+i*43,720,37)
 		panel(r,Color("253748"))
 		action_label(r,"%d  %s" % [i+1,action_rows[i][1]])
-	label_at(Vector2(290,640),display(world.message).left(100),14,TEAL)
+	label_at(Vector2(290,640),display(status_message()).left(100),14,TEAL)
 	if available_actions().size()>6:
 		label_at(Vector2(815,218),"Page %d   [ / ]" % (interaction_page+1),13,GOLD)
 	label_at(Vector2(290,672),"Click a choice or press its number. E / Esc closes without choosing.",14,MUTED)
@@ -740,7 +754,7 @@ func draw_calibration():
 		var r := Rect2(285,375+i*43,720,37)
 		panel(r,Color("253748"))
 		action_label(r,"%d  %s" % [i+1,action_rows[i][1]])
-	label_at(Vector2(290,640),display(world.message).left(100),14,TEAL)
+	label_at(Vector2(290,640),display(status_message()).left(100),14,TEAL)
 	label_at(Vector2(290,672),"Click a choice or press its number. E / Esc closes without choosing.",14,MUTED)
 func draw_key_confirmation():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.65))
@@ -774,12 +788,13 @@ func draw_winch_confirmation():
 		panel(rect,Color("253748")); action_label(rect,"%d  %s" % [i+1,action_rows[i][1]])
 	label_at(Vector2(290,672),"Click a choice / press 1-2. E / Esc cancels.",14,MUTED)
 func perform_action(id: String, confirmed:=false):
+	if not can_mutate(): return
 	cancel_walk()
 	if id=="winch_cancel": winch_pending=""; return
 	if id=="winch_confirm":
 		var choice: String=winch_pending
 		winch_pending=""
-		if choice!="": perform_action(choice,true)
+		if choice!="": await perform_action(choice,true)
 		return
 	if id in ["winch_rescue","winch_armory"] and not confirmed:
 		winch_pending=id; interaction=true; interaction_page=0
@@ -789,22 +804,18 @@ func perform_action(id: String, confirmed:=false):
 	if id=="continue":
 		var direction := checkpoint_pending
 		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""
-		move(direction,true)
+		await move(direction,true)
 		return
 	reset_armed=false
-	var before: Dictionary=world.save_data().duplicate(true)
-	if world.action(id):
-		if id=="expedition":
-			book=false; journal=false; growth=false; interaction=false; winch_pending=""; battle_time=0.0
-			checkpoint_pending=Vector2i.ZERO; pending_reason=""
-		if id in ["spring","drain","quest_bridge","camp_bridge"]: play_sound("water")
-		elif id in ["expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher","audit_medicine"]: play_sound("pickup")
-		if id.begins_with("hero_") or id.begins_with("talent_"): growth=false
-		history.append(before)
-		if history.size()>100: history.pop_front()
-		save_game(false)
-	else:
-		world.message={"camp_medicine":"Need 70 gold, remaining medicine stock, and a nearby camp (U).","camp_focus":"Need 55 gold, remaining focus stock, missing focus, and a nearby camp (U).","camp_bridge":"Need 80 gold, an unbuilt bridge, and a nearby engineer (Y).","quest_bridge":"Need unspent survey (I), beside F, with water not drained.","borrow":"Loan unavailable: once per run, before floor 4.","buy":"Need 60 gold; this weapon can only be purchased once.","repay":"No gold available or no outstanding debt.","elevator":"A held core is required. Its other uses will be lost.","forge":"A held core is required. Its other uses will be lost.","sell_core":"No core held. A used or sold core cannot be reclaimed.","travel":"Repair this elevator with the core first.","secret":"Solve the powered calibration before choosing a reward."}.get(id,world.message if id.begins_with("secret_") or id.begins_with("seal_") or id.begins_with("camp_") or id=="expedition" or id.begins_with("rescue_") or id.begins_with("oath_") or id.begins_with("fast_travel_") or id.begins_with("audit_") or id.begins_with("winch_") else "This choice is unavailable. Check its cost and requirements.")
+	var result: Dictionary=await session.action(id)
+	apply_session_result(result)
+func action_effect(id: String):
+	if id=="expedition":
+		book=false; journal=false; growth=false; interaction=false; winch_pending=""; battle_time=0.0
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	if id in ["spring","drain","quest_bridge","camp_bridge"]: play_sound("water")
+	elif id in ["expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher","audit_medicine"]: play_sound("pickup")
+	if id.begins_with("hero_") or id.begins_with("talent_"): growth=false
 func quest_hint() -> String:
 	return ["J: find the researcher's request","QUEST: seek the sample (I)","SURVEY: J reward or F bridge","SURVEY: delivered to J","SURVEY: flood bridge built"][clampi(world.quest_state,0,4)]
 func skill_description() -> String:
@@ -878,7 +889,7 @@ func draw_growth():
 			label_at(Vector2(530,574),"Page %d   [ / ]" % (gear_page+1),14,TEAL)
 		if world.equipped=="duelist": label_at(Vector2(225,610),"DUELIST COST: one EXTRA opening retaliation, even on a one-shot kill.",15,Color("ef928f"))
 	else: label_at(Vector2(225,610),"Focus is finite. First visits restore it; repeating floors cannot farm it.",15,MUTED)
-	label_at(Vector2(225,646),display(world.message).left(105),14,TEAL)
+	label_at(Vector2(225,646),display(status_message()).left(105),14,TEAL)
 	label_at(Vector2(225,697),"Choose 1-3. Tab changes section. Esc: keep default Warden." if world.moves==0 else "Click a card / press 1-3. Tab changes section. C / Esc closes.",15,MUTED)
 func open_journal():
 	close_attunement()
@@ -1035,6 +1046,11 @@ func _unhandled_input(event):
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode==KEY_M:
 		toggle_mute()
 		return
+	if session!=null and session.busy: return
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode==KEY_F5: retry_save(); return
+		if event.keycode==KEY_L and (world==null or session.read_only or not modal_open()): load_game(); return
+	if world==null: return
 	if event is InputEventMouseMotion:
 		hover = Vector2i(((get_global_mouse_position()-ORIGIN)/CELL).floor())
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
@@ -1174,18 +1190,21 @@ func _unhandled_input(event):
 			KEY_R: request_restart("replay")
 			KEY_N: request_restart("new")
 func request_restart(mode: String):
+	if not can_mutate(): return
 	close_attunement()
 	cancel_walk()
 	close_travel()
 	comparison=false
 	if reset_armed and reset_mode==mode:
-		world=World.new(world.seed_value if mode=="replay" else randi_range(1,2147483646))
+		var result: Dictionary=await session.new_run(world.seed_value if mode=="replay" else randi_range(1,2147483646),2,true)
+		apply_session_result(result)
+		if not result.get("committed",false): return
 		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""
-		save_game(false)
 	else:
 		reset_armed=true; reset_mode=mode
-		world.message="Press %s again: %s. Autosave will be replaced." % ["R" if mode=="replay" else "N","replay this seed" if mode=="replay" else "start a new seed"]
+		ui_notice="Press %s again: %s. Autosave will be replaced." % ["R" if mode=="replay" else "N","replay this seed" if mode=="replay" else "start a new seed"]
 func move(direction: Vector2i, confirmed:=false):
+	if not can_mutate(): return
 	cancel_walk()
 	reset_armed=false
 	var target_token: String=world.tile(world.pos+direction)
@@ -1193,68 +1212,81 @@ func move(direction: Vector2i, confirmed:=false):
 	if not confirmed and target_token in ["D","L"] and world.keys>=key_cost and not world.won:
 		checkpoint_pending=direction; pending_reason="door"
 		interaction_page=0; interaction=true
-		world.message="Opening this door costs %d keys. Confirm or keep them for later." % key_cost
+		ui_notice="Opening this door costs %d keys. Confirm or keep them for later." % key_cost
 		return
 	if not confirmed and world.tile(world.pos+direction)==">" and world.floor_index in [2,3] and world.checkpoints<world.floor_index-1 and world.debt()>0:
 		checkpoint_pending=direction; pending_reason="interest"
 		interaction_page=0
 		interaction=true
-		world.message="A new milestone settles interest. Repay first, continue, or cancel."
+		ui_notice="A new milestone settles interest. Repay first, continue, or cancel."
 		return
-	var before: Dictionary = world.save_data().duplicate(true)
-	var enemy: String = world.tile(world.pos+direction)
-	var hero_before: String = world.hero_id
-	if world.step(direction):
-		if World.ENEMIES.has(enemy): play_sound("victory" if world.won else "impact")
-		elif enemy in ["D","L"]: play_sound("door")
-		elif enemy in ["k","h","a","d","C","I","T","$","A","P","m"]: play_sound("pickup")
-		elif enemy=="~": play_sound("water")
-		else: play_sound("move")
-		if World.ENEMIES.has(enemy):
-			var resolved: Dictionary=world.last_battle.duplicate(true)
-			battle_time=2.4; battle_name=World.ENEMIES[enemy].name; battle_loss=int(resolved.get("damage",0))
-			battle_details=resolved; battle_kind=enemy; battle_hero=hero_before; battle_skill=resolved.get("skill_consumed",false)
-		history.append(before)
-		if history.size()>100: history.pop_front()
-		save_game(false)
+	apply_session_result(await session.step(direction))
+func step_effect(enemy: String, hero_before: String):
+	if World.ENEMIES.has(enemy): play_sound("victory" if world.won else "impact")
+	elif enemy in ["D","L"]: play_sound("door")
+	elif enemy in ["k","h","a","d","C","I","T","$","A","P","m"]: play_sound("pickup")
+	elif enemy=="~": play_sound("water")
+	else: play_sound("move")
+	if World.ENEMIES.has(enemy):
+		var resolved: Dictionary=world.last_battle.duplicate(true)
+		battle_time=2.4; battle_name=World.ENEMIES[enemy].name; battle_loss=int(resolved.get("damage",0))
+		battle_details=resolved; battle_kind=enemy; battle_hero=hero_before; battle_skill=resolved.get("skill_consumed",false)
 func undo():
-	close_attunement()
+	if not can_mutate(): return
+	close_attunement(); cancel_walk(); close_travel()
+	var result: Dictionary=await session.undo()
+	apply_session_result(result)
+	if result.get("committed",false): battle_time=0.0
+func save_game(_announce:=true):
+	if not can_mutate(): return
 	cancel_walk()
-	close_travel()
-	if history.is_empty(): world.message="No move to undo in this session."; return
-	world.restore(history.pop_back())
-	battle_time=0.0
-	world.message="One step back. A different possibility."
-	save_game(false)
-func save_game(announce:=true):
-	var f := FileAccess.open(save_path,FileAccess.WRITE)
-	if f == null: world.message="Could not save. Check storage permissions."; return
-	f.store_string(JSON.stringify(world.save_data()))
-	if announce: world.message="Journey saved locally."
+	apply_session_result(await session.save())
 func load_game():
-	close_attunement()
+	if session==null or session.busy: return
+	close_attunement(); cancel_walk(); close_travel()
+	var result: Dictionary=await session.reacquire_and_reload()
+	if result.get("status")=="empty" and world==null:
+		result=await session.new_run(initial_seed())
+	apply_session_result(result)
+	if not result.get("ok",false): return
+	journal=false; journal_page=0; interaction=false; winch_pending=""; growth=result.get("committed",false) and result.get("effect",{}).get("operation","")=="create"; gear_page=0; book=false; comparison=false
+	checkpoint_pending=Vector2i.ZERO; pending_reason=""; battle_time=0.0
+func retry_save():
+	if session==null or session.busy: return
 	cancel_walk()
-	close_travel()
-	comparison=false
-	if not FileAccess.file_exists(save_path): world.message="No saved journey yet."; return
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(save_path))
-	if not parsed is Dictionary: world.message="Save is invalid. Current journey is unchanged."; return
-	var upgrading: bool=parsed.get("version")==4 or parsed.get("version")==5 or parsed.get("version")==6 or parsed.get("version")==7 or parsed.get("version")==8 or parsed.get("version")==9 or parsed.get("version")==10 or parsed.get("version")==11
-	if upgrading:
-		var probe=World.new(0)
-		if not probe.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
-		var backup_path := save_path.get_basename()+(".pre-schema5.json" if parsed.get("version")==4 else (".pre-schema6.json" if parsed.get("version")==5 else (".pre-schema7.json" if parsed.get("version")==6 else (".pre-schema8.json" if parsed.get("version")==7 else (".pre-schema9.json" if parsed.get("version")==8 else (".pre-schema10.json" if parsed.get("version")==9 else (".pre-schema11.json" if parsed.get("version")==10 else ".pre-schema12.json")))))))
-		if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(backup_path)):
-			world.message="Could not back up the old save. Current journey is unchanged."
-			return
-		if not FileAccess.file_exists(backup_path):
-			var copied := DirAccess.copy_absolute(ProjectSettings.globalize_path(save_path),ProjectSettings.globalize_path(backup_path))
-			if copied!=OK:
-				world.message="Could not back up the old save. Current journey is unchanged."
-				return
-	if not world.restore(parsed): world.message="Save is invalid. Current journey is unchanged."; return
-	if upgrading: save_game(false)
-	history.clear()
-	journal=false; journal_page=0; interaction=false; winch_pending=""; growth=false; gear_page=0; book=false
-	checkpoint_pending=Vector2i.ZERO; pending_reason=""
-	battle_time=0.0
+	apply_session_result(await session.retry_pending())
+func status_message() -> String:
+	if session!=null and session.busy: return "Saving safely. Please wait."
+	return ui_notice if ui_notice!="" else (world.message if world!=null else "Opening journey storage...")
+func can_mutate() -> bool:
+	return session!=null and world!=null and not session.busy and not session.read_only
+func apply_session_result(result: Dictionary):
+	if result.get("ok",false):
+		world=session.world; history=session.history; ui_notice=""
+		if result.get("committed",false): dispatch_committed_effect(result.get("effect",{}))
+	else:
+		ui_notice=str(result.get("reason",result.get("status","Storage unavailable.")))
+	queue_redraw()
+func initialize_session():
+	if session==null:
+		# Adapter factory is supplied by the storage layer; no legacy FileAccess path.
+		var factory=load("res://scripts/session_storage.gd")
+		if factory==null: ui_notice="Storage unavailable. No journey was changed."; return
+		session=Session.new(factory.new())
+	var result: Dictionary=await session.open_current()
+	apply_session_result(result)
+	if result.get("status")=="empty":
+		apply_session_result(await session.new_run(initial_seed()))
+		if world!=null: ui_notice="New save system: old journey files are kept untouched."
+	else: growth=false
+
+func dispatch_committed_effect(effect: Dictionary):
+	match effect.get("operation",""):
+		"step": step_effect(str(effect.get("token",".")),str(effect.get("hero",world.hero_id)))
+		"action": action_effect(str(effect.get("input","")))
+		"walk": play_sound("move")
+		"undo": battle_time=0.0
+		"create":
+			close_attunement(); close_travel(); comparison=false; journal=false; book=false
+			reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0
+			interaction=false; winch_pending=""; checkpoint_pending=Vector2i.ZERO; pending_reason=""

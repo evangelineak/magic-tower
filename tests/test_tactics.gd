@@ -1,6 +1,8 @@
 extends SceneTree
 # Legacy-layout regression: authored fixed coordinates and old stair routes are intentional.
 # New layout-2 behavior is covered by test_usability and both generator suites.
+# Synthetic deep-floor fixtures below explicitly include previously traversed floors.
+const Fixture=preload("res://tests/ui_fixture.gd")
 const World=preload("res://scripts/world.gd")
 var checks:=0
 var failures:=0
@@ -9,7 +11,7 @@ func check(ok: bool, label: String):
 	if not ok: failures+=1; push_error(label)
 func fixture(gear: String="balanced", hero: String="warden", armed: bool=false):
 	var w=World.new(0,1)
-	w.enter_floor(3); w.pos=Vector2i(7,9)
+	w.floor_seen=[true,true,true,true,false]; w.enter_floor(3); w.pos=Vector2i(7,9)
 	w.atk=50; w.defense=10; w.hp=500; w.hero_id=hero; w.skill_armed=armed
 	if gear!="balanced": w.inventory.append(gear); w.chest_claimed=true
 	w.equipped=gear
@@ -61,17 +63,17 @@ func run_tests():
 	# Controller presentation must expose the same decomposition, without
 	# subtracting the buckler twice or narrating an attack as free.
 	var scene=load("res://main.tscn").instantiate()
-	root.add_child(scene); scene.save_path="user://tactics-integration-test.json"
-	scene.world=fixture("buckler"); scene.growth=false
+	Fixture.attach(scene)
+	root.add_child(scene)
+	await Fixture.bind(scene,fixture("buckler")); scene.growth=false
 	await process_frame
 	var details: Dictionary=scene.world.battle_preview("w")
 	var lines: Array=scene.battle_breakdown(details)
 	check(lines.size()==4 and "charge bonus 32" in lines[1] and "6 retaliations" in lines[1] and "Shield 16 / oath 0 / flank 0 / total reduction 16" in lines[2] and "Final loss 112" in lines[3],"UI breakdown exposes heavy bonus and shield without double subtraction")
 	before=state(scene.world)
-	scene.move(Vector2i.UP)
+	await scene.move(Vector2i.UP)
 	check(scene.world.hp==388 and scene.battle_loss==112 and scene.battle_details.charged_damage==32,"controller retains exact resolved heavy-battle breakdown")
-	scene.undo()
+	await scene.undo()
 	check(state(scene.world)==before and scene.battle_time==0,"controller undo restores gear battle atomically")
-	DirAccess.remove_absolute(scene.save_path)
 	print("TACTICS: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks])
 	quit(0 if failures==0 else 1)

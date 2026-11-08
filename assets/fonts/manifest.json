@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "7f4c9a55eb3b3b6541ff5a47120c2b6947b8dfab35da6a4ffb917a305dd20e29",
-  "bytes": 391400,
+  "output_sha256": "472e49d4db084683ef1185108be035a3d02a094efcefa2918c996bb66864d255",
+  "bytes": 401532,
   "coverage": {
-    "mapped_codepoints": 1007,
-    "glyphs": 2005,
-    "required_codepoints": 848,
+    "mapped_codepoints": 1031,
+    "glyphs": 2047,
+    "required_codepoints": 873,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -45,8 +45,20 @@
       "sha256": "fec08254bd67de4bd08e6137050ec0774c5cf5031b98523e602c1068c632797c"
     },
     {
+      "path": "scripts/journey_store_native.gd",
+      "sha256": "cbd8dd073a21f70e4298b85e09a73f845b1599cef158c1d1cdb4f414de58105e"
+    },
+    {
       "path": "scripts/layout.gd",
       "sha256": "f504dce5873a8b0583ceb70d43a8e882f63106e58572d6b0371bc71b3ab42369"
+    },
+    {
+      "path": "scripts/legacy_profile.gd",
+      "sha256": "7aff4a98e76554d21fdfb992fe462e0e9d2e7b95f448fccf5ea800d17d4222ed"
+    },
+    {
+      "path": "scripts/legacy_store_native.gd",
+      "sha256": "6252c058ac8c3aadd93a3b20bb49c0e51ff40a3b607fb42824a14f608c862346"
     },
     {
       "path": "scripts/localization.gd",
@@ -58,15 +70,15 @@
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "8d54520408226a44f9b2f57aae2d0ba880d801c6553d2cd7beb07aedc3d58e10"
+      "sha256": "eaafbab7aa171dc5f9b71abb81a8bc3f71fdef6af37baafd415f8c35071e7cef"
     },
     {
       "path": "scripts/localization_world.gd",
-      "sha256": "c36cd1225109ba95627d17f2ca0caa37e1925a660521288ceb8ba78518cca72c"
+      "sha256": "42b05fd68e2fa347ae8c2f1e2c07aaea28a0951d5be0169aabb4945d0099664d"
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "dcf1878f206d0a67140c93c77fd651eadbfeb2816245415ea64e3d6762373d6f"
+      "sha256": "874167653baea61a0f995c264e6b2ffe12dc47521565b1cf03023ca922297db4"
     },
     {
       "path": "scripts/navigation.gd",
@@ -81,8 +93,16 @@
       "sha256": "b7c68f76f7d7eeca23ab18a0c94133a474d58752314f909f0c9698c631a274da"
     },
     {
+      "path": "scripts/session.gd",
+      "sha256": "5d8d481469ccde01530136e78b883a2968ca5ff2fbe3e514c87ec93bc3f2631b"
+    },
+    {
+      "path": "scripts/session_storage.gd",
+      "sha256": "7a24f47e56b5d7ed643942e5bb3e77fadbfd4186e7974eab6f4b107d9146a503"
+    },
+    {
       "path": "scripts/world.gd",
-      "sha256": "e62a8ce94d1c6438bb9a7f6172f02cf847bef0a1c32bef8bcda3b98452b4834a"
+      "sha256": "6909995344ff468b27f6c7eb55ddaedc50168dc5e4d36157a6533d8ecba4b033"
     },
     {
       "path": "project.godot",

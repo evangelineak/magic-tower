@@ -12,7 +12,8 @@ func state(w) -> Dictionary:
 	return w.save_data().duplicate(true)
 func at_gate(floor_number: int):
 	var w=World.new(0,1)
-	w.enter_floor(floor_number); w.pos=Vector2i(3,9)
+	for index in range(floor_number+1): w.enter_floor(index)
+	w.pos=Vector2i(3,9)
 	return w
 func _init():
 	for index in [0,2,3]:

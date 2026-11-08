@@ -12,10 +12,12 @@ U 撤销；L 读档；M 静音；R 连按两次同种子重开；N 连按两次�
 悬停敌人按V可只读比较已持装备。N可立守望誓约，攻击-10换先制/荆棘保护；
 回N可免费退约，但永久不能再立。比较会包含当前誓约和备战技能。
 
-仍使用 journey-v4.json 文件名，内部存档结构为版本11。
-读取有效版本4旧档先保留 .pre-schema5.json，版本5保留 .pre-schema6.json 原文备份。
-版本6/7升级分别保留 .pre-schema7.json / .pre-schema8.json；版本8/9/10分别保留 .pre-schema9.json / .pre-schema10.json / .pre-schema11.json 原字节。旧图不补生新任务房。
-旧版本已经领过秘密奖励的存档不会再领奖。升级前仍建议自行备份存档。
+新版采用独立Session存档：桌面 user://journeys-v1/，网页本地 IndexedDB。
+启动读取当前旅程；L重新取得写入权并读最新状态；F5重试尚未确认的保存。
+每次动作保存成功才显示结果。保存期间请稍候；失败不预扣资源，重试不重复收益。
+旧 journey-v4.json 原样保留，但不自动导入；本版请新开局。
+其他窗口占用时只读，请关闭其他窗口并稍候，再按L读取，不能覆盖别人的更新。
+暂不启用真实死亡、跨局结算或永久天赋；当前仍保留致死保护。
 
 五层首章胜利可按1或点击主动继续三层远征，一次补120生命，不自动续章。
 六层营地药剂与专注各限两份，工程80金币开放三座桥；可回旧塔取宝。
@@ -34,7 +36,7 @@ This build is unsigned and experimental. It is not a production release.
 
 Arrows / WASD: move       E: nearby choices / loan ledger
 C: hero, equipment, talents    H: enemy guide    J: journey journal
-U: undo    L: load    SAVE button: save
+U: undo    L: reload current slot    F5: retry pending save    SAVE: save
 R twice: restart same seed    N twice: new seed    M: mute/unmute
 Battle display can be skipped with any key/click without changing the result.
 F2: Chinese / English (defaults to Chinese). Language does not change your save.
@@ -82,5 +84,5 @@ T：安全快旅（续章后、最后胜利前）。只到实际到访地标，�
 未取得装备也能提前看本局固定的三候选；取得后选择 1/2/3 或 4 保留原装，回车确认。
 仅当前穿戴的词条生效；锁定后不再改选，可用完整 U 撤销本次动作，候选不刷新。
 技能基础10级、训练+4、词条最多+2，目前最高16；不是已有完整20级成长。
-存档内部schema12；schema11原字节升级备份为.pre-schema12.json，早期备份规则保留。
+World内部schema13；新版Session不自动导入旧文件，不把旧档补成可领奖身份。
 公开网页仍按其BUILD独立发布，不随开发分支自动更新。

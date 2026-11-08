@@ -1,5 +1,13 @@
 extends RefCounted
 const EXACT = {
+"L: Reload current journey / F5: Retry save":"L：重新读取当前旅程 / F5：重试保存",
+"Saving safely. Please wait.":"正在安全保存，请稍候。",
+"Read-only: L reloads the current stored journey.":"只读状态：按L重新读取当前已保存旅程。",
+"Opening journey storage...":"正在打开旅程存储……",
+"Storage unavailable. No journey was changed.":"存储暂不可用，未更改任何旅程。",
+"New save system: old journey files are kept untouched.":"已启用新存档系统；旧旅程文件原样保留，不会自动导入。",
+"F5: retry pending save / L: reload stored journey":"F5：重试待保存内容 / L：重读已存旅程",
+
 "[ PREV":"[ 上一件",
 "NEXT ]":"下一件 ]",
 "NOT OWNED / READ ONLY":"尚未拥有 / 仅供预览",
