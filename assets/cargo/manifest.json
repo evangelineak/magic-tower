@@ -1,0 +1,17 @@
+[
+  {
+    "path": "assets/cargo/cargo.png",
+    "bytes": 27227,
+    "sha256": "b8f91d6f368e1d2e03709a624fb05360f79ae6468503725a9d48015b5bc1f862"
+  },
+  {
+    "path": "assets/cargo/cargo_empty.png",
+    "bytes": 25219,
+    "sha256": "9783fa8ef7b97b9fc1d594e59237f44a5d00af3522fdb830ba467667eabbcf4a"
+  },
+  {
+    "path": "assets/cargo/cargo.blend",
+    "bytes": 102910,
+    "sha256": "fa8d74e2f389d303a9b95c85ce46e295a1039dd1cf9426407d96792c1e43df4d"
+  }
+]

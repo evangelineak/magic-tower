@@ -1,0 +1,33 @@
+<!doctype html><meta charset="utf-8"><title>Endless device storage check</title>
+<style>body{font:17px monospace;background:#132330;color:#e5ebee;padding:30px}button{padding:12px}pre{white-space:pre-wrap}</style>
+<h1>Endless browser storage protocol check</h1>
+<p>Run only on an isolated test origin. Aborts if an endless save already exists. Tests real Web Locks and localStorage, not Godot gameplay or World replay.</p>
+<button id="run">Run isolated storage checks</button><pre id="out">Not run</pre>
+<script src="../scripts/endless_storage_web.js"></script>
+<script>
+let serial=0;const out=document.querySelector('#out');
+function request(operation,args={}){return new Promise(resolve=>MagicTowerEndless.request(JSON.stringify({request:++serial,operation,args}),raw=>resolve(JSON.parse(raw).result)));}
+const args=(snapshot,expected_revision,record={})=>({snapshot,expected_revision,record});
+document.querySelector('#run').onclick=async()=>{
+ const key='magic-tower.endless.v1';let owned=false;let count=0;
+ const check=(value,label)=>{if(!value)throw new Error(label);count++;out.textContent+=`\nPASS ${label}`;};
+ out.textContent='Running';document.querySelector('#run').disabled=true;
+ try{
+  if(localStorage.getItem(key)!==null)throw new Error('Existing save: refused to touch this origin');
+  const s={version:1,mode:'endless',seed:8,actions:[]};
+  let r=await request('read');check(r.ok&&r.status==='empty','empty isolated origin');
+  r=await request('start',args(s,0));check(r.ok&&r.revision===1,'real localStorage start');owned=true;
+  const results=await Promise.all([request('commit',args({...s,actions:['R']},1)),request('commit',args({...s,actions:['D']},1))]);
+  check(results.filter(x=>x.ok).length===1&&results.filter(x=>x.status==='conflict').length===1,'Web Locks serialize competing revisions');
+  r=await request('read');check(r.ok&&r.revision===2,'winning action persists');
+  const done={...r.snapshot,actions:[...r.snapshot.actions,'retire']};
+  r=await request('commit',args(done,2));check(r.ok&&r.revision===3,'retire action persists');
+  const record={run_id:1,seed:8,max_floor:1,kills:0,gold:0,reason:'retired'};
+  r=await request('finish',args(done,3,record));check(r.ok&&r.records.length===1&&r.status==='finished','device-only result atomic');
+  r=await request('finish',args(done,3,record));check(r.ok&&r.records.length===1,'finish retry has one record');
+  await new Promise((resolve,reject)=>{const tag=document.createElement('script');tag.src='../scripts/endless_storage_web.js?reload=1';tag.onload=resolve;tag.onerror=reject;document.body.append(tag);});
+  r=await request('read');check(r.ok&&r.status==='finished'&&r.records.length===1,'fresh bridge restores stored result');
+  out.textContent+=`\nPASS: ${count} checks (real browser protocol, not Godot gameplay)`;
+ }catch(e){out.textContent+='\nFAIL: '+e.message;}finally{if(owned)localStorage.removeItem(key);document.querySelector('#run').disabled=false;}
+};
+</script>

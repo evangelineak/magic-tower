@@ -1,0 +1,419 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 0
+      },
+      "seed": 0
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "keen_edge",
+            "tactical_review",
+            "iron_skin"
+          ],
+          [
+            "sentinel_lore",
+            "adversity_charge",
+            "last_stand"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 1
+      },
+      "seed": 0
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 0
+      },
+      "seed": 1
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "tactical_review",
+            "keen_edge"
+          ],
+          [
+            "adversity_charge",
+            "trained_focus",
+            "sentinel_lore"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 1
+      },
+      "seed": 1
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 0
+      },
+      "seed": 2
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "tactical_review",
+            "iron_skin",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "adversity_charge",
+            "sentinel_lore"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 1
+      },
+      "seed": 2
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 0
+      },
+      "seed": 3
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "clean_finish",
+            "keen_edge",
+            "iron_skin"
+          ],
+          [
+            "sentinel_lore",
+            "trained_focus",
+            "last_stand"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 1
+      },
+      "seed": 3
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 0
+      },
+      "seed": 7
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "keen_edge",
+            "tactical_review",
+            "iron_skin"
+          ],
+          [
+            "last_stand",
+            "trained_focus",
+            "sentinel_lore"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 1
+      },
+      "seed": 7
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 0
+      },
+      "seed": 42
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "keen_edge",
+            "iron_skin",
+            "tactical_review"
+          ],
+          [
+            "trained_focus",
+            "sentinel_lore",
+            "adversity_charge"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 1
+      },
+      "seed": 42
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 0
+      },
+      "seed": 51
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "clean_finish",
+            "tactical_review"
+          ],
+          [
+            "adversity_charge",
+            "sentinel_lore",
+            "last_stand"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 1
+      },
+      "seed": 51
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 0
+      },
+      "seed": 999
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "clean_finish",
+            "tactical_review"
+          ],
+          [
+            "trained_focus",
+            "last_stand",
+            "sentinel_lore"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 1
+      },
+      "seed": 999
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "iron_skin",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 0
+      },
+      "seed": 2147483647
+    },
+    {
+      "expected": {
+        "offers": [
+          [
+            "tactical_review",
+            "keen_edge",
+            "clean_finish"
+          ],
+          [
+            "last_stand",
+            "sentinel_lore",
+            "trained_focus"
+          ],
+          [
+            "giant_slayer",
+            "battle_medic",
+            "unbroken"
+          ]
+        ],
+        "version": 1
+      },
+      "seed": 2147483647
+    }
+  ],
+  "source": "actual progression.gd talent_draft output"
+}

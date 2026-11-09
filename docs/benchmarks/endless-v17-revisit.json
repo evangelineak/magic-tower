@@ -1,0 +1,21 @@
+{
+  "checks": 67,
+  "events": 888,
+  "failures": 0,
+  "floor": 5,
+  "gold": 117,
+  "healing_quote": {
+    "allowed": true,
+    "atk_gain": 0,
+    "def_gain": 0,
+    "heal_actual": 30,
+    "hp_after": 180,
+    "hp_before": 150,
+    "reason": "按当前预算领取实际收益，一次领取后遗物消失。",
+    "relic_gain": 0
+  },
+  "hp": 180,
+  "medicine_floor": 1,
+  "note": "All training, three old vault guards, resource payment and stair journeys were real actions; no stat, position or inventory injection",
+  "rules": 17
+}

@@ -1,0 +1,9 @@
+{
+  "branch_maps": 141,
+  "bridge_floors": 47,
+  "checks": 2487,
+  "failures": [],
+  "note": "Controlled branch overlay for independent spatial proof, not a legal acquisition history; all movement BFS is independent of production validate",
+  "rules": 16,
+  "samples": 512
+}

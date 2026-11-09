@@ -1,0 +1,621 @@
+{
+  "checks": 122,
+  "controlled_fixtures": true,
+  "failures": [],
+  "note": "Controlled transaction eligibility/price/heal boundaries, not claimed as legal earned resources or replay histories",
+  "rows": [
+    {
+      "action": "buy_potion",
+      "changed": true,
+      "hp_after": 100,
+      "hp_before": 50,
+      "paid": 15,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 15,
+        "heal_actual": 50,
+        "heal_nominal": 50,
+        "hp_after": 100,
+        "hp_before": 50,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "buy_potion",
+      "changed": true,
+      "hp_after": 150,
+      "hp_before": 100,
+      "paid": 15,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 15,
+        "heal_actual": 50,
+        "heal_nominal": 50,
+        "hp_after": 150,
+        "hp_before": 100,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "buy_potion",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 130,
+      "paid": 15,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 15,
+        "heal_actual": 50,
+        "heal_nominal": 50,
+        "hp_after": 180,
+        "hp_before": 130,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "buy_potion",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 150,
+      "paid": 15,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 15,
+        "heal_actual": 30,
+        "heal_nominal": 50,
+        "hp_after": 180,
+        "hp_before": 150,
+        "overflow": 20,
+        "reason": ""
+      }
+    },
+    {
+      "action": "buy_potion",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 179,
+      "paid": 15,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 15,
+        "heal_actual": 1,
+        "heal_nominal": 50,
+        "hp_after": 180,
+        "hp_before": 179,
+        "overflow": 49,
+        "reason": ""
+      }
+    },
+    {
+      "action": "buy_potion",
+      "changed": false,
+      "hp_after": 180,
+      "hp_before": 180,
+      "paid": 0,
+      "quote": {
+        "allowed": false,
+        "cost_gold": 15,
+        "heal_actual": 0,
+        "heal_nominal": 50,
+        "hp_after": 180,
+        "hp_before": 180,
+        "overflow": 50,
+        "reason": "生命已满，不消耗本次补给。"
+      }
+    },
+    {
+      "action": "enc_medicine",
+      "changed": true,
+      "hp_after": 85,
+      "hp_before": 50,
+      "paid": 12,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 12,
+        "heal_actual": 35,
+        "heal_nominal": 35,
+        "hp_after": 85,
+        "hp_before": 50,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "enc_medicine",
+      "changed": true,
+      "hp_after": 135,
+      "hp_before": 100,
+      "paid": 12,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 12,
+        "heal_actual": 35,
+        "heal_nominal": 35,
+        "hp_after": 135,
+        "hp_before": 100,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "enc_medicine",
+      "changed": true,
+      "hp_after": 165,
+      "hp_before": 130,
+      "paid": 12,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 12,
+        "heal_actual": 35,
+        "heal_nominal": 35,
+        "hp_after": 165,
+        "hp_before": 130,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "enc_medicine",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 150,
+      "paid": 12,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 12,
+        "heal_actual": 30,
+        "heal_nominal": 35,
+        "hp_after": 180,
+        "hp_before": 150,
+        "overflow": 5,
+        "reason": ""
+      }
+    },
+    {
+      "action": "enc_medicine",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 179,
+      "paid": 12,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 12,
+        "heal_actual": 1,
+        "heal_nominal": 35,
+        "hp_after": 180,
+        "hp_before": 179,
+        "overflow": 34,
+        "reason": ""
+      }
+    },
+    {
+      "action": "enc_medicine",
+      "changed": false,
+      "hp_after": 180,
+      "hp_before": 180,
+      "paid": 0,
+      "quote": {
+        "allowed": false,
+        "cost_gold": 12,
+        "heal_actual": 0,
+        "heal_nominal": 35,
+        "hp_after": 180,
+        "hp_before": 180,
+        "overflow": 35,
+        "reason": "生命已满，不消耗本次补给。"
+      }
+    },
+    {
+      "action": "skill_mend",
+      "changed": true,
+      "hp_after": 85,
+      "hp_before": 50,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 35,
+        "heal_nominal": 35,
+        "hp_after": 85,
+        "hp_before": 50,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "skill_mend",
+      "changed": true,
+      "hp_after": 135,
+      "hp_before": 100,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 35,
+        "heal_nominal": 35,
+        "hp_after": 135,
+        "hp_before": 100,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "skill_mend",
+      "changed": true,
+      "hp_after": 165,
+      "hp_before": 130,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 35,
+        "heal_nominal": 35,
+        "hp_after": 165,
+        "hp_before": 130,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "skill_mend",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 150,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 30,
+        "heal_nominal": 35,
+        "hp_after": 180,
+        "hp_before": 150,
+        "overflow": 5,
+        "reason": ""
+      }
+    },
+    {
+      "action": "skill_mend",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 179,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 1,
+        "heal_nominal": 35,
+        "hp_after": 180,
+        "hp_before": 179,
+        "overflow": 34,
+        "reason": ""
+      }
+    },
+    {
+      "action": "skill_mend",
+      "changed": false,
+      "hp_after": 180,
+      "hp_before": 180,
+      "paid": 0,
+      "quote": {
+        "allowed": false,
+        "cost_gold": 0,
+        "heal_actual": 0,
+        "heal_nominal": 35,
+        "hp_after": 180,
+        "hp_before": 180,
+        "overflow": 35,
+        "reason": "生命已满，不消耗本次补给。"
+      }
+    },
+    {
+      "action": "cargo_use",
+      "changed": true,
+      "hp_after": 58,
+      "hp_before": 50,
+      "paid": 4,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 4,
+        "heal_actual": 8,
+        "heal_nominal": 8,
+        "hp_after": 58,
+        "hp_before": 50,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_use",
+      "changed": true,
+      "hp_after": 108,
+      "hp_before": 100,
+      "paid": 4,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 4,
+        "heal_actual": 8,
+        "heal_nominal": 8,
+        "hp_after": 108,
+        "hp_before": 100,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_use",
+      "changed": true,
+      "hp_after": 138,
+      "hp_before": 130,
+      "paid": 4,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 4,
+        "heal_actual": 8,
+        "heal_nominal": 8,
+        "hp_after": 138,
+        "hp_before": 130,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_use",
+      "changed": true,
+      "hp_after": 158,
+      "hp_before": 150,
+      "paid": 4,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 4,
+        "heal_actual": 8,
+        "heal_nominal": 8,
+        "hp_after": 158,
+        "hp_before": 150,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_use",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 179,
+      "paid": 4,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 4,
+        "heal_actual": 1,
+        "heal_nominal": 8,
+        "hp_after": 180,
+        "hp_before": 179,
+        "overflow": 7,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_use",
+      "changed": false,
+      "hp_after": 180,
+      "hp_before": 180,
+      "paid": 0,
+      "quote": {
+        "allowed": false,
+        "cost_gold": 4,
+        "heal_actual": 0,
+        "heal_nominal": 8,
+        "hp_after": 180,
+        "hp_before": 180,
+        "overflow": 8,
+        "reason": "生命已满，不消耗本次补给。"
+      }
+    },
+    {
+      "action": "cargo_open",
+      "changed": true,
+      "hp_after": 58,
+      "hp_before": 50,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 8,
+        "heal_nominal": 8,
+        "hp_after": 58,
+        "hp_before": 50,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_open",
+      "changed": true,
+      "hp_after": 108,
+      "hp_before": 100,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 8,
+        "heal_nominal": 8,
+        "hp_after": 108,
+        "hp_before": 100,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_open",
+      "changed": true,
+      "hp_after": 138,
+      "hp_before": 130,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 8,
+        "heal_nominal": 8,
+        "hp_after": 138,
+        "hp_before": 130,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_open",
+      "changed": true,
+      "hp_after": 158,
+      "hp_before": 150,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 8,
+        "heal_nominal": 8,
+        "hp_after": 158,
+        "hp_before": 150,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_open",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 179,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 1,
+        "heal_nominal": 8,
+        "hp_after": 180,
+        "hp_before": 179,
+        "overflow": 7,
+        "reason": ""
+      }
+    },
+    {
+      "action": "cargo_open",
+      "changed": false,
+      "hp_after": 180,
+      "hp_before": 180,
+      "paid": 0,
+      "quote": {
+        "allowed": false,
+        "cost_gold": 0,
+        "heal_actual": 0,
+        "heal_nominal": 8,
+        "hp_after": 180,
+        "hp_before": 180,
+        "overflow": 8,
+        "reason": "生命已满，不消耗本次补给。"
+      }
+    },
+    {
+      "action": "case_take",
+      "changed": true,
+      "hp_after": 90,
+      "hp_before": 50,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 40,
+        "heal_nominal": 40,
+        "hp_after": 90,
+        "hp_before": 50,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "case_take",
+      "changed": true,
+      "hp_after": 140,
+      "hp_before": 100,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 40,
+        "heal_nominal": 40,
+        "hp_after": 140,
+        "hp_before": 100,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "case_take",
+      "changed": true,
+      "hp_after": 170,
+      "hp_before": 130,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 40,
+        "heal_nominal": 40,
+        "hp_after": 170,
+        "hp_before": 130,
+        "overflow": 0,
+        "reason": ""
+      }
+    },
+    {
+      "action": "case_take",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 150,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 30,
+        "heal_nominal": 40,
+        "hp_after": 180,
+        "hp_before": 150,
+        "overflow": 10,
+        "reason": ""
+      }
+    },
+    {
+      "action": "case_take",
+      "changed": true,
+      "hp_after": 180,
+      "hp_before": 179,
+      "paid": 0,
+      "quote": {
+        "allowed": true,
+        "cost_gold": 0,
+        "heal_actual": 1,
+        "heal_nominal": 40,
+        "hp_after": 180,
+        "hp_before": 179,
+        "overflow": 39,
+        "reason": ""
+      }
+    },
+    {
+      "action": "case_take",
+      "changed": false,
+      "hp_after": 180,
+      "hp_before": 180,
+      "paid": 0,
+      "quote": {
+        "allowed": false,
+        "cost_gold": 0,
+        "heal_actual": 0,
+        "heal_nominal": 40,
+        "hp_after": 180,
+        "hp_before": 180,
+        "overflow": 40,
+        "reason": "生命已满，不消耗本次补给。"
+      }
+    }
+  ],
+  "rules": 17
+}

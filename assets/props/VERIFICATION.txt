@@ -1,0 +1,35 @@
+Verified 2026-11-08 with installed Blender 4.3.2.
+Original generated geometry; no downloaded asset inputs.
+
+Final incremental render: blender -b -t 4 -P tools/build_props.py -- --only winch
+Fra:1 Mem:18.42M (Peak 20.42M) | Time:00:02.12 | Mem:2.80M, Peak:2.80M | Scene, ViewLayer | Finished
+Saved: '/workspace/scratch/a67e174a65e8/magic-tower/assets/props/winch.png'
+Time: 00:02.27 (Saving: 00:00.14)
+
+Info: Saved "props.blend"
+PROPS COMPLETE: winch
+
+Blender quit
+
+Final maul render: blender -b -t 4 -P tools/build_props.py -- --only maul
+Fra:1 Mem:18.20M (Peak 20.20M) | Time:00:01.03 | Mem:2.60M, Peak:2.60M | Scene, ViewLayer | Finished
+Saved: '/workspace/scratch/a67e174a65e8/magic-tower/assets/props/maul.png'
+Time: 00:01.15 (Saving: 00:00.12)
+
+Info: Saved "props.blend"
+PROPS COMPLETE: maul
+
+Blender quit
+
+Editable scene reopened with Blender; collection counts, transparency and resolution:
+PROP_VERIFY [('winch', 28), ('maul', 18)] True 256 256
+Blender 4.3.2
+Read blend: "/workspace/scratch/a67e174a65e8/magic-tower/assets/props/props.blend"
+
+Blender quit
+
+Pixel inspection: both RGBA PNGs viewed at native 256px and downsampled 50px; no clipping.
+SHA256:
+cebfd37fdedc0d7a90078e398a9cc3dd0d18dfb5620b57a222fe467f44ef06d8  winch.png
+39794ad4a995be814133d8ddac758b04849aed5405cbb722a3253c79b653ed7f  maul.png
+7875200e83a43bf1fedb869c95a0e0bf10f3453f0a4a1b72f4b8b42c8e6f43f1  props.blend

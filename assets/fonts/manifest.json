@@ -1,0 +1,384 @@
+{
+  "output": "MagicTowerCJK.otf",
+  "mode": "ui-subset",
+  "source_file": "NotoSansCJK-Regular.ttc",
+  "source_sha256": "b76b0433203017ca80401b2ee0dd69350349871c4b19d504c34dbdd80541690a",
+  "face_index": 2,
+  "copyright_source_file": "copyright",
+  "copyright_source_sha256": "849f4ea9c214fa4ac3593b770c699f387534b11ce671264c1b10d85bdcb5997b",
+  "original_names": {
+    "0": "© 2014-2021 Adobe (http://www.adobe.com/).",
+    "1": "Noto Sans CJK SC",
+    "3": "2.004;GOOG;NotoSansCJKsc-Regular;ADOBE",
+    "5": "Version 2.004;hotconv 1.0.118;makeotfexe 2.5.65603",
+    "6": "NotoSansCJKsc-Regular",
+    "8": "Adobe",
+    "9": "Ryoko NISHIZUKA 西塚涼子 (kana, bopomofo & ideographs); Paul D. Hunt (Latin, Greek & Cyrillic); Sandoll Communications 산돌커뮤니케이션, Soo-young JANG 장수영 & Joo-yeon KANG 강주연 (hangul elements, letters & syllables)",
+    "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
+    "14": "http://scripts.sil.org/OFL"
+  },
+  "output_sha256": "1946957d5774c296a3ab539f5437fab9784609fb96fbd6f44f4d14ef954a85d1",
+  "bytes": 490848,
+  "coverage": {
+    "mapped_codepoints": 1224,
+    "glyphs": 2417,
+    "required_codepoints": 1073,
+    "missing": [],
+    "family": "MagicTowerCJK",
+    "postscript": "MagicTowerCJK-Regular"
+  },
+  "scanned_sources": [
+    {
+      "path": "scripts/attunement.gd",
+      "sha256": "3191d14dfb7ab61f4262a324c08a3b9c5fc7d3f46e0f4b587a04b4c8a75e54f3"
+    },
+    {
+      "path": "scripts/audit_puzzle.gd",
+      "sha256": "adff6ad910d356f55334fdd325193211610d85cd3385e31056ca30fdeb900f29"
+    },
+    {
+      "path": "scripts/battle_timeline.gd",
+      "sha256": "a23d325c27da1e537bf827cc96578b389e5209bb92b14386649d91352733102a"
+    },
+    {
+      "path": "scripts/cargo.gd",
+      "sha256": "6c70fd4d0e7c21c8e9d06e83903fb73e39f06f2cb192f6fcba3f4b0181536260"
+    },
+    {
+      "path": "scripts/endless_actor_art.gd",
+      "sha256": "85460f24d9055cc738ab02b6f801e485a852a2b7bcbacadb5759a351d8545fda"
+    },
+    {
+      "path": "scripts/endless_battle_effect_art.gd",
+      "sha256": "0d7ea7fe06f255747e4278f8a8db56b00c662ed8e7ee1aef37a71c2b62b831ad"
+    },
+    {
+      "path": "scripts/endless_bridge_art.gd",
+      "sha256": "b230140a85f4884ec279fc02274c4e852feb915d551cf4309e5e7f91c68825c9"
+    },
+    {
+      "path": "scripts/endless_camp_floor_art.gd",
+      "sha256": "755c0ae589f9b59634b6ae2b8b157f3997eb7a63edb35ae36143802e53b51d2f"
+    },
+    {
+      "path": "scripts/endless_cart_art.gd",
+      "sha256": "072dae116d2b8ad2bb9428440f99940fa0f832118cf3795376a98ae81ef1fb51"
+    },
+    {
+      "path": "scripts/endless_combat_v20.gd",
+      "sha256": "3c25e29c4b6b003829e127eb683f31f738a7cacc4dbedcbb75c8075fb38b677c"
+    },
+    {
+      "path": "scripts/endless_combat_v21.gd",
+      "sha256": "8dfa1e7280e6251459888811905f4a1c1b1800a5c8f4f40b62d253fb20063226"
+    },
+    {
+      "path": "scripts/endless_enemy_v12_art.gd",
+      "sha256": "f1f6a7772cad04107ee1a6685ded8db076e24938b78b2291954cd0fc98e51f84"
+    },
+    {
+      "path": "scripts/endless_enemy_v7_art.gd",
+      "sha256": "63bd856a7fc83d02ed14e1d6d523bb1ee8d635d619ed49e48697bc395b9cf895"
+    },
+    {
+      "path": "scripts/endless_gear_art.gd",
+      "sha256": "433ca042a9e7c5f174011c360fac09b867d9981aa2bc71452a93e59b5aa5a19d"
+    },
+    {
+      "path": "scripts/endless_generation.gd",
+      "sha256": "360c50169959c6eacf8f008b4b30eee445210d8e4eb76c5bd5e87454ca1ca0fc"
+    },
+    {
+      "path": "scripts/endless_generation_v1.gd",
+      "sha256": "1d7f421877170bdd017e4e4bb09245a3ab1b15f0e687a3523a24508749156ec5"
+    },
+    {
+      "path": "scripts/endless_generation_v10.gd",
+      "sha256": "6cbc17d2e3f0db62b4064d95b5b2efd376dea5029617cc239402a5684f46c893"
+    },
+    {
+      "path": "scripts/endless_generation_v12.gd",
+      "sha256": "edf254c300255f47b7cf08e36ea35380a2a167aa4fabc0bdd80a2afe45331fe9"
+    },
+    {
+      "path": "scripts/endless_generation_v13.gd",
+      "sha256": "4a3b8f8a329eecdbbeea906599ce1d3713da51a58e7e0d80e05789434be7b17f"
+    },
+    {
+      "path": "scripts/endless_generation_v14.gd",
+      "sha256": "e8c3784a7b3823db32be33136eb7ad054d7846155abe2e23963880ff7b52bebc"
+    },
+    {
+      "path": "scripts/endless_generation_v15.gd",
+      "sha256": "324bb0cff892bd5fe46f33ee8a32b8c506044973a097bd330b5b6834b31e60ae"
+    },
+    {
+      "path": "scripts/endless_generation_v16.gd",
+      "sha256": "f4c9400d1368f8401a40b10a77ae98f0c16d901e154a483f544002de5cb924e5"
+    },
+    {
+      "path": "scripts/endless_generation_v19.gd",
+      "sha256": "0b496bd2add0d54b71fa071d0e20165dbc9717b2d3b6c8297de56fa2d290e248"
+    },
+    {
+      "path": "scripts/endless_generation_v2.gd",
+      "sha256": "51deac4d30b1b33021b95d2dff2c551a82e4a5f2b190c3d03d9e8f6bb8136bae"
+    },
+    {
+      "path": "scripts/endless_generation_v22.gd",
+      "sha256": "ba8f12fa2be869302e96fbb8838ae83b1cae6e37355435f849e7203e447c998c"
+    },
+    {
+      "path": "scripts/endless_generation_v3.gd",
+      "sha256": "2123bc28cf52a8dbfc9af872b559ba8cd783be3956febdb896dac7e5bf39d145"
+    },
+    {
+      "path": "scripts/endless_generation_v4.gd",
+      "sha256": "02aa7bcb7ddef757d0868c38698a4387b3195c5d82c19a8100c749d10bb4eae5"
+    },
+    {
+      "path": "scripts/endless_generation_v5.gd",
+      "sha256": "f78be3531472ed335fddcac8438203503f9158bd74ab7699372a2ac932ba16e5"
+    },
+    {
+      "path": "scripts/endless_generation_v6.gd",
+      "sha256": "60dd2cd14ba453e11d663439d0cbfae0ec11b099dc93906ce24a0175e9077eaa"
+    },
+    {
+      "path": "scripts/endless_generation_v7.gd",
+      "sha256": "a99e53c683053aebb80ced2ab3f3a81ca02de9fe92d044a4b62f060b30ab78dd"
+    },
+    {
+      "path": "scripts/endless_generation_v8.gd",
+      "sha256": "c9d05830b0a7315120e6c92afe50ddaa781cd1513568d7db48cf0b1e2e0fc0a9"
+    },
+    {
+      "path": "scripts/endless_generation_v9.gd",
+      "sha256": "eb103f923cec5c70807924101dea716102362642c91cb7be2db876c7e57e2cf9"
+    },
+    {
+      "path": "scripts/endless_hero_v20_art.gd",
+      "sha256": "71a8cf99ce77a6611428a83a26debc5c94087751ad8c3ebfd16d3c794419b520"
+    },
+    {
+      "path": "scripts/endless_interaction_art.gd",
+      "sha256": "9d03a480b37a3a8447fe9f84ce42c37024f579754d54bce8b38f71485ab3f102"
+    },
+    {
+      "path": "scripts/endless_progress_art.gd",
+      "sha256": "af96323c9a6748359f1df5b2a625f79010f8df739af6828a4568af12342286ae"
+    },
+    {
+      "path": "scripts/endless_revisit_art.gd",
+      "sha256": "38c93f8a767cc0f4658f9868d98ecbcd61f6c9b4c39137e99220c96035bbd17e"
+    },
+    {
+      "path": "scripts/endless_rune_art.gd",
+      "sha256": "ec7eed54337edc513333da32d2b7760dc2f65a7c12c9f2ad4939a9dc6a061d6d"
+    },
+    {
+      "path": "scripts/endless_store.gd",
+      "sha256": "f01577df4a082f3cb44f1ce599974c46862cbe84bcd54ebe047592317e777f3a"
+    },
+    {
+      "path": "scripts/endless_ui.gd",
+      "sha256": "3ad0d571f0b2e1582d6acd51a087888a7624115a2bae882a1cf2cddf40656892"
+    },
+    {
+      "path": "scripts/endless_vault_art.gd",
+      "sha256": "51e89444c0d876d0013417d64a0e3c77f9aa678d2ddcaa8ea5f8869c76e35470"
+    },
+    {
+      "path": "scripts/endless_water_art.gd",
+      "sha256": "3912d15f9e3ed36d2d158c93d4567a98fc2382ef50ee26a7ccf3e55dda567307"
+    },
+    {
+      "path": "scripts/endless_world.gd",
+      "sha256": "c971afeecdfe35354a6da3b5e26728e8b20d2c04bf572a1270e3003f24593e3e"
+    },
+    {
+      "path": "scripts/endless_world_v1.gd",
+      "sha256": "a1c9b8fa5e3dedadaa168642747df4aba72a2a4a940d6f6c2c6bc0c6245cedec"
+    },
+    {
+      "path": "scripts/endless_world_v10.gd",
+      "sha256": "1f8410231ee3a5fa0574ea21353f9f7197f9f952cd7a038ba6311b531db073e6"
+    },
+    {
+      "path": "scripts/endless_world_v11.gd",
+      "sha256": "efbab09ee3340756a87d977a91375e27269f711b4cb35a8ff89db47233914476"
+    },
+    {
+      "path": "scripts/endless_world_v12.gd",
+      "sha256": "e685d7c431f463786129e8eeff9dbab79c1789c85b90bd73bb9c4696f544446c"
+    },
+    {
+      "path": "scripts/endless_world_v13.gd",
+      "sha256": "decbf22c85ec245d3c4d8f6184563ab854235c5cea21b07e4d372505a5bee6cf"
+    },
+    {
+      "path": "scripts/endless_world_v14.gd",
+      "sha256": "5626429b02087d37d8f829985f19ae9bdaa741ef55b91375e824bb769466e948"
+    },
+    {
+      "path": "scripts/endless_world_v15.gd",
+      "sha256": "bad0ec98aa56ceb520867192f860b24c7c3beba52884417a3873476fed25cdf3"
+    },
+    {
+      "path": "scripts/endless_world_v16.gd",
+      "sha256": "324ad558a569078fe8cf0ebcd89d8b3a93f660e395dc5dcc64bb384888596a20"
+    },
+    {
+      "path": "scripts/endless_world_v17.gd",
+      "sha256": "b04b9ebbbd087d1b942e4ea261bad63b70a0f1e5f54d268c508bb8b2f3c02792"
+    },
+    {
+      "path": "scripts/endless_world_v18.gd",
+      "sha256": "618ad3a84706e25485bb9ff49a4b9a20a0f83a1ceb3510c0e1089407ef409f3f"
+    },
+    {
+      "path": "scripts/endless_world_v19.gd",
+      "sha256": "283e2fc26462911404efdeecd1b2fdcbdb5891388a9b7eeb818a2b9b29260023"
+    },
+    {
+      "path": "scripts/endless_world_v2.gd",
+      "sha256": "1f064db255d31026f3f7940cb6e42555a38c78ecc9e5635c570b1afea59f9e41"
+    },
+    {
+      "path": "scripts/endless_world_v20.gd",
+      "sha256": "d84f1a594ff233baf2521c9185c08224258acc3b6eb995a5e078894d1c1d81be"
+    },
+    {
+      "path": "scripts/endless_world_v21.gd",
+      "sha256": "06a0d488c58b5fc15eda29b2c4f603292c8cb5576f47ecb55a29c4987e023bf8"
+    },
+    {
+      "path": "scripts/endless_world_v22.gd",
+      "sha256": "8d0e938ac74d1c0db41d3468ea9ce9957699cef813dd6e31f92aee2d8d7a136c"
+    },
+    {
+      "path": "scripts/endless_world_v3.gd",
+      "sha256": "e951c32d6ee5522de71f4d6abc4f5be3b9fb38c1d87b921b00606272b054d86a"
+    },
+    {
+      "path": "scripts/endless_world_v4.gd",
+      "sha256": "ef204ecc2c78327ccb4792cf24a067d58334ec656d8aa0c733c58eecc59cf784"
+    },
+    {
+      "path": "scripts/endless_world_v5.gd",
+      "sha256": "829ca129bf92bb87597900dc237b391cd77825aff90a8b136996d8fd03665b82"
+    },
+    {
+      "path": "scripts/endless_world_v6.gd",
+      "sha256": "d8192db0bd26a2b9ec05852c347928578f005759c29205ebcbc0ef59523e9fbb"
+    },
+    {
+      "path": "scripts/endless_world_v7.gd",
+      "sha256": "b0c670271a31157d41ee4bbd44dfbd97d7f09b5bab95160d35d9f8d145427e21"
+    },
+    {
+      "path": "scripts/endless_world_v8.gd",
+      "sha256": "782d7bee3470059ee8e0bd5addbb7bb36810ec8632eb84d32bbf7967f358c764"
+    },
+    {
+      "path": "scripts/endless_world_v9.gd",
+      "sha256": "5ff790c19701fd4d09ff89d796beedd661ed01eaf5ce1ecb0ede39bd0ed3c9d8"
+    },
+    {
+      "path": "scripts/expedition.gd",
+      "sha256": "e669d2b04b2796285118df64fc8a8d20742c72671ddeb230990e05a27a069eb9"
+    },
+    {
+      "path": "scripts/exploration.gd",
+      "sha256": "b8ac5d80f86add9b9ea8c341244216a12718c8bf8775bd216df39e65253e1184"
+    },
+    {
+      "path": "scripts/generation.gd",
+      "sha256": "a086c596bfa39b582756fae1c4fd2132567a709b394913e80dceea7efc9a5843"
+    },
+    {
+      "path": "scripts/journey_store_native.gd",
+      "sha256": "68e90ffcb78b37575b3fb52f81008c5eb5ba27fa0f158be694fb0f06de11a966"
+    },
+    {
+      "path": "scripts/layout.gd",
+      "sha256": "f504dce5873a8b0583ceb70d43a8e882f63106e58572d6b0371bc71b3ab42369"
+    },
+    {
+      "path": "scripts/legacy_points.gd",
+      "sha256": "ea52adce79906637e5d3bb58d16160aafd38a7d374b86654e848c5b12f1fbbbe"
+    },
+    {
+      "path": "scripts/legacy_profile.gd",
+      "sha256": "7aff4a98e76554d21fdfb992fe462e0e9d2e7b95f448fccf5ea800d17d4222ed"
+    },
+    {
+      "path": "scripts/legacy_store_native.gd",
+      "sha256": "6252c058ac8c3aadd93a3b20bb49c0e51ff40a3b607fb42824a14f608c862346"
+    },
+    {
+      "path": "scripts/legacy_strategy.gd",
+      "sha256": "83e2db53609b50bbeb2c93a61826791823f16fb2b66e5af322e6527c704fbc39"
+    },
+    {
+      "path": "scripts/localization.gd",
+      "sha256": "ac9d2c141f8d18763e0edd632a07144f2c40f70fe98c33267aa04ed3c0212553"
+    },
+    {
+      "path": "scripts/localization_progression.gd",
+      "sha256": "64c30e9ba865ea9fb3292a15bfb1808a33886df1223ece848842317b2ddada92"
+    },
+    {
+      "path": "scripts/localization_ui.gd",
+      "sha256": "bae1471fd0ffa3a13be68a5c7f2e4c590b6c985eb8fd19b98d1d87ec39c276fa"
+    },
+    {
+      "path": "scripts/localization_world.gd",
+      "sha256": "95ef783e583d4c29a0f996df2184f06bccfb76e6e34938551546fbfcaa76aa96"
+    },
+    {
+      "path": "scripts/main.gd",
+      "sha256": "5541171c1b114389ab7171a5c63f98de56e9ae5da453f65c994985cf948bfee7"
+    },
+    {
+      "path": "scripts/map_symbols.gd",
+      "sha256": "a10acce96b013e3d6a3cf53552557414144e642d9c24937e938a51a719adb791"
+    },
+    {
+      "path": "scripts/navigation.gd",
+      "sha256": "356df339fbc5c1e5efe891e6cb1eeeb94eb92a55ab35008d27e8bd3ef6483839"
+    },
+    {
+      "path": "scripts/progression.gd",
+      "sha256": "657e14f1f535ebeb5cad9f457897ec6cee0ad501299efec9ec434f62c90ae01d"
+    },
+    {
+      "path": "scripts/riddle.gd",
+      "sha256": "b7c68f76f7d7eeca23ab18a0c94133a474d58752314f909f0c9698c631a274da"
+    },
+    {
+      "path": "scripts/rope.gd",
+      "sha256": "c1340cf75fdf32c49334329849cb20108e5f85e2176f09f750fffc1e481afc13"
+    },
+    {
+      "path": "scripts/session.gd",
+      "sha256": "e52214faadb887a6f2e923de9084a0defa5c0a686f7b5f478738814e2bef2ca0"
+    },
+    {
+      "path": "scripts/session_storage.gd",
+      "sha256": "ea371017ebb1238a0d766d3ab07c266c6fcaa88b8d93366951254a29b4ab4761"
+    },
+    {
+      "path": "scripts/tactical_forecast.gd",
+      "sha256": "3fe2a9cc316b473f92492285f79368bcd96f15d89f868aaa0341c3fc0ade7471"
+    },
+    {
+      "path": "scripts/world.gd",
+      "sha256": "b78051ee8fabcf643a1d7661733422bec3544ae383e658f16e7eec0a17f172bc"
+    },
+    {
+      "path": "project.godot",
+      "sha256": "3cbed630c5d4089d318473dabdcab74d3e8bed5e5689649fb2b8e80dfb09a1f3"
+    }
+  ]
+}

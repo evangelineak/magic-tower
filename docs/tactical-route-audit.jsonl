@@ -1,0 +1,34 @@
+{"floor":6,"hero":"warden","hp":277,"inventory":["balanced","buckler"],"moves":348,"stage":"equipped_checkpoint"}
+{"after_focus":3,"after_hp":281,"branch":"unarmed","checkpoint_hp":417,"floor":6,"gear":"balanced","hero":"warden","loss":136,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":328,"branch":"armed","checkpoint_hp":417,"floor":6,"gear":"balanced","hero":"warden","loss":89,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":333,"branch":"unarmed","checkpoint_hp":417,"floor":6,"gear":"buckler","hero":"warden","loss":84,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":362,"branch":"armed","checkpoint_hp":417,"floor":6,"gear":"buckler","hero":"warden","loss":55,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":315,"branch":"flank_unarmed","checkpoint_hp":417,"floor":6,"gear":"balanced","hero":"warden","loss":102,"restored_focus":0,"safe_walk_steps":1,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":350,"branch":"flank_armed","checkpoint_hp":417,"floor":6,"gear":"balanced","hero":"warden","loss":67,"restored_focus":1,"safe_walk_steps":1,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":361,"branch":"flank_unarmed","checkpoint_hp":417,"floor":6,"gear":"buckler","hero":"warden","loss":56,"restored_focus":0,"safe_walk_steps":1,"target":"(5, 2)"}
+{"after_focus":2,"after_hp":380,"branch":"flank_armed","checkpoint_hp":417,"floor":6,"gear":"buckler","hero":"warden","loss":37,"restored_focus":0,"safe_walk_steps":1,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":393,"branch":"unarmed","checkpoint_hp":483,"floor":7,"gear":"balanced","hero":"warden","loss":90,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 7)"}
+{"after_focus":3,"after_hp":424,"branch":"armed","checkpoint_hp":483,"floor":7,"gear":"balanced","hero":"warden","loss":59,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 7)"}
+{"after_focus":3,"after_hp":411,"branch":"unarmed","checkpoint_hp":483,"floor":7,"gear":"buckler","hero":"warden","loss":72,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 7)"}
+{"after_focus":3,"after_hp":436,"branch":"armed","checkpoint_hp":483,"floor":7,"gear":"buckler","hero":"warden","loss":47,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 7)"}
+{"after_focus":3,"after_hp":525,"branch":"unarmed","checkpoint_hp":603,"floor":8,"gear":"balanced","hero":"warden","loss":78,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 4)"}
+{"after_focus":3,"after_hp":552,"branch":"armed","checkpoint_hp":603,"floor":8,"gear":"balanced","hero":"warden","loss":51,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 4)"}
+{"after_focus":3,"after_hp":563,"branch":"unarmed","checkpoint_hp":603,"floor":8,"gear":"buckler","hero":"warden","loss":40,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 4)"}
+{"after_focus":2,"after_hp":577,"branch":"armed","checkpoint_hp":603,"floor":8,"gear":"buckler","hero":"warden","loss":26,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 4)"}
+{"floor":6,"hero":"ranger","hp":277,"inventory":["balanced","buckler"],"moves":348,"stage":"equipped_checkpoint"}
+{"after_focus":3,"after_hp":281,"branch":"unarmed","checkpoint_hp":417,"floor":6,"gear":"balanced","hero":"ranger","loss":136,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":315,"branch":"armed","checkpoint_hp":417,"floor":6,"gear":"balanced","hero":"ranger","loss":102,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":333,"branch":"unarmed","checkpoint_hp":417,"floor":6,"gear":"buckler","hero":"ranger","loss":84,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":333,"branch":"armed","checkpoint_hp":417,"floor":6,"gear":"buckler","hero":"ranger","loss":84,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":315,"branch":"flank_unarmed","checkpoint_hp":417,"floor":6,"gear":"balanced","hero":"ranger","loss":102,"restored_focus":0,"safe_walk_steps":1,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":349,"branch":"flank_armed","checkpoint_hp":417,"floor":6,"gear":"balanced","hero":"ranger","loss":68,"restored_focus":1,"safe_walk_steps":1,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":361,"branch":"flank_unarmed","checkpoint_hp":417,"floor":6,"gear":"buckler","hero":"ranger","loss":56,"restored_focus":0,"safe_walk_steps":1,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":361,"branch":"flank_armed","checkpoint_hp":417,"floor":6,"gear":"buckler","hero":"ranger","loss":56,"restored_focus":1,"safe_walk_steps":1,"target":"(5, 2)"}
+{"after_focus":3,"after_hp":393,"branch":"unarmed","checkpoint_hp":483,"floor":7,"gear":"balanced","hero":"ranger","loss":90,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 7)"}
+{"after_focus":3,"after_hp":393,"branch":"armed","checkpoint_hp":483,"floor":7,"gear":"balanced","hero":"ranger","loss":90,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 7)"}
+{"after_focus":3,"after_hp":411,"branch":"unarmed","checkpoint_hp":483,"floor":7,"gear":"buckler","hero":"ranger","loss":72,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 7)"}
+{"after_focus":3,"after_hp":435,"branch":"armed","checkpoint_hp":483,"floor":7,"gear":"buckler","hero":"ranger","loss":48,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 7)"}
+{"after_focus":3,"after_hp":525,"branch":"unarmed","checkpoint_hp":603,"floor":8,"gear":"balanced","hero":"ranger","loss":78,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 4)"}
+{"after_focus":3,"after_hp":525,"branch":"armed","checkpoint_hp":603,"floor":8,"gear":"balanced","hero":"ranger","loss":78,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 4)"}
+{"after_focus":3,"after_hp":563,"branch":"unarmed","checkpoint_hp":603,"floor":8,"gear":"buckler","hero":"ranger","loss":40,"restored_focus":0,"safe_walk_steps":0,"target":"(5, 4)"}
+{"after_focus":3,"after_hp":563,"branch":"armed","checkpoint_hp":603,"floor":8,"gear":"buckler","hero":"ranger","loss":40,"restored_focus":1,"safe_walk_steps":0,"target":"(5, 4)"}

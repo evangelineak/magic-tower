@@ -1,0 +1,37 @@
+name: Build unsigned desktop preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Fetch pinned official Godot and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --connect-timeout 30 --max-time 240 --retry 2 -H 'Accept: application/octet-stream' -o /tmp/godot.zip https://api.github.com/repos/godotengine/godot-builds/releases/assets/425484901
+          echo 'd0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3  /tmp/godot.zip' | sha256sum --check
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.6.3-stable_linux.x86_64
+          echo 'GODOT_BIN=/tmp/godot/Godot_v4.6.3-stable_linux.x86_64' >> "$GITHUB_ENV"
+          curl --fail --location --connect-timeout 30 --max-time 600 --retry 1 -H 'Accept: application/octet-stream' -o /tmp/templates.tpz https://api.github.com/repos/godotengine/godot-builds/releases/assets/425482597
+          echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
+          unzip -jo /tmp/templates.tpz templates/linux_release.x86_64 templates/windows_release_x86_64.exe -d "$HOME/.local/share/godot/export_templates/4.6.3.stable"
+      - name: Import and verify all game rules
+        run: |
+          bash tools/test_all.sh
+      - name: Export both previews and smoke test Linux
+        run: bash tools/export_desktop.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: magic-tower-desktop-preview-${{ github.sha }}
+          path: export/
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,148 @@
+新版无尽远征入口：主页顶部点击“新版无尽远征”，或按 F3。
+这是独立保存的新模式；进入后 H 查看玩法，B 战术，R 营地遭遇，I 战斗道具，Q 信使奇遇。
+旧旅程继续旧规则；N 明确新开局才使用新版，经典存档和本设备历史榜不变。
+以下快捷键说明属于经典魔塔，不要与无尽模式混用。
+
+魔塔 · 苍穹之钥（开发预览）
+============================
+默认中文，按 F2 切换英文；桌面版无需安装 Godot，也不需要联网或付款；网页首次需联网加载。
+WASD／方向键移动；E 互动与账本；C 英雄／装备／天赋；H 图鉴；J 旅途日志。
+U 撤销；L 读档；M 静音；R 连按两次同种子重开；N 连按两次换种子。
+
+三层宝库可以以后成长再回来。唯一机关芯只能修电梯、锻造或卖掉。
+样本可以回一层换奖励，或到四层造桥，保留二层泉水并回访取宝。
+旧塔校准需修复电梯；分别读取一层商人、二层阀门、四层碑文的线索，
+五层按顺序输入四个符号。错答不扣资源，解开后两种奖励只能选一种。
+所有贷款都只是游戏金币；走路、等待、回头不会增加利息。
+悬停敌人按V可只读比较已持装备。N可立守望誓约，攻击-10换先制/荆棘保护；
+回N可免费退约，但永久不能再立。比较会包含当前誓约和备战技能。
+
+新版采用独立Session存档：桌面 user://journeys-v1/，网页本地 IndexedDB。
+启动读取当前旅程；L重新取得写入权并读最新状态；F5重试尚未确认的保存。
+每次动作保存成功才显示结果。保存期间请稍候；失败不预扣资源，重试不重复收益。
+旧 journey-v4.json 原样保留，但不自动导入；本版请新开局。
+其他窗口占用时只读，请关闭其他窗口并稍候，再按L读取，不能覆盖别人的更新。
+X打开明确退役确认，Enter后结束本局并记录首次到达3/5/8层的里程碑。
+结算保存成功后不能撤销；新局保留跨局记录，不携带物品。里程碑可解锁下局可选策略和有限传承配点，不自动叠加永久攻防。
+默认安全模式保留致死保护。新局确认页 S选择安全 / D明确选择风险，再确认开局。
+风险模式遇到可预判的致死战斗，仍先二次确认；取消不扣资源。
+确认后只战斗到真正致命事件，原子记录战败；不能撤销、不发击杀奖励或战后回血。
+荆棘先接触后出手，接触已致命则该次攻击不会发生。B可只读复盘死亡战报。
+死亡后可明确新开一局；退役、胜利与死亡按同一首次楼层标准，重复死亡不增加点数。
+
+五层首章胜利按1主动继续三层远征并补120生命，或按2打开首章结算确认。
+最终胜利按2打开结算确认；不自动结算，L恢复终局也不重复领奖。
+六层营地药剂与专注各限两份，工程80金币开放三座桥；可回旧塔取宝。
+图鉴按 [ / ] 或点击页钮翻页，装备页同样可翻页。
+七层救出米拉后，务必在击败最后首领Z前回J领弩，或到U选择营地帮助。
+
+这是未签名开发预览，并非正式发行。Windows包已交叉导出，但尚未在
+真实Windows系统运行验收。请勿仅因开发者说“未签名”就绕过系统警告。
+中文字体许可见 FONT-LICENSE.txt；引擎及第三方声明见 GODOT-LICENSES.txt。
+
+Magic Tower - development preview
+================================
+Start magic-tower.exe (Windows x86_64) or magic-tower.x86_64 (Linux x86_64).
+No account, network connection, payment, or Godot installation is required.
+This build is unsigned and experimental. It is not a production release.
+
+Arrows / WASD: move       E: nearby choices / loan ledger
+C: hero, equipment, talents    H: enemy guide    J: journey journal
+U: undo    L: reload current slot    F5: retry pending save    SAVE: save
+R twice: restart same seed    N twice: new seed    M: mute/unmute
+Battle display can be skipped with any key/click without changing the result.
+F2: Chinese / English (defaults to Chinese). Language does not change your save.
+All loans use fictional game gold, not real money.
+Hover an enemy and press V for a read-only owned-gear comparison. At N, the Watch
+oath trades 10 ATK for ambush/thorns protection. Release at N for free, but never
+bind again in this run. Forecasts include your current oath and armed skill.
+
+Look at battle previews. Not every route is affordable. The third-floor vault
+is optional: return stronger before the final expedition boss. A survey sample
+can buy a reward back on floor 1 OR a bridge on floor 4, not both. Keep the
+single machine core for the elevator, the forge, or a sale. Read each choice.
+
+After the first five floors, press 1/click to continue the optional three-floor
+expedition with +120 HP once. Old floors stay accessible. Camp medicine and focus
+have finite shared stock; bridge works cost 80 gold and do not award skipped kills.
+Use [ / ] or page buttons to turn enemy guide and equipment pages.
+Rescue Mira on floor seven, then visit J for the repeating crossbow OR U for camp
+help before defeating the last boss Z. Existing old expeditions keep their maps.
+
+Saves are under the operating system's Godot app_userdata folder, in
+Magic Tower · 苍穹之钥/journey-v4.json. Old saves are not deleted by exports.
+Back up a save before upgrading. Game-only undo does not restore deleted files.
+
+Public source: https://github.com/evangelineak/magic-tower
+Work-in-progress branch: feature/choices-and-debt
+The game code/art has no open-source license selected yet. Public source does
+not itself grant general redistribution or modification rights. The Godot
+runtime and its components carry their own notices in GODOT-LICENSES.txt.
+The bundled MagicTowerCJK font is a Noto Sans CJK derivative under SIL OFL 1.1;
+its independent copyright/license notice is included in FONT-LICENSE.txt.
+
+T：安全快旅（续章后、最后胜利前）。只到实际到访地标，只压缩当前已清且无消耗通路；选择后再确认。怪物、锁门、未领资源与未通水域不会被绕过。不会自动领取奖励或退约。
+远征桥梁工程处按E可读伊莲验货签：按明确的真话数量推理三箱唯一解，答错免费；解后选140生命或一次重置已学天赋。重训不返还专注、不改变过去的战斗，随后在C重选。最终首领前完成领奖。
+
+新开启远征的7层卷扬机(v)：E选北侧救援捷径或重击锤库，必须再次确认，另一门本局关闭。可以延后决定；先救人/杀守卫后不再提供无意义的救援捷径选项。
+重击锤：-4防御，最终每击伤害×2，未击杀的每击招2次反击。V比较装备，注意技能能否真正减少战斗轮数。
+新远征H渡口守卫：从正东相邻格向左攻击可利用挡板取消先制，其他方向/远程预览无该收益。旧已开始远征不获得这项新场地规则。
+
+试玩整改版：棋盘64像素格、人物怪物新专图；悬停任何对象在附近显示说明。
+点击空地仅沿空地自动行走，每步重验，按键/点击/模态会停止；点击怪/门/物品/NPC/楼梯等只查看，必须用方向键手动触发。每步都有撤销和保存。
+新开局上下楼在同一个格子对应。新1/4/5层单钥房分别封住70生命、4防御、70生命，不可从侧面绕入；开锁前悬停看收益。旧档为保留进度仍使用原布局与旧楼梯规则，要体验新地图需新开局。
+
+开发版 v0.18：G 打开装备调校，方括号 [ / ] 切换装备。
+未取得装备也能提前看本局固定的三候选；取得后选择 1/2/3 或 4 保留原装，回车确认。
+仅当前穿戴的词条生效；锁定后不再改选，可用完整 U 撤销本次动作，候选不刷新。
+技能基础10级、训练+4、词条最多+2，目前最高16；不是已有完整20级成长。
+World内部schema13；新版Session不自动导入旧文件，不把旧档补成可领奖身份。
+公开网页仍按其BUILD独立发布，不随开发分支自动更新。
+
+Settlement: X opens a retirement confirmation; Enter permanently ends this run.
+At chapter-one victory, 1 continues the expedition, or 2 opens settlement.
+At final victory, 2 opens settlement. No automatic awards before saving succeeds.
+Undo cannot reopen a settled run. New journeys retain milestone records, not items.
+First visits to floors 3/5/8 are recorded once; these records currently add no stats.
+Safe mode remains the default. In new-run confirmation, S selects safe and D selects risk.
+Risk mode still requires explicit confirmation before a predictable lethal fight.
+Only actual events through death occur; no kill reward or recovery is granted.
+Death and its receipt save atomically. B reviews the saved death report without replaying rewards.
+Contact thorns resolve before the hero hit. A fatal contact stops that hit.
+A new journey may be started explicitly; permanent talent effects and drafts are not enabled yet.
+
+开局策略（开发分支，网页独立发布）
+完成旅程并取得首次3/5/8层档案后，下一新局会出现三个已解锁策略候选。
+1/2/3预选候选，0选原装，Enter明确锁定。Esc取消预选，但不能绕过待选阶段行动。
+策略有收益也有代价，锁定后不能Undo改选；读档和重试不重抽。N换种子可换塔和候选。
+无已解锁池时自动原装。旧活动旅程不补抽，必须明确新局才使用档案解锁。
+策略不直接修改基础攻防，按每战条件计入预览。技能20级须基础10+训练4+装备2+研习4全部具备。
+
+局内天赋册（新开发批次，独立Web预览不含此批）
+第3/7/12次存活击杀后获得天赋册；战报结束出现提示，C打开。
+1/2/3预选、Enter学习、Esc稍后选择；左右方括号比较已知敌人。
+两册4抽3候选固定，读档和七层重训不重抽。学习一次仍可按正常Undo规则撤销。
+战术复盘：与上次实际击杀同种时防御+4。逆境蓄能：存活且实际损血至少40时恢复1专注。
+
+传承配点（新局准备）
+首次结算到3/5/8层各增加1点每局可配置容量，总共3点；新局免费重配，本局锁定。
+准备页左边选策略，右边Q/A增加/减少研习，W/S增加/减少应急专注，也可点击+-。
+研习每点让技能等级+2（最多2点），全部来源总上限20；溢出不增加实际效果。
+应急专注每点携带1份本局一次性补给（最多2点），C英雄页第2项使用：未满才+1专注。
+满专注不消耗补给；使用消耗1步。可用正常U撤销消耗，但不能重新分配或复制补给。
+Enter同时锁定策略和配点。允许留余点；完全原玩法请选择原装策略+0/0配点。
+旧进行中旅程保持0配点，不追溯赠送中途加成；新局才按真实档案解锁容量。
+
+封箱货梯（新局内容，旧局不补箱）
+一层单钥房中的医疗补给仍只有70生命。门外按E读货签，可正常开门当场拿，或双确认免费发运。
+发运不花钥匙，移除源空门与原箱；目的地在确认前写清，固定不重抽。
+三层货口必须击败巨像V后相邻E领取，货口永不能通行；五层箱在校准台旁，与谜题奖励独立。
+五层箱需击败K并明确继续远征，之后回五层Q旁E读取货签并领取；不继续则不能拿。
+发运/领取需手动，普通U可撤销；安全点击寻路不会替你消费或领奖。
+战斗后青色实得行显示生命、专注实际变化，以及金币入袋/抵债；上方动作仅顺序示意，不是逐击回放。
+
+回访目标：J打开已知未完成目标，1–4或点击钉选，当前层显示角标，跨层只提示已知目的楼层。Tab切换原详细日志。钉选不会移动或领奖，读档/新局不保留。
+
+战术试算：悬停敌人按V，对比已持装备不用技能/投入1专注；[ ]翻页，H可Tab切换挡板位置试算。不会替你换装备、准备技能、移动或战斗。无焦候选只是假设，学者治疗须另行在战外使用。
+
+六层绳端E：新旅程可耗1焦单向跨过守卫，需再次确认，不击杀不领奖；最后焦取消备战，普通U可撤销整步。点走不会自动荡绳。V的P/E/F局部图分别标玩家/敌人/挡板，北朝上。

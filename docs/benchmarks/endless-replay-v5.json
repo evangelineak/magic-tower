@@ -1,0 +1,237 @@
+{
+  "measured_at_utc": "2026-11-09T03:35:17Z",
+  "machine": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "cpu": "",
+  "logical_cpus": 9,
+  "scope": "Local synthetic Godot v5 benchmark; not Worker/Edge CPU measurements. Linux /proc VmHWM sampled every 5 ms; a final peak may be missed. RSS includes engine, fixtures and assertion copies. Timing is elapsed wall time, not measured CPU time.",
+  "results": [
+    {
+      "actions": 1000,
+      "floor": 1,
+      "godot": "4.6.3-stable (official)",
+      "godot_static_peak_bytes": 31134269,
+      "json_utf8_bytes": 4065,
+      "kills": 0,
+      "late_invalid_rejection_us": 6926,
+      "live_replay_alloc_delta_bytes": [
+        39464,
+        39384,
+        39408,
+        39432,
+        39384
+      ],
+      "parse_us": [
+        107,
+        81,
+        96,
+        81,
+        153
+      ],
+      "profile": "corridor",
+      "replay_us": [
+        6447,
+        6480,
+        6496,
+        6963,
+        6564
+      ],
+      "replay_verified": true,
+      "rules_version": 5,
+      "seed": 42,
+      "process_wall_seconds": 0.6947,
+      "process_sampled_max_rss_kib": 70144,
+      "replay_median_us": 6496,
+      "replay_max_us": 6963
+    },
+    {
+      "actions": 10000,
+      "floor": 1,
+      "godot": "4.6.3-stable (official)",
+      "godot_static_peak_bytes": 31134273,
+      "json_utf8_bytes": 40065,
+      "kills": 0,
+      "late_invalid_rejection_us": 49527,
+      "live_replay_alloc_delta_bytes": [
+        305192,
+        305112,
+        305136,
+        305160,
+        305112
+      ],
+      "parse_us": [
+        644,
+        635,
+        877,
+        647,
+        680
+      ],
+      "profile": "corridor",
+      "replay_us": [
+        50135,
+        52575,
+        50822,
+        49612,
+        49443
+      ],
+      "replay_verified": true,
+      "rules_version": 5,
+      "seed": 42,
+      "process_wall_seconds": 0.9741,
+      "process_sampled_max_rss_kib": 70352,
+      "replay_median_us": 50135,
+      "replay_max_us": 52575
+    },
+    {
+      "actions": 1000,
+      "floor": 37,
+      "godot": "4.6.3-stable (official)",
+      "godot_static_peak_bytes": 31134265,
+      "json_utf8_bytes": 4353,
+      "kills": 37,
+      "late_invalid_rejection_us": 133851,
+      "live_replay_alloc_delta_bytes": [
+        65328,
+        65248,
+        65272,
+        65296,
+        65248
+      ],
+      "parse_us": [
+        121,
+        122,
+        152,
+        125,
+        153
+      ],
+      "profile": "primary",
+      "replay_us": [
+        119920,
+        115961,
+        117748,
+        118953,
+        126128
+      ],
+      "replay_verified": true,
+      "rules_version": 5,
+      "seed": 42,
+      "process_wall_seconds": 1.5091,
+      "process_sampled_max_rss_kib": 70124,
+      "replay_median_us": 118953,
+      "replay_max_us": 126128
+    },
+    {
+      "actions": 10000,
+      "floor": 371,
+      "godot": "4.6.3-stable (official)",
+      "godot_static_peak_bytes": 31134269,
+      "json_utf8_bytes": 43025,
+      "kills": 370,
+      "late_invalid_rejection_us": 1415384,
+      "live_replay_alloc_delta_bytes": [
+        570248,
+        570168,
+        570192,
+        570216,
+        570168
+      ],
+      "parse_us": [
+        719,
+        730,
+        1174,
+        1169,
+        719
+      ],
+      "profile": "primary",
+      "replay_us": [
+        1390459,
+        1376914,
+        1393604,
+        1313789,
+        1192200
+      ],
+      "replay_verified": true,
+      "rules_version": 5,
+      "seed": 42,
+      "process_wall_seconds": 11.6651,
+      "process_sampled_max_rss_kib": 70304,
+      "replay_median_us": 1376914,
+      "replay_max_us": 1393604
+    },
+    {
+      "actions": 1000,
+      "floor": 40,
+      "godot": "4.6.3-stable (official)",
+      "godot_static_peak_bytes": 31134273,
+      "json_utf8_bytes": 4377,
+      "kills": 80,
+      "late_invalid_rejection_us": 163723,
+      "live_replay_alloc_delta_bytes": [
+        68716,
+        68636,
+        68660,
+        68684,
+        68636
+      ],
+      "parse_us": [
+        198,
+        124,
+        211,
+        125,
+        123
+      ],
+      "profile": "alternate",
+      "replay_us": [
+        146371,
+        150307,
+        145946,
+        162117,
+        162546
+      ],
+      "replay_verified": true,
+      "rules_version": 5,
+      "seed": 42,
+      "process_wall_seconds": 1.8313,
+      "process_sampled_max_rss_kib": 70000,
+      "replay_median_us": 150307,
+      "replay_max_us": 162546
+    },
+    {
+      "actions": 10000,
+      "floor": 400,
+      "godot": "4.6.3-stable (official)",
+      "godot_static_peak_bytes": 31134277,
+      "json_utf8_bytes": 43257,
+      "kills": 800,
+      "late_invalid_rejection_us": 1582345,
+      "live_replay_alloc_delta_bytes": [
+        603148,
+        603068,
+        603092,
+        603116,
+        603068
+      ],
+      "parse_us": [
+        712,
+        715,
+        712,
+        715,
+        819
+      ],
+      "profile": "alternate",
+      "replay_us": [
+        1490130,
+        1366153,
+        1249123,
+        1463292,
+        1567585
+      ],
+      "replay_verified": true,
+      "rules_version": 5,
+      "seed": 42,
+      "process_wall_seconds": 12.452,
+      "process_sampled_max_rss_kib": 70388,
+      "replay_median_us": 1463292,
+      "replay_max_us": 1567585
+    }
+  ]
+}

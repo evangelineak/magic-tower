@@ -1,0 +1,2695 @@
+{
+  "cases": [
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": true,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+            "run_0000000000000000": {
+              "milestones": [],
+              "run_id": "run_0000000000000000",
+              "summary": {
+                "max_floor": 1,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": []
+            }
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [],
+          "run_id": "run_0000000000000000",
+          "summary": {
+            "max_floor": 1,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": []
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "fresh-low-floor",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000000",
+      "summary": {
+        "max_floor": 1,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [
+          "legacy_scout"
+        ],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [
+            3
+          ],
+          "run_id": "run_0000000000000001",
+          "summary": {
+            "max_floor": 3,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "first-floor-three",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [
+          "legacy_tactician"
+        ],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3,
+            5
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            },
+            "run_0000000000000002": {
+              "milestones": [
+                5
+              ],
+              "run_id": "run_0000000000000002",
+              "summary": {
+                "max_floor": 5,
+                "moves": 123,
+                "outcome": "chapter1",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_tactician"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout",
+            "legacy_tactician"
+          ]
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [
+            5
+          ],
+          "run_id": "run_0000000000000002",
+          "summary": {
+            "max_floor": 5,
+            "moves": 123,
+            "outcome": "chapter1",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_tactician"
+          ]
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "second-run-floor-five",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000002",
+      "summary": {
+        "max_floor": 5,
+        "moves": 123,
+        "outcome": "chapter1",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [
+          "legacy_veteran"
+        ],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3,
+            5,
+            8
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            },
+            "run_0000000000000002": {
+              "milestones": [
+                5
+              ],
+              "run_id": "run_0000000000000002",
+              "summary": {
+                "max_floor": 5,
+                "moves": 123,
+                "outcome": "chapter1",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_tactician"
+              ]
+            },
+            "run_0000000000000003": {
+              "milestones": [
+                8
+              ],
+              "run_id": "run_0000000000000003",
+              "summary": {
+                "max_floor": 8,
+                "moves": 123,
+                "outcome": "victory",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_veteran"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout",
+            "legacy_tactician",
+            "legacy_veteran"
+          ]
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [
+            8
+          ],
+          "run_id": "run_0000000000000003",
+          "summary": {
+            "max_floor": 8,
+            "moves": 123,
+            "outcome": "victory",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_veteran"
+          ]
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "third-run-floor-eight",
+      "profile": {
+        "milestones": [
+          3,
+          5
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          },
+          "run_0000000000000002": {
+            "milestones": [
+              5
+            ],
+            "run_id": "run_0000000000000002",
+            "summary": {
+              "max_floor": 5,
+              "moves": 123,
+              "outcome": "chapter1",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_tactician"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout",
+          "legacy_tactician"
+        ]
+      },
+      "run_id": "run_0000000000000003",
+      "summary": {
+        "max_floor": 8,
+        "moves": 123,
+        "outcome": "victory",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "This run was already settled.",
+        "receipt": {
+          "milestones": [
+            3
+          ],
+          "run_id": "run_0000000000000001",
+          "summary": {
+            "max_floor": 3,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "status": "duplicate"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "same-summary-duplicate",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "This run was settled with a different summary; its original receipt is final.",
+        "receipt": {
+          "milestones": [
+            3
+          ],
+          "run_id": "run_0000000000000001",
+          "summary": {
+            "max_floor": 3,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "status": "conflict"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "old-run-new-floor-conflict",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 8,
+        "moves": 123,
+        "outcome": "victory",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "This run was settled with a different summary; its original receipt is final.",
+        "receipt": {
+          "milestones": [
+            3
+          ],
+          "run_id": "run_0000000000000001",
+          "summary": {
+            "max_floor": 3,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "status": "conflict"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "same-run-outcome-conflict",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "defeat",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "This run was settled with a different summary; its original receipt is final.",
+        "receipt": {
+          "milestones": [
+            3
+          ],
+          "run_id": "run_0000000000000001",
+          "summary": {
+            "max_floor": 3,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "status": "conflict"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "same-run-moves-conflict",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": 124,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "This run was settled with a different summary; its original receipt is final.",
+        "receipt": {
+          "milestones": [
+            3
+          ],
+          "run_id": "run_0000000000000001",
+          "summary": {
+            "max_floor": 3,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "status": "conflict"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "same-run-seed-conflict",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 43
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            },
+            "run_0000000000000004": {
+              "milestones": [],
+              "run_id": "run_0000000000000004",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": []
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [],
+          "run_id": "run_0000000000000004",
+          "summary": {
+            "max_floor": 3,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": []
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "other-run-same-milestone-no-repeat",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000004",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3,
+            5,
+            8
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            },
+            "run_0000000000000002": {
+              "milestones": [
+                5
+              ],
+              "run_id": "run_0000000000000002",
+              "summary": {
+                "max_floor": 5,
+                "moves": 123,
+                "outcome": "chapter1",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_tactician"
+              ]
+            },
+            "run_0000000000000003": {
+              "milestones": [
+                8
+              ],
+              "run_id": "run_0000000000000003",
+              "summary": {
+                "max_floor": 8,
+                "moves": 123,
+                "outcome": "victory",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_veteran"
+              ]
+            },
+            "run_0000000000000004": {
+              "milestones": [],
+              "run_id": "run_0000000000000004",
+              "summary": {
+                "max_floor": 8,
+                "moves": 123,
+                "outcome": "defeat",
+                "seed": 42
+              },
+              "unlocked": []
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout",
+            "legacy_tactician",
+            "legacy_veteran"
+          ]
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [],
+          "run_id": "run_0000000000000004",
+          "summary": {
+            "max_floor": 8,
+            "moves": 123,
+            "outcome": "defeat",
+            "seed": 42
+          },
+          "unlocked": []
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "other-run-all-milestones-no-repeat",
+      "profile": {
+        "milestones": [
+          3,
+          5,
+          8
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          },
+          "run_0000000000000002": {
+            "milestones": [
+              5
+            ],
+            "run_id": "run_0000000000000002",
+            "summary": {
+              "max_floor": 5,
+              "moves": 123,
+              "outcome": "chapter1",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_tactician"
+            ]
+          },
+          "run_0000000000000003": {
+            "milestones": [
+              8
+            ],
+            "run_id": "run_0000000000000003",
+            "summary": {
+              "max_floor": 8,
+              "moves": 123,
+              "outcome": "victory",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_veteran"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout",
+          "legacy_tactician",
+          "legacy_veteran"
+        ]
+      },
+      "run_id": "run_0000000000000004",
+      "summary": {
+        "max_floor": 8,
+        "moves": 123,
+        "outcome": "defeat",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [
+          "legacy_scout",
+          "legacy_tactician",
+          "legacy_veteran"
+        ],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3,
+            5,
+            8
+          ],
+          "receipts": {
+            "run_0000000000000005": {
+              "milestones": [
+                3,
+                5,
+                8
+              ],
+              "run_id": "run_0000000000000005",
+              "summary": {
+                "max_floor": 8,
+                "moves": 123,
+                "outcome": "victory",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout",
+                "legacy_tactician",
+                "legacy_veteran"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout",
+            "legacy_tactician",
+            "legacy_veteran"
+          ]
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [
+            3,
+            5,
+            8
+          ],
+          "run_id": "run_0000000000000005",
+          "summary": {
+            "max_floor": 8,
+            "moves": 123,
+            "outcome": "victory",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_scout",
+            "legacy_tactician",
+            "legacy_veteran"
+          ]
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "first-run-jumps-to-eight",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000005",
+      "summary": {
+        "max_floor": 8,
+        "moves": 123,
+        "outcome": "victory",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3.0
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3.0
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3.0,
+                "moves": 123.0,
+                "outcome": "withdrawn",
+                "seed": 42.0
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1.0,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "This run was already settled.",
+        "receipt": {
+          "milestones": [
+            3.0
+          ],
+          "run_id": "run_0000000000000001",
+          "summary": {
+            "max_floor": 3.0,
+            "moves": 123.0,
+            "outcome": "withdrawn",
+            "seed": 42.0
+          },
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "status": "duplicate"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "json-float-profile-and-summary",
+      "profile": {
+        "milestones": [
+          3.0
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3.0
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3.0,
+              "moves": 123.0,
+              "outcome": "withdrawn",
+              "seed": 42.0
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1.0,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3.0,
+        "moves": 123.0,
+        "outcome": "withdrawn",
+        "seed": 42.0
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [
+          "legacy_tactician"
+        ],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3,
+            5
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3.0
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3.0,
+                "moves": 123.0,
+                "outcome": "withdrawn",
+                "seed": 42.0
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            },
+            "run_0000000000000006": {
+              "milestones": [
+                5
+              ],
+              "run_id": "run_0000000000000006",
+              "summary": {
+                "max_floor": 5,
+                "moves": 123,
+                "outcome": "chapter1",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_tactician"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout",
+            "legacy_tactician"
+          ]
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [
+            5
+          ],
+          "run_id": "run_0000000000000006",
+          "summary": {
+            "max_floor": 5,
+            "moves": 123,
+            "outcome": "chapter1",
+            "seed": 42
+          },
+          "unlocked": [
+            "legacy_tactician"
+          ]
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "json-float-profile-next-milestone",
+      "profile": {
+        "milestones": [
+          3.0
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3.0
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3.0,
+              "moves": 123.0,
+              "outcome": "withdrawn",
+              "seed": 42.0
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1.0,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000006",
+      "summary": {
+        "max_floor": 5.0,
+        "moves": 123.0,
+        "outcome": "chapter1",
+        "seed": 42.0
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": true,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+            "run_0000000000000007": {
+              "milestones": [],
+              "run_id": "run_0000000000000007",
+              "summary": {
+                "max_floor": 2,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": []
+            }
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [],
+          "run_id": "run_0000000000000007",
+          "summary": {
+            "max_floor": 2,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": []
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "settled-before-first-milestone",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000007",
+      "summary": {
+        "max_floor": 2,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+            "run_0000000000000007": {
+              "milestones": [],
+              "run_id": "run_0000000000000007",
+              "summary": {
+                "max_floor": 2,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": []
+            }
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "This run was settled with a different summary; its original receipt is final.",
+        "receipt": {
+          "milestones": [],
+          "run_id": "run_0000000000000007",
+          "summary": {
+            "max_floor": 2,
+            "moves": 123,
+            "outcome": "withdrawn",
+            "seed": 42
+          },
+          "unlocked": []
+        },
+        "status": "conflict"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "low-run-reload-cannot-upgrade",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+          "run_0000000000000007": {
+            "milestones": [],
+            "run_id": "run_0000000000000007",
+            "summary": {
+              "max_floor": 2,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": []
+          }
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000007",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [
+          "legacy_scout"
+        ],
+        "ok": true,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-": {
+              "milestones": [
+                3
+              ],
+              "run_id": "Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-",
+              "summary": {
+                "max_floor": 3,
+                "moves": 10000000,
+                "outcome": "withdrawn",
+                "seed": 2147483647
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "",
+        "receipt": {
+          "milestones": [
+            3
+          ],
+          "run_id": "Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-",
+          "summary": {
+            "max_floor": 3,
+            "moves": 10000000,
+            "outcome": "withdrawn",
+            "seed": 2147483647
+          },
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "status": "applied"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "summary-upper-bounds",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-Z9_-",
+      "summary": {
+        "max_floor": 3,
+        "moves": 10000000,
+        "outcome": "withdrawn",
+        "seed": 2147483647
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "Invalid run identifier.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "bad-id",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "short",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "Invalid settlement summary.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "bad-summary-outcome",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "death",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "Invalid settlement summary.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "bad-premature-chapter",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 4,
+        "moves": 123,
+        "outcome": "chapter1",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "Invalid settlement summary.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "bad-premature-victory",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 7,
+        "moves": 123,
+        "outcome": "victory",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "Invalid settlement summary.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "bad-boolean-number",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": true,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "Invalid settlement summary.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "bad-fractional-number",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3.5,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "Invalid settlement summary.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "bad-overflow-seed",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 4294967296
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "Invalid settlement summary.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": true,
+        "reason": ""
+      },
+      "id": "bad-summary-extra-field",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "extra": 1,
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 2,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "Unsupported profile revision.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Unsupported profile revision."
+      },
+      "id": "corrupt-profile-revision",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 2,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000002",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "extra": 1,
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "Invalid profile fields.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Invalid profile fields."
+      },
+      "id": "corrupt-profile-extra-field",
+      "profile": {
+        "extra": 1,
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000002",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "Milestone ledger does not match profile.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Milestone ledger does not match profile."
+      },
+      "id": "corrupt-orphaned-unlock",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000002",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "unknown"
+          ]
+        },
+        "reason": "Invalid profile unlocks.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Invalid profile unlocks."
+      },
+      "id": "corrupt-unknown-unlock",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "unknown"
+        ]
+      },
+      "run_id": "run_0000000000000002",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            5,
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            },
+            "run_0000000000000002": {
+              "milestones": [
+                5
+              ],
+              "run_id": "run_0000000000000002",
+              "summary": {
+                "max_floor": 5,
+                "moves": 123,
+                "outcome": "chapter1",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_tactician"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_tactician",
+            "legacy_scout"
+          ]
+        },
+        "reason": "Invalid profile unlocks.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Invalid profile unlocks."
+      },
+      "id": "corrupt-unordered-milestones",
+      "profile": {
+        "milestones": [
+          5,
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          },
+          "run_0000000000000002": {
+            "milestones": [
+              5
+            ],
+            "run_id": "run_0000000000000002",
+            "summary": {
+              "max_floor": 5,
+              "moves": 123,
+              "outcome": "chapter1",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_tactician"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_tactician",
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000004",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 2,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "Duplicate or unearned milestone.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Duplicate or unearned milestone."
+      },
+      "id": "corrupt-unearned-award",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 2,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000002",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            },
+            "run_0000000000000002": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000002",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "Duplicate or unearned milestone.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Duplicate or unearned milestone."
+      },
+      "id": "corrupt-duplicate-award-sources",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          },
+          "run_0000000000000002": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000002",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000003",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": []
+            }
+          },
+          "revision": 1,
+          "unlocked": []
+        },
+        "reason": "Milestone ledger does not match profile.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Milestone ledger does not match profile."
+      },
+      "id": "corrupt-reached-milestone-omitted",
+      "profile": {
+        "milestones": [],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": []
+          }
+        },
+        "revision": 1,
+        "unlocked": []
+      },
+      "run_id": "run_0000000000000002",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000002",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "Invalid receipt fields.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Invalid receipt fields."
+      },
+      "id": "corrupt-receipt-identity",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000002",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000002",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+          "milestones": [
+            3
+          ],
+          "receipts": {
+            "run_0000000000000001": {
+              "extra": 0,
+              "milestones": [
+                3
+              ],
+              "run_id": "run_0000000000000001",
+              "summary": {
+                "max_floor": 3,
+                "moves": 123,
+                "outcome": "withdrawn",
+                "seed": 42
+              },
+              "unlocked": [
+                "legacy_scout"
+              ]
+            }
+          },
+          "revision": 1,
+          "unlocked": [
+            "legacy_scout"
+          ]
+        },
+        "reason": "Invalid receipt fields.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Invalid receipt fields."
+      },
+      "id": "corrupt-receipt-extra-field",
+      "profile": {
+        "milestones": [
+          3
+        ],
+        "receipts": {
+          "run_0000000000000001": {
+            "extra": 0,
+            "milestones": [
+              3
+            ],
+            "run_id": "run_0000000000000001",
+            "summary": {
+              "max_floor": 3,
+              "moves": 123,
+              "outcome": "withdrawn",
+              "seed": 42
+            },
+            "unlocked": [
+              "legacy_scout"
+            ]
+          }
+        },
+        "revision": 1,
+        "unlocked": [
+          "legacy_scout"
+        ]
+      },
+      "run_id": "run_0000000000000002",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": null,
+        "reason": "Invalid profile fields.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Invalid profile fields."
+      },
+      "id": "corrupt-null-profile",
+      "profile": null,
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    },
+    {
+      "expected_settlement": {
+        "new_unlocks": [],
+        "ok": false,
+        "profile": {
+
+        },
+        "reason": "Invalid profile fields.",
+        "receipt": {
+
+        },
+        "status": "invalid"
+      },
+      "expected_validation": {
+        "ok": false,
+        "reason": "Invalid profile fields."
+      },
+      "id": "corrupt-empty-object-profile",
+      "profile": {
+
+      },
+      "run_id": "run_0000000000000001",
+      "summary": {
+        "max_floor": 3,
+        "moves": 123,
+        "outcome": "withdrawn",
+        "seed": 42
+      }
+    }
+  ],
+  "comparison": "Compare validation ok and settlement ok/status/profile/receipt/new_unlocks; reason strings are diagnostic, not protocol enums.",
+  "fixture_revision": 1,
+  "fresh": {
+    "milestones": [],
+    "receipts": {
+
+    },
+    "revision": 1,
+    "unlocked": []
+  },
+  "producer": "tools/generate_legacy_vectors.gd via scripts/legacy_profile.gd",
+  "profile_revision": 1
+}

@@ -1,0 +1,71 @@
+{
+  "generator": "tools/build_audio.py",
+  "sounds": [
+    {
+      "file": "move.wav",
+      "sha256": "91cf817fe79b3561f435df5f2be4c9086855b7ebec946602c69bdf9645926f26",
+      "duration_seconds": 0.13,
+      "sample_rate": 44100,
+      "channels": 1,
+      "sample_width_bits": 16,
+      "peak_dbfs": -25.19,
+      "rms_dbfs": -35.52,
+      "exact_silent_edge_samples": 221
+    },
+    {
+      "file": "pickup.wav",
+      "sha256": "9bb1f86ff6a0312f06f9a5a7ece9768df22a4f96d279c67be7de9b827780e542",
+      "duration_seconds": 0.52,
+      "sample_rate": 44100,
+      "channels": 1,
+      "sample_width_bits": 16,
+      "peak_dbfs": -17.9,
+      "rms_dbfs": -28.76,
+      "exact_silent_edge_samples": 221
+    },
+    {
+      "file": "door.wav",
+      "sha256": "fef6b7d360ece084cccd931c6e32d5d8181e28607f2480aaee064153697aa21a",
+      "duration_seconds": 0.42,
+      "sample_rate": 44100,
+      "channels": 1,
+      "sample_width_bits": 16,
+      "peak_dbfs": -19.04,
+      "rms_dbfs": -30.71,
+      "exact_silent_edge_samples": 221
+    },
+    {
+      "file": "impact.wav",
+      "sha256": "ddf64f9bf6696ab6b479d6d51c50d369c06bc6a516bb4b09794a89a1cb5976b0",
+      "duration_seconds": 0.3,
+      "sample_rate": 44100,
+      "channels": 1,
+      "sample_width_bits": 16,
+      "peak_dbfs": -14.42,
+      "rms_dbfs": -29.24,
+      "exact_silent_edge_samples": 221
+    },
+    {
+      "file": "victory.wav",
+      "sha256": "b712e80b097e0238788ff9c5d68be7b442e0f92bccc5c94a1652e5528ee2ef56",
+      "duration_seconds": 1.65,
+      "sample_rate": 44100,
+      "channels": 1,
+      "sample_width_bits": 16,
+      "peak_dbfs": -15.07,
+      "rms_dbfs": -27.33,
+      "exact_silent_edge_samples": 221
+    },
+    {
+      "file": "water.wav",
+      "sha256": "d56ce02f98780e9fe17fc19219d15dc47c9143315b514a35d0eb6b861e9a2dd2",
+      "duration_seconds": 0.85,
+      "sample_rate": 44100,
+      "channels": 1,
+      "sample_width_bits": 16,
+      "peak_dbfs": -21.19,
+      "rms_dbfs": -34.51,
+      "exact_silent_edge_samples": 221
+    }
+  ]
+}

@@ -1,0 +1,3074 @@
+{
+  "checks": 1832,
+  "failures": 0,
+  "preview_checks": 450,
+  "reports": [
+    {
+      "bought_at": 0,
+      "completed": 50,
+      "ended": false,
+      "policy": "none",
+      "problem": "",
+      "route": "primary",
+      "rows": [
+        {
+          "base_atk": 23,
+          "base_def": 13,
+          "events": 35,
+          "floor": 1,
+          "gear": "",
+          "gold": 20,
+          "hp": 149,
+          "net_damage": 9
+        },
+        {
+          "base_atk": 26,
+          "base_def": 16,
+          "events": 65,
+          "floor": 2,
+          "gear": "",
+          "gold": 42,
+          "hp": 153,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 29,
+          "base_def": 19,
+          "events": 96,
+          "floor": 3,
+          "gear": "",
+          "gold": 60,
+          "hp": 157,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 32,
+          "base_def": 22,
+          "events": 153,
+          "floor": 4,
+          "gear": "",
+          "gold": 85,
+          "hp": 159,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 37,
+          "base_def": 24,
+          "events": 188,
+          "floor": 5,
+          "gear": "",
+          "gold": 103,
+          "hp": 166,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 42,
+          "base_def": 26,
+          "events": 219,
+          "floor": 6,
+          "gear": "",
+          "gold": 128,
+          "hp": 170,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 45,
+          "base_def": 28,
+          "events": 249,
+          "floor": 7,
+          "gear": "",
+          "gold": 148,
+          "hp": 175,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 48,
+          "base_def": 30,
+          "events": 305,
+          "floor": 8,
+          "gear": "",
+          "gold": 170,
+          "hp": 179,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 51,
+          "base_def": 32,
+          "events": 337,
+          "floor": 9,
+          "gear": "",
+          "gold": 188,
+          "hp": 180,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 54,
+          "base_def": 34,
+          "events": 365,
+          "floor": 10,
+          "gear": "",
+          "gold": 210,
+          "hp": 180,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 57,
+          "base_def": 36,
+          "events": 395,
+          "floor": 11,
+          "gear": "",
+          "gold": 230,
+          "hp": 177,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 60,
+          "base_def": 38,
+          "events": 451,
+          "floor": 12,
+          "gear": "",
+          "gold": 255,
+          "hp": 175,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 63,
+          "base_def": 40,
+          "events": 485,
+          "floor": 13,
+          "gear": "",
+          "gold": 275,
+          "hp": 172,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 66,
+          "base_def": 42,
+          "events": 515,
+          "floor": 14,
+          "gear": "",
+          "gold": 300,
+          "hp": 168,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 69,
+          "base_def": 44,
+          "events": 545,
+          "floor": 15,
+          "gear": "",
+          "gold": 318,
+          "hp": 168,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 72,
+          "base_def": 46,
+          "events": 601,
+          "floor": 16,
+          "gear": "",
+          "gold": 340,
+          "hp": 167,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 75,
+          "base_def": 48,
+          "events": 635,
+          "floor": 17,
+          "gear": "",
+          "gold": 358,
+          "hp": 167,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 78,
+          "base_def": 50,
+          "events": 665,
+          "floor": 18,
+          "gear": "",
+          "gold": 383,
+          "hp": 163,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 81,
+          "base_def": 52,
+          "events": 695,
+          "floor": 19,
+          "gear": "",
+          "gold": 403,
+          "hp": 160,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 84,
+          "base_def": 54,
+          "events": 751,
+          "floor": 20,
+          "gear": "",
+          "gold": 425,
+          "hp": 159,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 87,
+          "base_def": 56,
+          "events": 783,
+          "floor": 21,
+          "gear": "",
+          "gold": 445,
+          "hp": 156,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 90,
+          "base_def": 58,
+          "events": 811,
+          "floor": 22,
+          "gear": "",
+          "gold": 467,
+          "hp": 156,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 93,
+          "base_def": 60,
+          "events": 841,
+          "floor": 23,
+          "gear": "",
+          "gold": 485,
+          "hp": 156,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 96,
+          "base_def": 62,
+          "events": 897,
+          "floor": 24,
+          "gear": "",
+          "gold": 510,
+          "hp": 151,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 99,
+          "base_def": 64,
+          "events": 931,
+          "floor": 25,
+          "gear": "",
+          "gold": 530,
+          "hp": 148,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 102,
+          "base_def": 66,
+          "events": 961,
+          "floor": 26,
+          "gear": "",
+          "gold": 555,
+          "hp": 144,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 105,
+          "base_def": 68,
+          "events": 991,
+          "floor": 27,
+          "gear": "",
+          "gold": 573,
+          "hp": 144,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 108,
+          "base_def": 70,
+          "events": 1047,
+          "floor": 28,
+          "gear": "",
+          "gold": 595,
+          "hp": 143,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 111,
+          "base_def": 72,
+          "events": 1081,
+          "floor": 29,
+          "gear": "",
+          "gold": 613,
+          "hp": 143,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 114,
+          "base_def": 74,
+          "events": 1111,
+          "floor": 30,
+          "gear": "",
+          "gold": 635,
+          "hp": 143,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 117,
+          "base_def": 76,
+          "events": 1141,
+          "floor": 31,
+          "gear": "",
+          "gold": 655,
+          "hp": 140,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 120,
+          "base_def": 78,
+          "events": 1197,
+          "floor": 32,
+          "gear": "",
+          "gold": 680,
+          "hp": 135,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 123,
+          "base_def": 80,
+          "events": 1229,
+          "floor": 33,
+          "gear": "",
+          "gold": 700,
+          "hp": 132,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 126,
+          "base_def": 82,
+          "events": 1257,
+          "floor": 34,
+          "gear": "",
+          "gold": 725,
+          "hp": 128,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 129,
+          "base_def": 84,
+          "events": 1288,
+          "floor": 35,
+          "gear": "",
+          "gold": 728,
+          "hp": 178,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 132,
+          "base_def": 86,
+          "events": 1344,
+          "floor": 36,
+          "gear": "",
+          "gold": 750,
+          "hp": 177,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 135,
+          "base_def": 88,
+          "events": 1378,
+          "floor": 37,
+          "gear": "",
+          "gold": 768,
+          "hp": 177,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 138,
+          "base_def": 90,
+          "events": 1408,
+          "floor": 38,
+          "gear": "",
+          "gold": 793,
+          "hp": 173,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 141,
+          "base_def": 92,
+          "events": 1438,
+          "floor": 39,
+          "gear": "",
+          "gold": 813,
+          "hp": 170,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 144,
+          "base_def": 94,
+          "events": 1494,
+          "floor": 40,
+          "gear": "",
+          "gold": 835,
+          "hp": 169,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 147,
+          "base_def": 96,
+          "events": 1528,
+          "floor": 41,
+          "gear": "",
+          "gold": 855,
+          "hp": 166,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 150,
+          "base_def": 98,
+          "events": 1558,
+          "floor": 42,
+          "gear": "",
+          "gold": 877,
+          "hp": 166,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 153,
+          "base_def": 100,
+          "events": 1588,
+          "floor": 43,
+          "gear": "",
+          "gold": 895,
+          "hp": 166,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 156,
+          "base_def": 102,
+          "events": 1644,
+          "floor": 44,
+          "gear": "",
+          "gold": 920,
+          "hp": 161,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 159,
+          "base_def": 104,
+          "events": 1676,
+          "floor": 45,
+          "gear": "",
+          "gold": 940,
+          "hp": 158,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 162,
+          "base_def": 106,
+          "events": 1704,
+          "floor": 46,
+          "gear": "",
+          "gold": 965,
+          "hp": 154,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 165,
+          "base_def": 108,
+          "events": 1734,
+          "floor": 47,
+          "gear": "",
+          "gold": 983,
+          "hp": 154,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 168,
+          "base_def": 110,
+          "events": 1790,
+          "floor": 48,
+          "gear": "",
+          "gold": 1005,
+          "hp": 153,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 171,
+          "base_def": 112,
+          "events": 1824,
+          "floor": 49,
+          "gear": "",
+          "gold": 1023,
+          "hp": 153,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 174,
+          "base_def": 114,
+          "events": 1854,
+          "floor": 50,
+          "gear": "",
+          "gold": 1045,
+          "hp": 153,
+          "net_damage": 0
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bought_at": 0,
+      "completed": 50,
+      "ended": false,
+      "policy": "none",
+      "problem": "",
+      "route": "alternate",
+      "rows": [
+        {
+          "base_atk": 23,
+          "base_def": 13,
+          "events": 29,
+          "floor": 1,
+          "gear": "",
+          "gold": 32,
+          "hp": 144,
+          "net_damage": 14
+        },
+        {
+          "base_atk": 26,
+          "base_def": 16,
+          "events": 67,
+          "floor": 2,
+          "gear": "",
+          "gold": 74,
+          "hp": 142,
+          "net_damage": 10
+        },
+        {
+          "base_atk": 29,
+          "base_def": 19,
+          "events": 95,
+          "floor": 3,
+          "gear": "",
+          "gold": 117,
+          "hp": 139,
+          "net_damage": 11
+        },
+        {
+          "base_atk": 32,
+          "base_def": 22,
+          "events": 140,
+          "floor": 4,
+          "gear": "",
+          "gold": 164,
+          "hp": 140,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 37,
+          "base_def": 24,
+          "events": 169,
+          "floor": 5,
+          "gear": "",
+          "gold": 202,
+          "hp": 144,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 42,
+          "base_def": 26,
+          "events": 208,
+          "floor": 6,
+          "gear": "",
+          "gold": 244,
+          "hp": 148,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 45,
+          "base_def": 28,
+          "events": 236,
+          "floor": 7,
+          "gear": "",
+          "gold": 282,
+          "hp": 153,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 48,
+          "base_def": 30,
+          "events": 280,
+          "floor": 8,
+          "gear": "",
+          "gold": 319,
+          "hp": 156,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 51,
+          "base_def": 32,
+          "events": 312,
+          "floor": 9,
+          "gear": "",
+          "gold": 362,
+          "hp": 159,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 54,
+          "base_def": 34,
+          "events": 343,
+          "floor": 10,
+          "gear": "",
+          "gold": 394,
+          "hp": 164,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 57,
+          "base_def": 36,
+          "events": 370,
+          "floor": 11,
+          "gear": "",
+          "gold": 432,
+          "hp": 161,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 60,
+          "base_def": 38,
+          "events": 414,
+          "floor": 12,
+          "gear": "",
+          "gold": 464,
+          "hp": 158,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 63,
+          "base_def": 40,
+          "events": 442,
+          "floor": 13,
+          "gear": "",
+          "gold": 511,
+          "hp": 154,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 66,
+          "base_def": 42,
+          "events": 479,
+          "floor": 14,
+          "gear": "",
+          "gold": 548,
+          "hp": 150,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 69,
+          "base_def": 44,
+          "events": 506,
+          "floor": 15,
+          "gear": "",
+          "gold": 590,
+          "hp": 146,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 72,
+          "base_def": 46,
+          "events": 550,
+          "floor": 16,
+          "gear": "",
+          "gold": 622,
+          "hp": 142,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 75,
+          "base_def": 48,
+          "events": 578,
+          "floor": 17,
+          "gear": "",
+          "gold": 669,
+          "hp": 138,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 78,
+          "base_def": 50,
+          "events": 615,
+          "floor": 18,
+          "gear": "",
+          "gold": 706,
+          "hp": 134,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 81,
+          "base_def": 52,
+          "events": 642,
+          "floor": 19,
+          "gear": "",
+          "gold": 753,
+          "hp": 130,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 84,
+          "base_def": 54,
+          "events": 687,
+          "floor": 20,
+          "gear": "",
+          "gold": 776,
+          "hp": 174,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 87,
+          "base_def": 56,
+          "events": 719,
+          "floor": 21,
+          "gear": "",
+          "gold": 818,
+          "hp": 170,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 90,
+          "base_def": 58,
+          "events": 751,
+          "floor": 22,
+          "gear": "",
+          "gold": 861,
+          "hp": 165,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 93,
+          "base_def": 60,
+          "events": 779,
+          "floor": 23,
+          "gear": "",
+          "gold": 908,
+          "hp": 161,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 96,
+          "base_def": 62,
+          "events": 823,
+          "floor": 24,
+          "gear": "",
+          "gold": 951,
+          "hp": 155,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 99,
+          "base_def": 64,
+          "events": 851,
+          "floor": 25,
+          "gear": "",
+          "gold": 983,
+          "hp": 152,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 102,
+          "base_def": 66,
+          "events": 888,
+          "floor": 26,
+          "gear": "",
+          "gold": 1021,
+          "hp": 149,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 105,
+          "base_def": 68,
+          "events": 916,
+          "floor": 27,
+          "gear": "",
+          "gold": 1058,
+          "hp": 145,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 108,
+          "base_def": 70,
+          "events": 960,
+          "floor": 28,
+          "gear": "",
+          "gold": 1101,
+          "hp": 139,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 111,
+          "base_def": 72,
+          "events": 988,
+          "floor": 29,
+          "gear": "",
+          "gold": 1138,
+          "hp": 135,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 114,
+          "base_def": 74,
+          "events": 1025,
+          "floor": 30,
+          "gear": "",
+          "gold": 1180,
+          "hp": 131,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 117,
+          "base_def": 76,
+          "events": 1053,
+          "floor": 31,
+          "gear": "",
+          "gold": 1212,
+          "hp": 128,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 120,
+          "base_def": 78,
+          "events": 1098,
+          "floor": 32,
+          "gear": "",
+          "gold": 1244,
+          "hp": 172,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 123,
+          "base_def": 80,
+          "events": 1130,
+          "floor": 33,
+          "gear": "",
+          "gold": 1281,
+          "hp": 168,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 126,
+          "base_def": 82,
+          "events": 1161,
+          "floor": 34,
+          "gear": "",
+          "gold": 1323,
+          "hp": 164,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 129,
+          "base_def": 84,
+          "events": 1189,
+          "floor": 35,
+          "gear": "",
+          "gold": 1355,
+          "hp": 161,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 132,
+          "base_def": 86,
+          "events": 1233,
+          "floor": 36,
+          "gear": "",
+          "gold": 1397,
+          "hp": 157,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 135,
+          "base_def": 88,
+          "events": 1261,
+          "floor": 37,
+          "gear": "",
+          "gold": 1440,
+          "hp": 152,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 138,
+          "base_def": 90,
+          "events": 1299,
+          "floor": 38,
+          "gear": "",
+          "gold": 1487,
+          "hp": 148,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 141,
+          "base_def": 92,
+          "events": 1327,
+          "floor": 39,
+          "gear": "",
+          "gold": 1525,
+          "hp": 145,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 144,
+          "base_def": 94,
+          "events": 1371,
+          "floor": 40,
+          "gear": "",
+          "gold": 1567,
+          "hp": 141,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 147,
+          "base_def": 96,
+          "events": 1399,
+          "floor": 41,
+          "gear": "",
+          "gold": 1605,
+          "hp": 138,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 150,
+          "base_def": 98,
+          "events": 1437,
+          "floor": 42,
+          "gear": "",
+          "gold": 1642,
+          "hp": 134,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 153,
+          "base_def": 100,
+          "events": 1465,
+          "floor": 43,
+          "gear": "",
+          "gold": 1685,
+          "hp": 129,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 156,
+          "base_def": 102,
+          "events": 1510,
+          "floor": 44,
+          "gear": "",
+          "gold": 1702,
+          "hp": 176,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 159,
+          "base_def": 104,
+          "events": 1542,
+          "floor": 45,
+          "gear": "",
+          "gold": 1740,
+          "hp": 173,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 162,
+          "base_def": 106,
+          "events": 1573,
+          "floor": 46,
+          "gear": "",
+          "gold": 1772,
+          "hp": 170,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 165,
+          "base_def": 108,
+          "events": 1601,
+          "floor": 47,
+          "gear": "",
+          "gold": 1819,
+          "hp": 166,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 168,
+          "base_def": 110,
+          "events": 1645,
+          "floor": 48,
+          "gear": "",
+          "gold": 1856,
+          "hp": 162,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 171,
+          "base_def": 112,
+          "events": 1673,
+          "floor": 49,
+          "gear": "",
+          "gold": 1898,
+          "hp": 158,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 174,
+          "base_def": 114,
+          "events": 1711,
+          "floor": 50,
+          "gear": "",
+          "gold": 1930,
+          "hp": 155,
+          "net_damage": 3
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bought_at": 3,
+      "completed": 50,
+      "ended": false,
+      "policy": "cloak",
+      "problem": "",
+      "route": "primary",
+      "rows": [
+        {
+          "base_atk": 23,
+          "base_def": 13,
+          "events": 35,
+          "floor": 1,
+          "gear": "",
+          "gold": 20,
+          "hp": 149,
+          "net_damage": 9
+        },
+        {
+          "base_atk": 26,
+          "base_def": 16,
+          "events": 65,
+          "floor": 2,
+          "gear": "",
+          "gold": 42,
+          "hp": 153,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 29,
+          "base_def": 19,
+          "events": 98,
+          "floor": 3,
+          "gear": "cloak",
+          "gold": 20,
+          "hp": 157,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 32,
+          "base_def": 22,
+          "events": 155,
+          "floor": 4,
+          "gear": "cloak",
+          "gold": 45,
+          "hp": 157,
+          "net_damage": 8
+        },
+        {
+          "base_atk": 37,
+          "base_def": 24,
+          "events": 190,
+          "floor": 5,
+          "gear": "cloak",
+          "gold": 63,
+          "hp": 162,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 42,
+          "base_def": 26,
+          "events": 221,
+          "floor": 6,
+          "gear": "cloak",
+          "gold": 88,
+          "hp": 169,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 45,
+          "base_def": 28,
+          "events": 251,
+          "floor": 7,
+          "gear": "cloak",
+          "gold": 108,
+          "hp": 176,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 48,
+          "base_def": 30,
+          "events": 307,
+          "floor": 8,
+          "gear": "cloak",
+          "gold": 130,
+          "hp": 180,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 51,
+          "base_def": 32,
+          "events": 339,
+          "floor": 9,
+          "gear": "cloak",
+          "gold": 148,
+          "hp": 179,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 54,
+          "base_def": 34,
+          "events": 367,
+          "floor": 10,
+          "gear": "cloak",
+          "gold": 170,
+          "hp": 180,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 57,
+          "base_def": 36,
+          "events": 397,
+          "floor": 11,
+          "gear": "cloak",
+          "gold": 190,
+          "hp": 179,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 60,
+          "base_def": 38,
+          "events": 453,
+          "floor": 12,
+          "gear": "cloak",
+          "gold": 215,
+          "hp": 178,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 63,
+          "base_def": 40,
+          "events": 487,
+          "floor": 13,
+          "gear": "cloak",
+          "gold": 235,
+          "hp": 177,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 66,
+          "base_def": 42,
+          "events": 517,
+          "floor": 14,
+          "gear": "cloak",
+          "gold": 260,
+          "hp": 176,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 69,
+          "base_def": 44,
+          "events": 547,
+          "floor": 15,
+          "gear": "cloak",
+          "gold": 278,
+          "hp": 175,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 72,
+          "base_def": 46,
+          "events": 603,
+          "floor": 16,
+          "gear": "cloak",
+          "gold": 300,
+          "hp": 175,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 75,
+          "base_def": 48,
+          "events": 637,
+          "floor": 17,
+          "gear": "cloak",
+          "gold": 318,
+          "hp": 174,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 78,
+          "base_def": 50,
+          "events": 667,
+          "floor": 18,
+          "gear": "cloak",
+          "gold": 343,
+          "hp": 173,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 81,
+          "base_def": 52,
+          "events": 697,
+          "floor": 19,
+          "gear": "cloak",
+          "gold": 363,
+          "hp": 172,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 84,
+          "base_def": 54,
+          "events": 753,
+          "floor": 20,
+          "gear": "cloak",
+          "gold": 385,
+          "hp": 172,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 87,
+          "base_def": 56,
+          "events": 785,
+          "floor": 21,
+          "gear": "cloak",
+          "gold": 405,
+          "hp": 171,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 90,
+          "base_def": 58,
+          "events": 813,
+          "floor": 22,
+          "gear": "cloak",
+          "gold": 427,
+          "hp": 171,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 93,
+          "base_def": 60,
+          "events": 843,
+          "floor": 23,
+          "gear": "cloak",
+          "gold": 445,
+          "hp": 170,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 96,
+          "base_def": 62,
+          "events": 899,
+          "floor": 24,
+          "gear": "cloak",
+          "gold": 470,
+          "hp": 168,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 99,
+          "base_def": 64,
+          "events": 933,
+          "floor": 25,
+          "gear": "cloak",
+          "gold": 490,
+          "hp": 167,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 102,
+          "base_def": 66,
+          "events": 963,
+          "floor": 26,
+          "gear": "cloak",
+          "gold": 515,
+          "hp": 166,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 105,
+          "base_def": 68,
+          "events": 993,
+          "floor": 27,
+          "gear": "cloak",
+          "gold": 533,
+          "hp": 165,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 108,
+          "base_def": 70,
+          "events": 1049,
+          "floor": 28,
+          "gear": "cloak",
+          "gold": 555,
+          "hp": 165,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 111,
+          "base_def": 72,
+          "events": 1083,
+          "floor": 29,
+          "gear": "cloak",
+          "gold": 573,
+          "hp": 164,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 114,
+          "base_def": 74,
+          "events": 1113,
+          "floor": 30,
+          "gear": "cloak",
+          "gold": 595,
+          "hp": 164,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 117,
+          "base_def": 76,
+          "events": 1143,
+          "floor": 31,
+          "gear": "cloak",
+          "gold": 615,
+          "hp": 163,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 120,
+          "base_def": 78,
+          "events": 1199,
+          "floor": 32,
+          "gear": "cloak",
+          "gold": 640,
+          "hp": 161,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 123,
+          "base_def": 80,
+          "events": 1231,
+          "floor": 33,
+          "gear": "cloak",
+          "gold": 660,
+          "hp": 160,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 126,
+          "base_def": 82,
+          "events": 1259,
+          "floor": 34,
+          "gear": "cloak",
+          "gold": 685,
+          "hp": 159,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 129,
+          "base_def": 84,
+          "events": 1289,
+          "floor": 35,
+          "gear": "cloak",
+          "gold": 703,
+          "hp": 158,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 132,
+          "base_def": 86,
+          "events": 1345,
+          "floor": 36,
+          "gear": "cloak",
+          "gold": 725,
+          "hp": 158,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 135,
+          "base_def": 88,
+          "events": 1379,
+          "floor": 37,
+          "gear": "cloak",
+          "gold": 743,
+          "hp": 157,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 138,
+          "base_def": 90,
+          "events": 1409,
+          "floor": 38,
+          "gear": "cloak",
+          "gold": 768,
+          "hp": 156,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 141,
+          "base_def": 92,
+          "events": 1439,
+          "floor": 39,
+          "gear": "cloak",
+          "gold": 788,
+          "hp": 155,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 144,
+          "base_def": 94,
+          "events": 1495,
+          "floor": 40,
+          "gear": "cloak",
+          "gold": 810,
+          "hp": 155,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 147,
+          "base_def": 96,
+          "events": 1529,
+          "floor": 41,
+          "gear": "cloak",
+          "gold": 830,
+          "hp": 154,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 150,
+          "base_def": 98,
+          "events": 1559,
+          "floor": 42,
+          "gear": "cloak",
+          "gold": 852,
+          "hp": 154,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 153,
+          "base_def": 100,
+          "events": 1589,
+          "floor": 43,
+          "gear": "cloak",
+          "gold": 870,
+          "hp": 153,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 156,
+          "base_def": 102,
+          "events": 1645,
+          "floor": 44,
+          "gear": "cloak",
+          "gold": 895,
+          "hp": 151,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 159,
+          "base_def": 104,
+          "events": 1677,
+          "floor": 45,
+          "gear": "cloak",
+          "gold": 915,
+          "hp": 150,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 162,
+          "base_def": 106,
+          "events": 1705,
+          "floor": 46,
+          "gear": "cloak",
+          "gold": 940,
+          "hp": 149,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 165,
+          "base_def": 108,
+          "events": 1735,
+          "floor": 47,
+          "gear": "cloak",
+          "gold": 958,
+          "hp": 148,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 168,
+          "base_def": 110,
+          "events": 1791,
+          "floor": 48,
+          "gear": "cloak",
+          "gold": 980,
+          "hp": 148,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 171,
+          "base_def": 112,
+          "events": 1825,
+          "floor": 49,
+          "gear": "cloak",
+          "gold": 998,
+          "hp": 147,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 174,
+          "base_def": 114,
+          "events": 1855,
+          "floor": 50,
+          "gear": "cloak",
+          "gold": 1020,
+          "hp": 147,
+          "net_damage": 0
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bought_at": 3,
+      "completed": 50,
+      "ended": false,
+      "policy": "cloak",
+      "problem": "",
+      "route": "alternate",
+      "rows": [
+        {
+          "base_atk": 23,
+          "base_def": 13,
+          "events": 29,
+          "floor": 1,
+          "gear": "",
+          "gold": 32,
+          "hp": 144,
+          "net_damage": 14
+        },
+        {
+          "base_atk": 26,
+          "base_def": 16,
+          "events": 67,
+          "floor": 2,
+          "gear": "",
+          "gold": 74,
+          "hp": 142,
+          "net_damage": 10
+        },
+        {
+          "base_atk": 29,
+          "base_def": 19,
+          "events": 98,
+          "floor": 3,
+          "gear": "cloak",
+          "gold": 77,
+          "hp": 140,
+          "net_damage": 10
+        },
+        {
+          "base_atk": 32,
+          "base_def": 22,
+          "events": 143,
+          "floor": 4,
+          "gear": "cloak",
+          "gold": 124,
+          "hp": 144,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 37,
+          "base_def": 24,
+          "events": 172,
+          "floor": 5,
+          "gear": "cloak",
+          "gold": 162,
+          "hp": 150,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 42,
+          "base_def": 26,
+          "events": 210,
+          "floor": 6,
+          "gear": "cloak",
+          "gold": 204,
+          "hp": 157,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 45,
+          "base_def": 28,
+          "events": 237,
+          "floor": 7,
+          "gear": "cloak",
+          "gold": 242,
+          "hp": 163,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 48,
+          "base_def": 30,
+          "events": 281,
+          "floor": 8,
+          "gear": "cloak",
+          "gold": 279,
+          "hp": 169,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 51,
+          "base_def": 32,
+          "events": 313,
+          "floor": 9,
+          "gear": "cloak",
+          "gold": 322,
+          "hp": 174,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 54,
+          "base_def": 34,
+          "events": 344,
+          "floor": 10,
+          "gear": "cloak",
+          "gold": 354,
+          "hp": 179,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 57,
+          "base_def": 36,
+          "events": 371,
+          "floor": 11,
+          "gear": "cloak",
+          "gold": 392,
+          "hp": 177,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 60,
+          "base_def": 38,
+          "events": 415,
+          "floor": 12,
+          "gear": "cloak",
+          "gold": 424,
+          "hp": 176,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 63,
+          "base_def": 40,
+          "events": 443,
+          "floor": 13,
+          "gear": "cloak",
+          "gold": 471,
+          "hp": 175,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 66,
+          "base_def": 42,
+          "events": 481,
+          "floor": 14,
+          "gear": "cloak",
+          "gold": 508,
+          "hp": 173,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 69,
+          "base_def": 44,
+          "events": 508,
+          "floor": 15,
+          "gear": "cloak",
+          "gold": 550,
+          "hp": 172,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 72,
+          "base_def": 46,
+          "events": 552,
+          "floor": 16,
+          "gear": "cloak",
+          "gold": 582,
+          "hp": 171,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 75,
+          "base_def": 48,
+          "events": 580,
+          "floor": 17,
+          "gear": "cloak",
+          "gold": 629,
+          "hp": 170,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 78,
+          "base_def": 50,
+          "events": 618,
+          "floor": 18,
+          "gear": "cloak",
+          "gold": 666,
+          "hp": 168,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 81,
+          "base_def": 52,
+          "events": 646,
+          "floor": 19,
+          "gear": "cloak",
+          "gold": 713,
+          "hp": 167,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 84,
+          "base_def": 54,
+          "events": 690,
+          "floor": 20,
+          "gear": "cloak",
+          "gold": 751,
+          "hp": 156,
+          "net_damage": 11
+        },
+        {
+          "base_atk": 87,
+          "base_def": 56,
+          "events": 722,
+          "floor": 21,
+          "gear": "cloak",
+          "gold": 793,
+          "hp": 155,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 90,
+          "base_def": 58,
+          "events": 753,
+          "floor": 22,
+          "gear": "cloak",
+          "gold": 836,
+          "hp": 152,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 93,
+          "base_def": 60,
+          "events": 781,
+          "floor": 23,
+          "gear": "cloak",
+          "gold": 883,
+          "hp": 151,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 96,
+          "base_def": 62,
+          "events": 825,
+          "floor": 24,
+          "gear": "cloak",
+          "gold": 926,
+          "hp": 144,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 99,
+          "base_def": 64,
+          "events": 853,
+          "floor": 25,
+          "gear": "cloak",
+          "gold": 958,
+          "hp": 143,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 102,
+          "base_def": 66,
+          "events": 890,
+          "floor": 26,
+          "gear": "cloak",
+          "gold": 996,
+          "hp": 141,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 105,
+          "base_def": 68,
+          "events": 917,
+          "floor": 27,
+          "gear": "cloak",
+          "gold": 1033,
+          "hp": 139,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 108,
+          "base_def": 70,
+          "events": 961,
+          "floor": 28,
+          "gear": "cloak",
+          "gold": 1076,
+          "hp": 136,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 111,
+          "base_def": 72,
+          "events": 989,
+          "floor": 29,
+          "gear": "cloak",
+          "gold": 1113,
+          "hp": 134,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 114,
+          "base_def": 74,
+          "events": 1026,
+          "floor": 30,
+          "gear": "cloak",
+          "gold": 1155,
+          "hp": 133,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 117,
+          "base_def": 76,
+          "events": 1053,
+          "floor": 31,
+          "gear": "cloak",
+          "gold": 1187,
+          "hp": 132,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 120,
+          "base_def": 78,
+          "events": 1098,
+          "floor": 32,
+          "gear": "cloak",
+          "gold": 1219,
+          "hp": 180,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 123,
+          "base_def": 80,
+          "events": 1130,
+          "floor": 33,
+          "gear": "cloak",
+          "gold": 1256,
+          "hp": 178,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 126,
+          "base_def": 82,
+          "events": 1161,
+          "floor": 34,
+          "gear": "cloak",
+          "gold": 1298,
+          "hp": 177,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 129,
+          "base_def": 84,
+          "events": 1188,
+          "floor": 35,
+          "gear": "cloak",
+          "gold": 1330,
+          "hp": 176,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 132,
+          "base_def": 86,
+          "events": 1232,
+          "floor": 36,
+          "gear": "cloak",
+          "gold": 1372,
+          "hp": 175,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 135,
+          "base_def": 88,
+          "events": 1260,
+          "floor": 37,
+          "gear": "cloak",
+          "gold": 1415,
+          "hp": 172,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 138,
+          "base_def": 90,
+          "events": 1298,
+          "floor": 38,
+          "gear": "cloak",
+          "gold": 1462,
+          "hp": 171,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 141,
+          "base_def": 92,
+          "events": 1326,
+          "floor": 39,
+          "gear": "cloak",
+          "gold": 1500,
+          "hp": 169,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 144,
+          "base_def": 94,
+          "events": 1370,
+          "floor": 40,
+          "gear": "cloak",
+          "gold": 1542,
+          "hp": 168,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 147,
+          "base_def": 96,
+          "events": 1398,
+          "floor": 41,
+          "gear": "cloak",
+          "gold": 1580,
+          "hp": 166,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 150,
+          "base_def": 98,
+          "events": 1435,
+          "floor": 42,
+          "gear": "cloak",
+          "gold": 1617,
+          "hp": 164,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 153,
+          "base_def": 100,
+          "events": 1462,
+          "floor": 43,
+          "gear": "cloak",
+          "gold": 1660,
+          "hp": 161,
+          "net_damage": 3
+        },
+        {
+          "base_atk": 156,
+          "base_def": 102,
+          "events": 1506,
+          "floor": 44,
+          "gear": "cloak",
+          "gold": 1692,
+          "hp": 160,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 159,
+          "base_def": 104,
+          "events": 1538,
+          "floor": 45,
+          "gear": "cloak",
+          "gold": 1730,
+          "hp": 158,
+          "net_damage": 2
+        },
+        {
+          "base_atk": 162,
+          "base_def": 106,
+          "events": 1569,
+          "floor": 46,
+          "gear": "cloak",
+          "gold": 1762,
+          "hp": 157,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 165,
+          "base_def": 108,
+          "events": 1597,
+          "floor": 47,
+          "gear": "cloak",
+          "gold": 1809,
+          "hp": 156,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 168,
+          "base_def": 110,
+          "events": 1641,
+          "floor": 48,
+          "gear": "cloak",
+          "gold": 1846,
+          "hp": 152,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 171,
+          "base_def": 112,
+          "events": 1669,
+          "floor": 49,
+          "gear": "cloak",
+          "gold": 1888,
+          "hp": 151,
+          "net_damage": 1
+        },
+        {
+          "base_atk": 174,
+          "base_def": 114,
+          "events": 1706,
+          "floor": 50,
+          "gear": "cloak",
+          "gold": 1920,
+          "hp": 150,
+          "net_damage": 1
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bought_at": 3,
+      "completed": 50,
+      "ended": false,
+      "policy": "lens",
+      "problem": "",
+      "route": "primary",
+      "rows": [
+        {
+          "base_atk": 23,
+          "base_def": 13,
+          "events": 35,
+          "floor": 1,
+          "gear": "",
+          "gold": 20,
+          "hp": 149,
+          "net_damage": 9
+        },
+        {
+          "base_atk": 26,
+          "base_def": 16,
+          "events": 65,
+          "floor": 2,
+          "gear": "",
+          "gold": 42,
+          "hp": 153,
+          "net_damage": 4
+        },
+        {
+          "base_atk": 29,
+          "base_def": 19,
+          "events": 97,
+          "floor": 3,
+          "gear": "lens",
+          "gold": 20,
+          "hp": 155,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 32,
+          "base_def": 22,
+          "events": 154,
+          "floor": 4,
+          "gear": "lens",
+          "gold": 45,
+          "hp": 155,
+          "net_damage": 8
+        },
+        {
+          "base_atk": 37,
+          "base_def": 24,
+          "events": 189,
+          "floor": 5,
+          "gear": "lens",
+          "gold": 63,
+          "hp": 158,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 42,
+          "base_def": 26,
+          "events": 219,
+          "floor": 6,
+          "gear": "lens",
+          "gold": 88,
+          "hp": 159,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 45,
+          "base_def": 28,
+          "events": 249,
+          "floor": 7,
+          "gear": "lens",
+          "gold": 108,
+          "hp": 160,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 48,
+          "base_def": 30,
+          "events": 305,
+          "floor": 8,
+          "gear": "lens",
+          "gold": 130,
+          "hp": 168,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 51,
+          "base_def": 32,
+          "events": 337,
+          "floor": 9,
+          "gear": "lens",
+          "gold": 148,
+          "hp": 171,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 54,
+          "base_def": 34,
+          "events": 365,
+          "floor": 10,
+          "gear": "lens",
+          "gold": 170,
+          "hp": 179,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 57,
+          "base_def": 36,
+          "events": 394,
+          "floor": 11,
+          "gear": "lens",
+          "gold": 190,
+          "hp": 172,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 60,
+          "base_def": 38,
+          "events": 450,
+          "floor": 12,
+          "gear": "lens",
+          "gold": 215,
+          "hp": 159,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 63,
+          "base_def": 40,
+          "events": 484,
+          "floor": 13,
+          "gear": "lens",
+          "gold": 235,
+          "hp": 152,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 66,
+          "base_def": 42,
+          "events": 514,
+          "floor": 14,
+          "gear": "lens",
+          "gold": 260,
+          "hp": 145,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 69,
+          "base_def": 44,
+          "events": 543,
+          "floor": 15,
+          "gear": "lens",
+          "gold": 278,
+          "hp": 140,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 72,
+          "base_def": 46,
+          "events": 599,
+          "floor": 16,
+          "gear": "lens",
+          "gold": 300,
+          "hp": 134,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 75,
+          "base_def": 48,
+          "events": 633,
+          "floor": 17,
+          "gear": "lens",
+          "gold": 318,
+          "hp": 129,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 78,
+          "base_def": 50,
+          "events": 663,
+          "floor": 18,
+          "gear": "lens",
+          "gold": 328,
+          "hp": 172,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 81,
+          "base_def": 52,
+          "events": 693,
+          "floor": 19,
+          "gear": "lens",
+          "gold": 348,
+          "hp": 165,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 84,
+          "base_def": 54,
+          "events": 749,
+          "floor": 20,
+          "gear": "lens",
+          "gold": 370,
+          "hp": 165,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 87,
+          "base_def": 56,
+          "events": 781,
+          "floor": 21,
+          "gear": "lens",
+          "gold": 390,
+          "hp": 158,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 90,
+          "base_def": 58,
+          "events": 808,
+          "floor": 22,
+          "gear": "lens",
+          "gold": 412,
+          "hp": 158,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 93,
+          "base_def": 60,
+          "events": 838,
+          "floor": 23,
+          "gear": "lens",
+          "gold": 430,
+          "hp": 153,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 96,
+          "base_def": 62,
+          "events": 894,
+          "floor": 24,
+          "gear": "lens",
+          "gold": 455,
+          "hp": 146,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 99,
+          "base_def": 64,
+          "events": 928,
+          "floor": 25,
+          "gear": "lens",
+          "gold": 475,
+          "hp": 139,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 102,
+          "base_def": 66,
+          "events": 958,
+          "floor": 26,
+          "gear": "lens",
+          "gold": 500,
+          "hp": 132,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 105,
+          "base_def": 68,
+          "events": 987,
+          "floor": 27,
+          "gear": "lens",
+          "gold": 518,
+          "hp": 127,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 108,
+          "base_def": 70,
+          "events": 1044,
+          "floor": 28,
+          "gear": "lens",
+          "gold": 525,
+          "hp": 171,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 111,
+          "base_def": 72,
+          "events": 1078,
+          "floor": 29,
+          "gear": "lens",
+          "gold": 543,
+          "hp": 166,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 114,
+          "base_def": 74,
+          "events": 1108,
+          "floor": 30,
+          "gear": "lens",
+          "gold": 565,
+          "hp": 166,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 117,
+          "base_def": 76,
+          "events": 1137,
+          "floor": 31,
+          "gear": "lens",
+          "gold": 585,
+          "hp": 159,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 120,
+          "base_def": 78,
+          "events": 1193,
+          "floor": 32,
+          "gear": "lens",
+          "gold": 610,
+          "hp": 146,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 123,
+          "base_def": 80,
+          "events": 1225,
+          "floor": 33,
+          "gear": "lens",
+          "gold": 630,
+          "hp": 139,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 126,
+          "base_def": 82,
+          "events": 1253,
+          "floor": 34,
+          "gear": "lens",
+          "gold": 655,
+          "hp": 132,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 129,
+          "base_def": 84,
+          "events": 1282,
+          "floor": 35,
+          "gear": "lens",
+          "gold": 673,
+          "hp": 127,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 132,
+          "base_def": 86,
+          "events": 1339,
+          "floor": 36,
+          "gear": "lens",
+          "gold": 680,
+          "hp": 171,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 135,
+          "base_def": 88,
+          "events": 1373,
+          "floor": 37,
+          "gear": "lens",
+          "gold": 698,
+          "hp": 166,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 138,
+          "base_def": 90,
+          "events": 1402,
+          "floor": 38,
+          "gear": "lens",
+          "gold": 723,
+          "hp": 159,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 141,
+          "base_def": 92,
+          "events": 1432,
+          "floor": 39,
+          "gear": "lens",
+          "gold": 743,
+          "hp": 152,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 144,
+          "base_def": 94,
+          "events": 1488,
+          "floor": 40,
+          "gear": "lens",
+          "gold": 765,
+          "hp": 152,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 147,
+          "base_def": 96,
+          "events": 1522,
+          "floor": 41,
+          "gear": "lens",
+          "gold": 785,
+          "hp": 145,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 150,
+          "base_def": 98,
+          "events": 1551,
+          "floor": 42,
+          "gear": "lens",
+          "gold": 807,
+          "hp": 145,
+          "net_damage": 0
+        },
+        {
+          "base_atk": 153,
+          "base_def": 100,
+          "events": 1581,
+          "floor": 43,
+          "gear": "lens",
+          "gold": 825,
+          "hp": 140,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 156,
+          "base_def": 102,
+          "events": 1637,
+          "floor": 44,
+          "gear": "lens",
+          "gold": 850,
+          "hp": 133,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 159,
+          "base_def": 104,
+          "events": 1669,
+          "floor": 45,
+          "gear": "lens",
+          "gold": 870,
+          "hp": 126,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 162,
+          "base_def": 106,
+          "events": 1698,
+          "floor": 46,
+          "gear": "lens",
+          "gold": 880,
+          "hp": 169,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 165,
+          "base_def": 108,
+          "events": 1727,
+          "floor": 47,
+          "gear": "lens",
+          "gold": 898,
+          "hp": 164,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 168,
+          "base_def": 110,
+          "events": 1783,
+          "floor": 48,
+          "gear": "lens",
+          "gold": 920,
+          "hp": 158,
+          "net_damage": 6
+        },
+        {
+          "base_atk": 171,
+          "base_def": 112,
+          "events": 1817,
+          "floor": 49,
+          "gear": "lens",
+          "gold": 938,
+          "hp": 153,
+          "net_damage": 5
+        },
+        {
+          "base_atk": 174,
+          "base_def": 114,
+          "events": 1847,
+          "floor": 50,
+          "gear": "lens",
+          "gold": 960,
+          "hp": 153,
+          "net_damage": 0
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bought_at": 3,
+      "completed": 50,
+      "ended": false,
+      "policy": "lens",
+      "problem": "",
+      "route": "alternate",
+      "rows": [
+        {
+          "base_atk": 23,
+          "base_def": 13,
+          "events": 29,
+          "floor": 1,
+          "gear": "",
+          "gold": 32,
+          "hp": 144,
+          "net_damage": 14
+        },
+        {
+          "base_atk": 26,
+          "base_def": 16,
+          "events": 67,
+          "floor": 2,
+          "gear": "",
+          "gold": 74,
+          "hp": 142,
+          "net_damage": 10
+        },
+        {
+          "base_atk": 29,
+          "base_def": 19,
+          "events": 97,
+          "floor": 3,
+          "gear": "lens",
+          "gold": 77,
+          "hp": 136,
+          "net_damage": 14
+        },
+        {
+          "base_atk": 32,
+          "base_def": 22,
+          "events": 143,
+          "floor": 4,
+          "gear": "lens",
+          "gold": 109,
+          "hp": 178,
+          "net_damage": 16
+        },
+        {
+          "base_atk": 37,
+          "base_def": 24,
+          "events": 172,
+          "floor": 5,
+          "gear": "lens",
+          "gold": 147,
+          "hp": 167,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 42,
+          "base_def": 26,
+          "events": 211,
+          "floor": 6,
+          "gear": "lens",
+          "gold": 189,
+          "hp": 168,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 45,
+          "base_def": 28,
+          "events": 238,
+          "floor": 7,
+          "gear": "lens",
+          "gold": 227,
+          "hp": 164,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 48,
+          "base_def": 30,
+          "events": 282,
+          "floor": 8,
+          "gear": "lens",
+          "gold": 264,
+          "hp": 154,
+          "net_damage": 18
+        },
+        {
+          "base_atk": 51,
+          "base_def": 32,
+          "events": 314,
+          "floor": 9,
+          "gear": "lens",
+          "gold": 307,
+          "hp": 150,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 54,
+          "base_def": 34,
+          "events": 345,
+          "floor": 10,
+          "gear": "lens",
+          "gold": 339,
+          "hp": 150,
+          "net_damage": 8
+        },
+        {
+          "base_atk": 57,
+          "base_def": 36,
+          "events": 373,
+          "floor": 11,
+          "gear": "lens",
+          "gold": 377,
+          "hp": 138,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 60,
+          "base_def": 38,
+          "events": 418,
+          "floor": 12,
+          "gear": "lens",
+          "gold": 394,
+          "hp": 176,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 63,
+          "base_def": 40,
+          "events": 446,
+          "floor": 13,
+          "gear": "lens",
+          "gold": 441,
+          "hp": 163,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 66,
+          "base_def": 42,
+          "events": 483,
+          "floor": 14,
+          "gear": "lens",
+          "gold": 478,
+          "hp": 156,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 69,
+          "base_def": 44,
+          "events": 511,
+          "floor": 15,
+          "gear": "lens",
+          "gold": 520,
+          "hp": 149,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 72,
+          "base_def": 46,
+          "events": 555,
+          "floor": 16,
+          "gear": "lens",
+          "gold": 552,
+          "hp": 137,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 75,
+          "base_def": 48,
+          "events": 583,
+          "floor": 17,
+          "gear": "lens",
+          "gold": 599,
+          "hp": 124,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 78,
+          "base_def": 50,
+          "events": 621,
+          "floor": 18,
+          "gear": "lens",
+          "gold": 621,
+          "hp": 167,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 81,
+          "base_def": 52,
+          "events": 648,
+          "floor": 19,
+          "gear": "lens",
+          "gold": 668,
+          "hp": 154,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 84,
+          "base_def": 54,
+          "events": 692,
+          "floor": 20,
+          "gear": "lens",
+          "gold": 706,
+          "hp": 141,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 87,
+          "base_def": 56,
+          "events": 724,
+          "floor": 21,
+          "gear": "lens",
+          "gold": 748,
+          "hp": 134,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 90,
+          "base_def": 58,
+          "events": 756,
+          "floor": 22,
+          "gear": "lens",
+          "gold": 791,
+          "hp": 122,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 93,
+          "base_def": 60,
+          "events": 784,
+          "floor": 23,
+          "gear": "lens",
+          "gold": 823,
+          "hp": 159,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 96,
+          "base_def": 62,
+          "events": 828,
+          "floor": 24,
+          "gear": "lens",
+          "gold": 866,
+          "hp": 147,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 99,
+          "base_def": 64,
+          "events": 856,
+          "floor": 25,
+          "gear": "lens",
+          "gold": 898,
+          "hp": 139,
+          "net_damage": 8
+        },
+        {
+          "base_atk": 102,
+          "base_def": 66,
+          "events": 894,
+          "floor": 26,
+          "gear": "lens",
+          "gold": 936,
+          "hp": 127,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 105,
+          "base_def": 68,
+          "events": 923,
+          "floor": 27,
+          "gear": "lens",
+          "gold": 958,
+          "hp": 170,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 108,
+          "base_def": 70,
+          "events": 967,
+          "floor": 28,
+          "gear": "lens",
+          "gold": 1001,
+          "hp": 158,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 111,
+          "base_def": 72,
+          "events": 995,
+          "floor": 29,
+          "gear": "lens",
+          "gold": 1038,
+          "hp": 151,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 114,
+          "base_def": 74,
+          "events": 1033,
+          "floor": 30,
+          "gear": "lens",
+          "gold": 1080,
+          "hp": 144,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 117,
+          "base_def": 76,
+          "events": 1061,
+          "floor": 31,
+          "gear": "lens",
+          "gold": 1112,
+          "hp": 136,
+          "net_damage": 8
+        },
+        {
+          "base_atk": 120,
+          "base_def": 78,
+          "events": 1106,
+          "floor": 32,
+          "gear": "lens",
+          "gold": 1144,
+          "hp": 173,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 123,
+          "base_def": 80,
+          "events": 1138,
+          "floor": 33,
+          "gear": "lens",
+          "gold": 1181,
+          "hp": 166,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 126,
+          "base_def": 82,
+          "events": 1170,
+          "floor": 34,
+          "gear": "lens",
+          "gold": 1223,
+          "hp": 159,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 129,
+          "base_def": 84,
+          "events": 1198,
+          "floor": 35,
+          "gear": "lens",
+          "gold": 1255,
+          "hp": 151,
+          "net_damage": 8
+        },
+        {
+          "base_atk": 132,
+          "base_def": 86,
+          "events": 1242,
+          "floor": 36,
+          "gear": "lens",
+          "gold": 1297,
+          "hp": 137,
+          "net_damage": 14
+        },
+        {
+          "base_atk": 135,
+          "base_def": 88,
+          "events": 1270,
+          "floor": 37,
+          "gear": "lens",
+          "gold": 1340,
+          "hp": 125,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 138,
+          "base_def": 90,
+          "events": 1308,
+          "floor": 38,
+          "gear": "lens",
+          "gold": 1372,
+          "hp": 162,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 141,
+          "base_def": 92,
+          "events": 1336,
+          "floor": 39,
+          "gear": "lens",
+          "gold": 1410,
+          "hp": 150,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 144,
+          "base_def": 94,
+          "events": 1380,
+          "floor": 40,
+          "gear": "lens",
+          "gold": 1452,
+          "hp": 143,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 147,
+          "base_def": 96,
+          "events": 1408,
+          "floor": 41,
+          "gear": "lens",
+          "gold": 1490,
+          "hp": 131,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 150,
+          "base_def": 98,
+          "events": 1446,
+          "floor": 42,
+          "gear": "lens",
+          "gold": 1527,
+          "hp": 124,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 153,
+          "base_def": 100,
+          "events": 1474,
+          "floor": 43,
+          "gear": "lens",
+          "gold": 1555,
+          "hp": 162,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 156,
+          "base_def": 102,
+          "events": 1518,
+          "floor": 44,
+          "gear": "lens",
+          "gold": 1587,
+          "hp": 154,
+          "net_damage": 8
+        },
+        {
+          "base_atk": 159,
+          "base_def": 104,
+          "events": 1550,
+          "floor": 45,
+          "gear": "lens",
+          "gold": 1625,
+          "hp": 142,
+          "net_damage": 12
+        },
+        {
+          "base_atk": 162,
+          "base_def": 106,
+          "events": 1582,
+          "floor": 46,
+          "gear": "lens",
+          "gold": 1657,
+          "hp": 134,
+          "net_damage": 8
+        },
+        {
+          "base_atk": 165,
+          "base_def": 108,
+          "events": 1609,
+          "floor": 47,
+          "gear": "lens",
+          "gold": 1704,
+          "hp": 121,
+          "net_damage": 13
+        },
+        {
+          "base_atk": 168,
+          "base_def": 110,
+          "events": 1654,
+          "floor": 48,
+          "gear": "lens",
+          "gold": 1726,
+          "hp": 164,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 171,
+          "base_def": 112,
+          "events": 1682,
+          "floor": 49,
+          "gear": "lens",
+          "gold": 1768,
+          "hp": 157,
+          "net_damage": 7
+        },
+        {
+          "base_atk": 174,
+          "base_def": 114,
+          "events": 1720,
+          "floor": 50,
+          "gear": "lens",
+          "gold": 1800,
+          "hp": 149,
+          "net_damage": 8
+        }
+      ],
+      "seed": 42
+    }
+  ],
+  "rules": 11
+}

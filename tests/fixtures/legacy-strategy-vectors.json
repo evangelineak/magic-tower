@@ -1,0 +1,2043 @@
+{
+  "algorithm": "fnv1a32 UTF8 legacy-strategy-v1|<decimal seed>|<id>; unsigned ascending rank then ID ascending; first three",
+  "cases": [
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 0
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 1
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 2
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 3
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 7
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 42
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 99
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 1024
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 65535
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 2147483646
+    },
+    {
+      "expected_draft": {
+        "choice": "none",
+        "offers": [],
+        "pool": [],
+        "version": 1
+      },
+      "expected_offers": [],
+      "milestones": [],
+      "pool": [],
+      "ranks": {
+
+      },
+      "seed": 2147483647
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "study",
+          "forager"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "study",
+        "forager"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 3122842189,
+        "forager": 2433439166,
+        "reserve": 349273990,
+        "study": 700082631
+      },
+      "seed": 0
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "forager",
+          "channel"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "forager",
+        "channel"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 2638197154,
+        "forager": 928240057,
+        "reserve": 2740496269,
+        "study": 623869540
+      },
+      "seed": 1
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "forager",
+          "reserve"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "forager",
+        "reserve"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 2412245451,
+        "forager": 1161936236,
+        "reserve": 1634143400,
+        "study": 89527389
+      },
+      "seed": 2
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "channel",
+          "study"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "channel",
+        "study"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 1296633280,
+        "forager": 3031676839,
+        "reserve": 212822727,
+        "study": 2943790386
+      },
+      "seed": 3
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "channel",
+          "reserve",
+          "forager"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "channel",
+        "reserve",
+        "forager"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 537979580,
+        "forager": 2369898307,
+        "reserve": 1443662915,
+        "study": 3769315126
+      },
+      "seed": 7
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "channel",
+          "reserve"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "channel",
+        "reserve"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 2804838107,
+        "forager": 3246248892,
+        "reserve": 3209472696,
+        "study": 236957037
+      },
+      "seed": 42
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "study",
+          "channel"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "study",
+        "channel"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 3735591147,
+        "forager": 3807888780,
+        "reserve": 1049140424,
+        "study": 3367157373
+      },
+      "seed": 99
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "channel",
+          "reserve"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "channel",
+        "reserve"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 1280493022,
+        "forager": 3835935381,
+        "reserve": 2382208889,
+        "study": 402786088
+      },
+      "seed": 1024
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "channel",
+          "reserve",
+          "study"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "channel",
+        "reserve",
+        "study"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 233821817,
+        "forager": 2519489802,
+        "reserve": 337484850,
+        "study": 2208414091
+      },
+      "seed": 65535
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "study",
+          "channel"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "study",
+        "channel"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 2462445382,
+        "forager": 2839309581,
+        "reserve": 732507361,
+        "study": 1104399744
+      },
+      "seed": 2147483646
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "study",
+          "channel"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "study",
+        "channel"
+      ],
+      "milestones": [
+        3
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve"
+      ],
+      "ranks": {
+        "channel": 3255093953,
+        "forager": 3496229506,
+        "reserve": 670316378,
+        "study": 1677417283
+      },
+      "seed": 2147483647
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "study",
+          "ambush_hunter"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "study",
+        "ambush_hunter"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 1447831537,
+        "channel": 3122842189,
+        "forager": 2433439166,
+        "reserve": 349273990,
+        "study": 700082631
+      },
+      "seed": 0
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "forager",
+          "channel"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "forager",
+        "channel"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 3820074894,
+        "channel": 2638197154,
+        "forager": 928240057,
+        "reserve": 2740496269,
+        "study": 623869540
+      },
+      "seed": 1
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "forager",
+          "reserve"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "forager",
+        "reserve"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 2482065927,
+        "channel": 2412245451,
+        "forager": 1161936236,
+        "reserve": 1634143400,
+        "study": 89527389
+      },
+      "seed": 2
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "channel",
+          "ambush_hunter"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "channel",
+        "ambush_hunter"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 1577651284,
+        "channel": 1296633280,
+        "forager": 3031676839,
+        "reserve": 212822727,
+        "study": 2943790386
+      },
+      "seed": 3
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "channel",
+          "reserve",
+          "forager"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "channel",
+        "reserve",
+        "forager"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 4265486632,
+        "channel": 537979580,
+        "forager": 2369898307,
+        "reserve": 1443662915,
+        "study": 3769315126
+      },
+      "seed": 7
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "ambush_hunter",
+          "channel"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "ambush_hunter",
+        "channel"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 574843223,
+        "channel": 2804838107,
+        "forager": 3246248892,
+        "reserve": 3209472696,
+        "study": 236957037
+      },
+      "seed": 42
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "study",
+          "ambush_hunter"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "study",
+        "ambush_hunter"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 3566681447,
+        "channel": 3735591147,
+        "forager": 3807888780,
+        "reserve": 1049140424,
+        "study": 3367157373
+      },
+      "seed": 99
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "channel",
+          "reserve"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "channel",
+        "reserve"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 3004296562,
+        "channel": 1280493022,
+        "forager": 3835935381,
+        "reserve": 2382208889,
+        "study": 402786088
+      },
+      "seed": 1024
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "channel",
+          "reserve",
+          "study"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "channel",
+        "reserve",
+        "study"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 3413053173,
+        "channel": 233821817,
+        "forager": 2519489802,
+        "reserve": 337484850,
+        "study": 2208414091
+      },
+      "seed": 65535
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "ambush_hunter",
+          "study"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "ambush_hunter",
+        "study"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 990279722,
+        "channel": 2462445382,
+        "forager": 2839309581,
+        "reserve": 732507361,
+        "study": 1104399744
+      },
+      "seed": 2147483646
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "study",
+          "channel"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "study",
+        "channel"
+      ],
+      "milestones": [
+        3,
+        5
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "ranks": {
+        "ambush_hunter": 3681025613,
+        "channel": 3255093953,
+        "forager": 3496229506,
+        "reserve": 670316378,
+        "study": 1677417283
+      },
+      "seed": 2147483647
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "study",
+          "last_gambit"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "study",
+        "last_gambit"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 1447831537,
+        "channel": 3122842189,
+        "forager": 2433439166,
+        "last_gambit": 1335982249,
+        "reserve": 349273990,
+        "study": 700082631
+      },
+      "seed": 0
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "last_gambit",
+          "forager"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "last_gambit",
+        "forager"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 3820074894,
+        "channel": 2638197154,
+        "forager": 928240057,
+        "last_gambit": 875718914,
+        "reserve": 2740496269,
+        "study": 623869540
+      },
+      "seed": 1
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "forager",
+          "reserve"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "forager",
+        "reserve"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 2482065927,
+        "channel": 2412245451,
+        "forager": 1161936236,
+        "last_gambit": 3927644827,
+        "reserve": 1634143400,
+        "study": 89527389
+      },
+      "seed": 2
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "channel",
+          "ambush_hunter"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "channel",
+        "ambush_hunter"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 1577651284,
+        "channel": 1296633280,
+        "forager": 3031676839,
+        "last_gambit": 2232313052,
+        "reserve": 212822727,
+        "study": 2943790386
+      },
+      "seed": 3
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "channel",
+          "last_gambit",
+          "reserve"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "channel",
+        "last_gambit",
+        "reserve"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 4265486632,
+        "channel": 537979580,
+        "forager": 2369898307,
+        "last_gambit": 1379792840,
+        "reserve": 1443662915,
+        "study": 3769315126
+      },
+      "seed": 7
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 574843223,
+        "channel": 2804838107,
+        "forager": 3246248892,
+        "last_gambit": 2586123691,
+        "reserve": 3209472696,
+        "study": 236957037
+      },
+      "seed": 42
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "last_gambit",
+          "study"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "last_gambit",
+        "study"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 3566681447,
+        "channel": 3735591147,
+        "forager": 3807888780,
+        "last_gambit": 1745062011,
+        "reserve": 1049140424,
+        "study": 3367157373
+      },
+      "seed": 99
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "study",
+          "channel",
+          "reserve"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "study",
+        "channel",
+        "reserve"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 3004296562,
+        "channel": 1280493022,
+        "forager": 3835935381,
+        "last_gambit": 2967745534,
+        "reserve": 2382208889,
+        "study": 402786088
+      },
+      "seed": 1024
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "channel",
+          "reserve",
+          "last_gambit"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "channel",
+        "reserve",
+        "last_gambit"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 3413053173,
+        "channel": 233821817,
+        "forager": 2519489802,
+        "last_gambit": 575455109,
+        "reserve": 337484850,
+        "study": 2208414091
+      },
+      "seed": 65535
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "last_gambit",
+          "reserve",
+          "ambush_hunter"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "last_gambit",
+        "reserve",
+        "ambush_hunter"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 990279722,
+        "channel": 2462445382,
+        "forager": 2839309581,
+        "last_gambit": 275592454,
+        "reserve": 732507361,
+        "study": 1104399744
+      },
+      "seed": 2147483646
+    },
+    {
+      "expected_draft": {
+        "choice": "",
+        "offers": [
+          "reserve",
+          "study",
+          "last_gambit"
+        ],
+        "pool": [
+          "study",
+          "forager",
+          "channel",
+          "reserve",
+          "ambush_hunter",
+          "last_gambit"
+        ],
+        "version": 1
+      },
+      "expected_offers": [
+        "reserve",
+        "study",
+        "last_gambit"
+      ],
+      "milestones": [
+        3,
+        5,
+        8
+      ],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "ranks": {
+        "ambush_hunter": 3681025613,
+        "channel": 3255093953,
+        "forager": 3496229506,
+        "last_gambit": 1856759437,
+        "reserve": 670316378,
+        "study": 1677417283
+      },
+      "seed": 2147483647
+    }
+  ],
+  "invalid_cases": [
+    {
+      "expected_offers": [],
+      "pool": null,
+      "seed": 0,
+      "valid_pool": false
+    },
+    {
+      "expected_offers": [],
+      "pool": true,
+      "seed": 0,
+      "valid_pool": false
+    },
+    {
+      "expected_offers": [],
+      "pool": {
+
+      },
+      "seed": 0,
+      "valid_pool": false
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "study"
+      ],
+      "seed": 0,
+      "valid_pool": false
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "study"
+      ],
+      "seed": 0,
+      "valid_pool": false
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "forager",
+        "study",
+        "channel",
+        "reserve"
+      ],
+      "seed": 0,
+      "valid_pool": false
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "fake"
+      ],
+      "seed": 0,
+      "valid_pool": false
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "seed": null,
+      "valid_pool": true
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "seed": true,
+      "valid_pool": true
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "seed": "42",
+      "valid_pool": true
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "seed": -1,
+      "valid_pool": true
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "seed": 1.5,
+      "valid_pool": true
+    },
+    {
+      "expected_offers": [],
+      "pool": [
+        "study",
+        "forager",
+        "channel",
+        "reserve",
+        "ambush_hunter",
+        "last_gambit"
+      ],
+      "seed": 2147483648,
+      "valid_pool": true
+    }
+  ],
+  "modifier_cases": [
+    {
+      "context": {
+
+      },
+      "expected": {
+        "atk": 0,
+        "def": 0,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "none"
+    },
+    {
+      "context": {
+        "enemy_hp": 180,
+        "first_strike": true,
+        "hp": 199,
+        "skill": true
+      },
+      "expected": {
+        "atk": 0,
+        "def": 0,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "none"
+    },
+    {
+      "context": {
+        "enemy_hp": 179,
+        "first_strike": true,
+        "first_strike_suppressed": true,
+        "hp": 200,
+        "skill": false
+      },
+      "expected": {
+        "atk": 0,
+        "def": 0,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "none"
+    },
+    {
+      "context": {
+
+      },
+      "expected": {
+        "atk": -4,
+        "def": -2,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 4
+      },
+      "id": "study"
+    },
+    {
+      "context": {
+        "enemy_hp": 180,
+        "first_strike": true,
+        "hp": 199,
+        "skill": true
+      },
+      "expected": {
+        "atk": -4,
+        "def": -2,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 4
+      },
+      "id": "study"
+    },
+    {
+      "context": {
+        "enemy_hp": 179,
+        "first_strike": true,
+        "first_strike_suppressed": true,
+        "hp": 200,
+        "skill": false
+      },
+      "expected": {
+        "atk": -4,
+        "def": -2,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 4
+      },
+      "id": "study"
+    },
+    {
+      "context": {
+
+      },
+      "expected": {
+        "atk": 0,
+        "def": 0,
+        "focus_after": 0,
+        "gold_tax_percent": 25,
+        "heal_after": 12,
+        "levels": 0
+      },
+      "id": "forager"
+    },
+    {
+      "context": {
+        "enemy_hp": 180,
+        "first_strike": true,
+        "hp": 199,
+        "skill": true
+      },
+      "expected": {
+        "atk": 0,
+        "def": 0,
+        "focus_after": 0,
+        "gold_tax_percent": 25,
+        "heal_after": 12,
+        "levels": 0
+      },
+      "id": "forager"
+    },
+    {
+      "context": {
+        "enemy_hp": 179,
+        "first_strike": true,
+        "first_strike_suppressed": true,
+        "hp": 200,
+        "skill": false
+      },
+      "expected": {
+        "atk": 0,
+        "def": 0,
+        "focus_after": 0,
+        "gold_tax_percent": 25,
+        "heal_after": 12,
+        "levels": 0
+      },
+      "id": "forager"
+    },
+    {
+      "context": {
+
+      },
+      "expected": {
+        "atk": 0,
+        "def": -3,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "channel"
+    },
+    {
+      "context": {
+        "enemy_hp": 180,
+        "first_strike": true,
+        "hp": 199,
+        "skill": true
+      },
+      "expected": {
+        "atk": 0,
+        "def": -3,
+        "focus_after": 1,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "channel"
+    },
+    {
+      "context": {
+        "enemy_hp": 179,
+        "first_strike": true,
+        "first_strike_suppressed": true,
+        "hp": 200,
+        "skill": false
+      },
+      "expected": {
+        "atk": 0,
+        "def": -3,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "channel"
+    },
+    {
+      "context": {
+
+      },
+      "expected": {
+        "atk": -3,
+        "def": 4,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "reserve"
+    },
+    {
+      "context": {
+        "enemy_hp": 180,
+        "first_strike": true,
+        "hp": 199,
+        "skill": true
+      },
+      "expected": {
+        "atk": -3,
+        "def": 0,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "reserve"
+    },
+    {
+      "context": {
+        "enemy_hp": 179,
+        "first_strike": true,
+        "first_strike_suppressed": true,
+        "hp": 200,
+        "skill": false
+      },
+      "expected": {
+        "atk": -3,
+        "def": 4,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "reserve"
+    },
+    {
+      "context": {
+
+      },
+      "expected": {
+        "atk": -2,
+        "def": -2,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "ambush_hunter"
+    },
+    {
+      "context": {
+        "enemy_hp": 180,
+        "first_strike": true,
+        "hp": 199,
+        "skill": true
+      },
+      "expected": {
+        "atk": 6,
+        "def": -2,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "ambush_hunter"
+    },
+    {
+      "context": {
+        "enemy_hp": 179,
+        "first_strike": true,
+        "first_strike_suppressed": true,
+        "hp": 200,
+        "skill": false
+      },
+      "expected": {
+        "atk": -2,
+        "def": -2,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "ambush_hunter"
+    },
+    {
+      "context": {
+
+      },
+      "expected": {
+        "atk": 0,
+        "def": -2,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "last_gambit"
+    },
+    {
+      "context": {
+        "enemy_hp": 180,
+        "first_strike": true,
+        "hp": 199,
+        "skill": true
+      },
+      "expected": {
+        "atk": 6,
+        "def": -2,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "last_gambit"
+    },
+    {
+      "context": {
+        "enemy_hp": 179,
+        "first_strike": true,
+        "first_strike_suppressed": true,
+        "hp": 200,
+        "skill": false
+      },
+      "expected": {
+        "atk": 0,
+        "def": -2,
+        "focus_after": 0,
+        "gold_tax_percent": 0,
+        "heal_after": 0,
+        "levels": 0
+      },
+      "id": "last_gambit"
+    }
+  ],
+  "version": 1
+}
