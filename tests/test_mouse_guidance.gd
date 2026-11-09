@@ -66,7 +66,8 @@ func run_tests():
    for x in range(11):
     if scene.world.tile(Vector2i(x,y))!=token:continue
     scene.hover=Vector2i(x,y)
-    check("WASD" in scene.hover_walk_info().hint,"object has actionable keyboard explanation")
+    var adjacent=absi(scene.hover.x-scene.world.pos.x)+absi(scene.hover.y-scene.world.pos.y)==1
+    check(("Click" if adjacent else "WASD") in scene.hover_walk_info().hint,"object explains adjacent click or distant manual approach")
     for lang in ["en","zh"]:
      scene.language=lang
      var lines=scene.tooltip_lines();var rect=scene.tooltip_rect(lines)

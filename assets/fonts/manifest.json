@@ -90,7 +90,7 @@
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "36194a24d6ab1a780264b311ad9ce662dbd4e94085a36297cf13c7f2480e4ffe"
+      "sha256": "bae1471fd0ffa3a13be68a5c7f2e4c590b6c985eb8fd19b98d1d87ec39c276fa"
     },
     {
       "path": "scripts/localization_world.gd",
@@ -98,7 +98,7 @@
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "db0837915ac8e98cc7c4472ab487ded97a6f51cad3ce4ddaaa2829531be175ba"
+      "sha256": "1c68c980f74957697ed3a05af3dfcf9307bb45d95732b26a3e289076307021f4"
     },
     {
       "path": "scripts/navigation.gd",

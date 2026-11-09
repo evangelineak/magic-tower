@@ -70,6 +70,7 @@ var battle_hero := "warden"
 var battle_skill := false
 var interaction_page := 0
 var interaction := false
+var interaction_target := "" # Empty means the existing keyboard nearby-actions menu.
 var rope_pending: Dictionary={}
 var rope_inspecting:=false
 var cargo_pending := false
@@ -271,7 +272,7 @@ func draw_sidebar():
 	label_at(Vector2(768,354),"NEW TALENT AVAILABLE  [C]" if not world.talent_options().is_empty() else "C: hero, equipment and skills",15,TEAL)
 	draw_wrapped(Vector2(768,388),pinned_target_text(),460,16,GOLD,2)
 	draw_wrapped(Vector2(768,441),status_message(),460,15,TEAL,3)
-	label_at(Vector2(768,512),"Walking safely... Any key or click stops." if not walk_route.is_empty() else "Click clear floor to walk. Other objects: inspect only.",14,MUTED)
+	label_at(Vector2(768,512),"Walking safely... Any key or click stops." if not walk_route.is_empty() else "Click nearby objects to act; clear floor to walk safely.",14,MUTED)
 	var titles := ["UNDO  U","SAVE (CLICK)","LOAD  L","GUIDE  H","INTERACT / LEDGER  E","HERO / GROWTH  C","JOURNEY NOTES  J","SAFE TRAVEL  T"]
 	for i in buttons.size():
 		panel(buttons[i],Color("253748")); label_at(buttons[i].position+Vector2(12,26),titles[i],15)
@@ -317,8 +318,15 @@ func hover_walk_info() -> Dictionary:
 		elif World.ENEMIES.has(token): info.hint="Mouse only inspects. Move into this enemy with WASD / arrows to fight."
 		elif token in ["D","L"]: info.hint="Mouse only inspects. Move into this door with WASD / arrows to request opening."
 		elif token in ["<",">"]: info.hint="Mouse only inspects. Move into these stairs with WASD / arrows."
-		elif token in ["k","h","a","d","$","A","P","T","C","I","R","m"]: info.hint="Mouse only inspects. Move into this item with WASD / arrows to collect."
-		elif token in ["M","J","N","E","F","Q","O","X","U","Y","v","t","c"]: info.hint="Mouse only inspects. Approach with WASD / arrows, then press E to interact."
+		elif token in ["k","h","a","d","$","A","P","T","C","I","m"]: info.hint="Mouse only inspects. Move into this item with WASD / arrows to collect."
+		elif token in ["M","J","N","E","F","Q","O","X","U","Y","v","t","c","R"]: info.hint="Mouse only inspects. Approach with WASD / arrows, then press E to interact."
+		if absi(hover.x-world.pos.x)+absi(hover.y-world.pos.y)==1:
+			if World.ENEMIES.has(token): info.hint="Click to fight this adjacent enemy. Dangerous fights still require confirmation."
+			elif token in ["k","h","a","d","$","A","P","T","C","I","m"]: info.hint="Click to collect this adjacent item."
+			elif token in ["M","J","N","E","F","Q","O","X","U","Y","v","c","R"]: info.hint="Click to open this object's choices. Nothing is spent until you choose."
+			elif token=="t": info.hint="Click to rescue Mira."
+			elif token in ["D","L"]: info.hint="Click to request opening this door. Key confirmation is unchanged."
+			elif token in ["<",">"]: info.hint="Click to use these adjacent stairs."
 	hover_walk_cache=info
 	return info.duplicate(true)
 func draw_hover_walk():
@@ -369,6 +377,27 @@ func draw_tooltip():
 func cancel_walk():
 	walk_generation+=1
 	walk_route.clear(); walk_floor=-1; walk_origin=Vector2i(-1,-1); walk_timer=0.0
+func map_click(target: Vector2i):
+	if not can_mutate() or modal_open(): return
+	cancel_walk()
+	hover=target
+	var delta: Vector2i=target-world.pos
+	var token: String=world.tile(target)
+	if absi(delta.x)+absi(delta.y)==1:
+		if token in ["M","J","N","E","F","Q","O","X","U","Y","v","c","R"]:
+			open_interaction(token)
+			return
+		if World.ENEMIES.has(token) or token in ["k","h","a","d","$","A","P","T","C","I","m","t","D","L","<",">"]:
+			interaction_target=""
+			await move(delta)
+			return
+	start_walk(target)
+func open_interaction(target_token: String=""):
+	cancel_walk()
+	interaction_target=target_token
+	interaction=true; winch_pending=""; cargo_pending=false; cargo_inspecting=false
+	rope_pending.clear(); rope_inspecting=false; interaction_page=0
+	journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 func start_walk(target: Vector2i):
 	if not can_mutate(): return
 	cancel_walk()
@@ -471,7 +500,7 @@ func open_attunement():
 	cancel_walk()
 	if attuning: close_attunement(); return
 	if battle_time>0.0: return
-	close_travel(); comparison=false; journal=false; book=false; growth=false; interaction=false
+	close_travel(); comparison=false; journal=false; book=false; growth=false; interaction=false; interaction_target=""
 	winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	attune_gear=world.equipped if world.equipped!="balanced" else "buckler"; attune_pending=""; attuning=true
 func cycle_attunement(delta: int):
@@ -823,6 +852,7 @@ func token_name(t: String) -> String:
 	if t=="=": return "Expedition bridge: open" if world.expedition_bridge else "Broken bridge: engineering unlocks a shortcut"
 	return {"t":"Mira: the missing apprentice","U":"Expedition camp: finite tactical supplies","Y":"Engineering station: inspect local options","M":"Merchant: calibration needs a powered lift","C":"Core: lift powers calibration; forge/sale forfeits it","E":"The old elevator","F":"Workshop: a lasting choice","T":"A treasure worth returning for","N":"An inscription. Read carefully.","Q":"A door with a secret","<":"Return to a lower floor",">":"Ascend: check your ledger","a":"Ruby: +5 attack","d":"Sapphire: +4 defense","h":"Spring water: +70 HP","k":"Gold key","D":"Gold door: costs 1 key","L":"Double lock: costs 2 keys","$":"Gold cache: +60 gold","A":"Blade relic: +5 attack","P":"Supplies: +140 HP / +1 focus","J":"Ilen: cartographer and mentor","I":"An unusual research sample","O":"Drain the route or keep the spring?","~":"Deep water blocks this route","R":"A choice of equipment","X":"A costly opportunity"}.get(t,"SCOUT BEFORE YOU STRIKE")
 func nearby(t: String) -> bool:
+	if interaction and interaction_target!="" and t!=interaction_target: return false
 	for d in [Vector2i.ZERO,Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
 		if world.tile(world.pos+d)==t: return true
 	return false
@@ -832,13 +862,15 @@ func cargo_actions() -> Array:
 		rows.append([offer[0],"Ship the original supply free / delay its 70 HP" if offer[0]=="cargo_ship" else offer[1]])
 	return rows
 func at_rope_anchor() -> bool:
+	if interaction and interaction_target!="": return false
 	var preview:Dictionary=world.rope_preview()
 	return preview.valid and world.pos in [preview.origin,preview.landing]
 func available_actions() -> Array:
+	if not interaction: interaction_target=""
 	if not rope_pending.is_empty(): return [["rope_confirm","Confirm: spend 1 focus and cross once"],["rope_cancel","Cancel: stay on this bank"]]
 	if rope_inspecting or at_rope_anchor(): return world.rope_offers()
 	if cargo_pending: return [["cargo_confirm","Confirm shipment to the fixed destination"],["cargo_cancel","Cancel: keep the floor 1 box sealed"]]
-	if cargo_inspecting: return cargo_actions()
+	if cargo_inspecting or (interaction_target=="c" and interaction): return cargo_actions()
 	if winch_pending!="": return [["winch_confirm","Confirm permanent winch choice"],["winch_cancel","Cancel: leave both options undecided"]]
 	var rows: Array = []
 	if checkpoint_pending!=Vector2i.ZERO:
@@ -846,13 +878,15 @@ func available_actions() -> Array:
 		rows.append(["cancel","Cancel: keep all keys" if pending_reason=="door" else "Stay on this floor: no interest charged"])
 		if pending_reason=="door": return rows
 	if world.debt()>0: rows.append(["repay","Repay using available gold (fees, interest, principal)"])
-	rows.append_array(world.camp_offers())
-	rows.append_array(world.npc_offers())
-	rows.append_array(world.oath_offers())
-	rows.append_array(world.audit_offers())
-	rows.append_array(world.winch_offers())
-	rows.append_array(cargo_actions())
-	if world.rope_context(): rows.append(["rope_inspect","Inspect the single-use ferry rope / no cost"])
+	for offer in world.camp_offers():
+		if interaction_target=="" or (interaction_target=="U" and offer[0] in ["camp_medicine","camp_focus"]) or (interaction_target=="Y" and offer[0]=="camp_bridge"): rows.append(offer)
+	for offer in world.npc_offers():
+		if interaction_target=="" or (interaction_target=="J" and offer[0] in ["rescue_accept","rescue_repeater"]) or (interaction_target=="U" and offer[0]=="rescue_supplies"): rows.append(offer)
+	if nearby("N"): rows.append_array(world.oath_offers())
+	if nearby("Y"): rows.append_array(world.audit_offers())
+	if nearby("v"): rows.append_array(world.winch_offers())
+	if interaction_target=="": rows.append_array(cargo_actions())
+	if interaction_target=="" and world.rope_context(): rows.append(["rope_inspect","Inspect the single-use ferry rope / no cost"])
 	if world.cargo_context() and nearby("Q"): rows.append(["cargo_inspect","Read the freight label / no resources spent"])
 	if nearby("M"):
 		if (world.seal_clues & 1)==0: rows.append(["seal_contract","Read the old contract: calibration clue / lift power required"])
@@ -913,7 +947,7 @@ func draw_interaction():
 	if rope_inspecting or not rope_pending.is_empty() or (pending_reason=="" and at_rope_anchor()):
 		draw_rope_confirmation()
 		return
-	if cargo_pending or cargo_inspecting or (world.cargo_context() and not nearby("Q") and pending_reason==""):
+	if cargo_pending or cargo_inspecting or (interaction and interaction_target=="c") or (interaction_target=="" and world.cargo_context() and not nearby("Q") and pending_reason==""):
 		draw_cargo()
 		return
 	if winch_pending!="":
@@ -1093,20 +1127,20 @@ func perform_action(id: String, confirmed:=false):
 		winch_pending=id; interaction=true; interaction_page=0
 		return
 	if id=="cancel":
-		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; return
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; return
 	if id=="continue":
 		var direction := checkpoint_pending
-		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false
+		checkpoint_pending=Vector2i.ZERO; pending_reason=""; interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false
 		await move(direction,true)
 		return
 	reset_armed=false
 	var result: Dictionary=await session.action(id)
 	apply_session_result(result)
 func action_effect(id: String):
-	if id=="rope_cross": rope_pending.clear(); rope_inspecting=false; interaction=false
+	if id=="rope_cross": rope_pending.clear(); rope_inspecting=false; interaction=false; interaction_target=""
 	if id in ["cargo_ship","cargo_claim"]: cargo_pending=false
 	if id=="expedition":
-		book=false; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; battle_time=0.0
+		book=false; journal=false; growth=false; interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; battle_time=0.0
 		checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if id in ["spring","drain","quest_bridge","camp_bridge"]: play_sound("water")
 	elif id in ["cargo_claim","expedition","camp_medicine","camp_focus","rescue_repeater","rescue_supplies","buy","quest_gold","quest_scroll","relic_buckler","relic_duelist","secret","secret_provisions","secret_voucher","audit_medicine"]: play_sound("pickup")
@@ -1143,7 +1177,7 @@ func open_growth():
 	close_attunement()
 	cancel_walk()
 	comparison=false
-	growth=not growth; journal=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	growth=not growth; journal=false; interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	if growth: growth_tab=2 if not world.talent_options().is_empty() else 0
 func draw_growth():
 	draw_rect(Rect2(0,0,1280,800),Color(0,0,0,0.72))
@@ -1201,7 +1235,7 @@ func open_journal():
 	journal=not journal
 	journal_page=0
 	journal_details=false
-	book=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+	book=false; growth=false; interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 func floor_has(index: int, token: String) -> bool:
 	for row in world.floors[index]:
 		if token in row: return true
@@ -1566,7 +1600,7 @@ func _unhandled_input(event):
 			var rows := visible_actions()
 			for i in rows.size():
 				if Rect2(285,375+i*43,720,37).has_point(get_global_mouse_position()): perform_action(rows[i][0]); return
-			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+			if not Rect2(260,120,770,570).has_point(get_global_mouse_position()): interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 			return
 		if world.won and Rect2(395,575,490,48).has_point(get_global_mouse_position()): request_finish(); return
 		if Rect2(768,738,476,32).has_point(get_global_mouse_position()): request_finish(); return
@@ -1579,13 +1613,13 @@ func _unhandled_input(event):
 					1: save_game()
 					2: load_game()
 					3: book=true
-					4: interaction=true; interaction_page=0
+					4: open_interaction()
 					5: open_growth()
 					6: open_journal()
 					7: open_travel()
 				return
 		hover=Vector2i(((get_global_mouse_position()-ORIGIN)/CELL).floor())
-		start_walk(hover)
+		await map_click(hover)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if battle_time>0.0: battle_time=0.0; return
 		if event.keycode==KEY_G: open_attunement(); return
@@ -1620,9 +1654,15 @@ func _unhandled_input(event):
 			return
 		if event.keycode==KEY_J: open_journal(); return
 		if event.keycode==KEY_C: open_growth(); return
-		if event.keycode==KEY_H: book=not book; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
-		if event.keycode==KEY_E: interaction=not interaction; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; interaction_page=0; journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
-		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_H: book=not book; journal=false; growth=false; interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
+		if event.keycode==KEY_E:
+			if interaction:
+				interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false
+				rope_pending.clear(); rope_inspecting=false; interaction_page=0
+				journal=false; growth=false; book=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+			else: open_interaction()
+			return
+		if event.keycode==KEY_ESCAPE: book=false; journal=false; growth=false; interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""; return
 		if journal:
 			if event.keycode==KEY_TAB: journal_details=not journal_details; return
 			if not journal_details:
@@ -1678,12 +1718,13 @@ func request_restart(mode: String):
 		var result: Dictionary=await session.new_run(world.seed_value if mode=="replay" else randi_range(1,2147483646),2,true,selected_run_mode)
 		apply_session_result(result)
 		if not result.get("committed",false): return
-		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+		history.clear(); journal=false; journal_page=0; reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0; interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 	else:
 		reset_armed=true; reset_mode=mode; selected_run_mode="safe"
 		ui_notice="Press %s again: %s. Autosave will be replaced." % ["R" if mode=="replay" else "N","replay this seed" if mode=="replay" else "start a new seed"]
 func move(direction: Vector2i, confirmed:=false):
 	if not can_mutate(): return
+	interaction_target=""
 	cancel_walk()
 	reset_armed=false
 	var target_token: String=world.tile(world.pos+direction)
@@ -1743,7 +1784,7 @@ func load_game():
 		result=await session.new_run(initial_seed())
 	apply_session_result(result)
 	if not result.get("ok",false): return
-	journal=false; journal_page=0; interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; growth=result.get("committed",false) and result.get("effect",{}).get("operation","")=="create"; gear_page=0; book=false; comparison=false
+	journal=false; journal_page=0; interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; growth=result.get("committed",false) and result.get("effect",{}).get("operation","")=="create"; gear_page=0; book=false; comparison=false
 	checkpoint_pending=Vector2i.ZERO; pending_reason=""; battle_time=0.0
 func retry_save():
 	if session==null or session.busy: return
@@ -1760,7 +1801,7 @@ func apply_session_result(result: Dictionary):
 	if result.get("ok",false):
 		world=session.world; history=session.history; ui_notice=""
 		compare_cache.clear(); compare_cache_world=null
-		if result.get("status","")=="loaded" or result.get("effect",{}).get("operation","")=="create": pinned_target=""
+		if result.get("status","")=="loaded" or result.get("effect",{}).get("operation","")=="create": pinned_target=""; interaction_target=""
 		validate_pinned_target()
 		if strategy_pending(): cancel_walk()
 		if result.get("committed",false): dispatch_committed_effect(result.get("effect",{}))
@@ -1799,7 +1840,7 @@ func dispatch_committed_effect(effect: Dictionary):
 			finish_pending=""
 			close_attunement(); close_travel(); comparison=false; journal=false; book=false
 			reset_armed=false; battle_time=0.0; growth=true; growth_tab=0; gear_page=0
-			interaction=false; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
+			interaction=false; interaction_target=""; winch_pending=""; cargo_pending=false; cargo_inspecting=false; rope_pending.clear(); rope_inspecting=false; checkpoint_pending=Vector2i.ZERO; pending_reason=""
 
 func is_terminal() -> bool:
 	return session!=null and session.get("terminal")==true
@@ -1809,7 +1850,7 @@ func settlement_outcome() -> String:
 func request_finish():
 	if not can_mutate(): return
 	cancel_walk(); close_attunement(); close_travel()
-	book=false; growth=false; interaction=false; journal=false; comparison=false; battle_time=0.0
+	book=false; growth=false; interaction=false; interaction_target=""; journal=false; comparison=false; battle_time=0.0
 	finish_pending=settlement_outcome(); reset_armed=false
 func confirm_finish():
 	if finish_pending=="" or not can_mutate(): return

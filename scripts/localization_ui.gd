@@ -1,5 +1,12 @@
 extends RefCounted
 const EXACT = {
+"Click to fight this adjacent enemy. Dangerous fights still require confirmation.":"点击攻击相邻怪物。危险战斗仍保留原有确认。",
+"Click to collect this adjacent item.":"点击拾取相邻物品。",
+"Click to open this object's choices. Nothing is spent until you choose.":"点击打开该对象的选项。选择前不消耗资源。",
+"Click to rescue Mira.":"点击救出米拉。",
+"Click to request opening this door. Key confirmation is unchanged.":"点击请求开门，仍需确认钥匙消耗。",
+"Click to use these adjacent stairs.":"点击使用相邻楼梯。",
+
 "WASD / arrows: move, pick up, fight and use stairs.":"WASD / 方向键：移动、拾取、战斗、上下楼。",
 "Mouse only inspects. Use WASD / arrows for manual actions.":"鼠标只查看。使用 WASD / 方向键主动操作。",
 "You are here. Use WASD / arrows to move.":"你在这里。使用 WASD / 方向键移动。",
@@ -181,7 +188,7 @@ const EXACT = {
 "DEBT":"欠款",
 "C: hero, equipment and skills":"C：英雄、装备与技能",
 "Walking safely... Any key or click stops.":"正在安全步行；任意按键或点击立即停止。",
-"Click clear floor to walk. Other objects: inspect only.":"点击空地安全步行；其他对象只查看，不触发。",
+"Click nearby objects to act; clear floor to walk safely.":"点击相邻对象操作；点击空地安全步行。",
 "WASD / arrows: manual actions. R / N twice: restart.":"WASD / 方向键：手动操作；连按 R / N 重开。",
 
 "Flank barrier active":"侧袭挡板生效",
