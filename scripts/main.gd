@@ -169,13 +169,14 @@ func style(color: Color) -> StyleBoxFlat:
 func _draw():
 	draw_rect(Rect2(0,0,1280,800),Color("080f1b"))
 	label_at(Vector2(24,42),"MAGIC TOWER",27,INK)
+	panel(Rect2(510,12,214,44),Color("294738"))
+	label_at(Vector2(521,40),"新版无尽远征 · F3",16,GOLD)
+	label_at(Vector2(516,64),"点击进入 · 随机路线与英雄战术",11,TEAL)
 	if world==null:
 		draw_wrapped(Vector2(100,200),ui_notice,1000,22,TEAL)
 		label_at(Vector2(100,310),"L: Reload current journey / F5: Retry save",18,GOLD)
 		return
 	label_at(Vector2(310,42),world.floor_title(),22,GOLD)
-	panel(Rect2(510,12,214,44),Color("294738"))
-	label_at(Vector2(521,40),"无尽远征 · 15×15  F3",16,GOLD)
 	label_at(Vector2(752,30),"FLOOR %d / %d" % [world.floor_index+1,world.floor_count()],18,GOLD)
 	label_at(Vector2(930,30),"SEED %d" % world.seed_value,15,TEAL)
 	label_at(Vector2(752,54),"F2: 中文 / English",13,MUTED)

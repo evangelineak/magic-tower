@@ -185,8 +185,8 @@ func run_tests():
  ui.open_build();check(ui.choices.is_empty(),"cannot switch stance from shrine rather than merchant")
  ui.queue_redraw();await process_frame
  for seed_value in range(4):
-  await ui.start_run(seed_value)
-  check(ui.world.rule_version()==5,"new UI uses current v5 rules")
+  await ui.start_run(seed_value,5)
+  check(ui.world.rule_version()==5,"explicit v5 journey keeps map rules")
   check(ui.world.summary().routes.size()==2,"each layout presents two actual routes")
   ui.modal="";await ui.map_click(Vector2i(2,1))
   check(ui.world.pos==Vector2i(2,1),"v5 adjacent training pickup")
@@ -196,5 +196,35 @@ func run_tests():
   check(ui.world.rule_version()==5 and ui.world.tactic=="brace","v5 UI persisted stance replay")
   ui.modal="";ui.hover=Vector2i(3,2)
   ui.queue_redraw();await process_frame
+ var help_snapshot=ui.world.save_data();var help_writes=memory.writes
+ ui.modal="";var help_key=InputEventKey.new();help_key.pressed=true;help_key.keycode=KEY_H
+ await ui._unhandled_input(help_key)
+ check(ui.modal=="help","H opens read-only gameplay guide")
+ ui.queue_redraw();await process_frame
+ await ui.confirm_modal()
+ check(ui.modal=="" and ui.world.save_data()==help_snapshot and memory.writes==help_writes,"closing help does not restart or save journey")
+ ui.open_supply_panel("encounter")
+ check(ui.modal=="" and "旧规则" in ui.notice,"old journey does not pretend new encounters are available")
+ await ui.start_run(20,6)
+ ui.open_supply_panel("encounter")
+ check(ui.modal=="encounter" and ui.choices.is_empty(),"remote encounter is visible but cannot transact")
+ ui.modal="";await ui.map_click(Vector2i(2,1));ui.open_supply_panel("encounter")
+ check(ui.choices.size()==3,"camp altar offers two priced choices and permanent leave")
+ var encounter_before=ui.world.save_data();memory.failing=true
+ await ui.transact("act","enc_blood_ward")
+ check(ui.world.save_data()==encounter_before,"failed storage does not spend life or award item")
+ memory.failing=false;await ui.transact("act","enc_blood_ward")
+ check(ui.world.hp==130 and ui.world.items.ward==1 and ui.choices.is_empty(),"one altar choice spends life and cannot be repeated")
+ ui.open_supply_panel("items")
+ check(ui.modal=="items" and ui.choices.size()==1,"owned consumable can be equipped")
+ await ui.transact("act","arm_ward")
+ check(ui.world.armed_item=="ward" and ui.world.items.ward==1,"arming is saved but does not consume item")
+ ui.queue_redraw();await process_frame
+ await ui.reload_run();ui.open_supply_panel("items")
+ check(ui.world.armed_item=="ward" and ui.world.items.ward==1,"inventory and equipped item restored")
+ await ui.transact("act","arm_none")
+ check(ui.world.armed_item=="" and ui.world.items.ward==1,"unarming keeps inventory")
+ await ui.start_run(21)
+ check(ui.world.rule_version()==6,"fresh UI follows current v6 registry")
  ui.queue_free();await process_frame
  print("ENDLESS UI: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks]);quit(0 if failures==0 else 1)

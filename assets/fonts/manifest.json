@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "790b27fbb2d511057cc316832f010d7c25da2692001ea06000663b980ed5770e",
-  "bytes": 455392,
+  "output_sha256": "5b73152d1631245af3a5cc031968c16c80fa521ae33c3c23439290f9d35160cd",
+  "bytes": 461120,
   "coverage": {
-    "mapped_codepoints": 1152,
-    "glyphs": 2276,
-    "required_codepoints": 999,
+    "mapped_codepoints": 1162,
+    "glyphs": 2296,
+    "required_codepoints": 1009,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -73,6 +73,10 @@
       "sha256": "f78be3531472ed335fddcac8438203503f9158bd74ab7699372a2ac932ba16e5"
     },
     {
+      "path": "scripts/endless_generation_v6.gd",
+      "sha256": "60dd2cd14ba453e11d663439d0cbfae0ec11b099dc93906ce24a0175e9077eaa"
+    },
+    {
       "path": "scripts/endless_interaction_art.gd",
       "sha256": "9d03a480b37a3a8447fe9f84ce42c37024f579754d54bce8b38f71485ab3f102"
     },
@@ -82,11 +86,11 @@
     },
     {
       "path": "scripts/endless_ui.gd",
-      "sha256": "e9217bccc35721441b7f58c05dc1da24ce52336aa5cb5a7dbf182c15223a9ff2"
+      "sha256": "b8d654c51028b8ecbf7171e55493152779ba7859c8870c0c52fc83f185ef5a09"
     },
     {
       "path": "scripts/endless_world.gd",
-      "sha256": "c79fcfc9a06386e06f64a5aa40861eaeb0da383bec20b129fa6653ca5c0c01ac"
+      "sha256": "93a463dfc2558252a83492eaccf0cbab037501407a4c8fb5b6e5e66dc0ef7eca"
     },
     {
       "path": "scripts/endless_world_v1.gd",
@@ -107,6 +111,10 @@
     {
       "path": "scripts/endless_world_v5.gd",
       "sha256": "829ca129bf92bb87597900dc237b391cd77825aff90a8b136996d8fd03665b82"
+    },
+    {
+      "path": "scripts/endless_world_v6.gd",
+      "sha256": "d8192db0bd26a2b9ec05852c347928578f005759c29205ebcbc0ef59523e9fbb"
     },
     {
       "path": "scripts/expedition.gd",
@@ -162,7 +170,7 @@
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "b474fee45ed30e2454b1f6f9035da5ffa4324479d511b1c7db2bd3801cd2ffc3"
+      "sha256": "5541171c1b114389ab7171a5c63f98de56e9ae5da453f65c994985cf948bfee7"
     },
     {
       "path": "scripts/map_symbols.gd",
