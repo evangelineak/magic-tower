@@ -1,0 +1,36 @@
+{
+  "first": {
+    "gold": 2506,
+    "medicine": 2507,
+    "pierce": 2489,
+    "ward": 2498
+  },
+  "note": "Finite deterministic seed sample, not proof of statistical independence or true randomness",
+  "permutations": {
+    "gold,medicine,pierce,ward": 416,
+    "gold,medicine,ward,pierce": 417,
+    "gold,pierce,medicine,ward": 419,
+    "gold,pierce,ward,medicine": 423,
+    "gold,ward,medicine,pierce": 421,
+    "gold,ward,pierce,medicine": 410,
+    "medicine,gold,pierce,ward": 418,
+    "medicine,gold,ward,pierce": 419,
+    "medicine,pierce,gold,ward": 417,
+    "medicine,pierce,ward,gold": 421,
+    "medicine,ward,gold,pierce": 422,
+    "medicine,ward,pierce,gold": 410,
+    "pierce,gold,medicine,ward": 415,
+    "pierce,gold,ward,medicine": 414,
+    "pierce,medicine,gold,ward": 415,
+    "pierce,medicine,ward,gold": 409,
+    "pierce,ward,gold,medicine": 417,
+    "pierce,ward,medicine,gold": 419,
+    "ward,gold,medicine,pierce": 410,
+    "ward,gold,pierce,medicine": 418,
+    "ward,medicine,gold,pierce": 413,
+    "ward,medicine,pierce,gold": 422,
+    "ward,pierce,gold,medicine": 417,
+    "ward,pierce,medicine,gold": 418
+  },
+  "samples": 10000
+}

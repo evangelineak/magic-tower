@@ -1,0 +1,6 @@
+{
+  "checks": 404,
+  "controlled_fixtures": true,
+  "failures": 0,
+  "note": "capacity fixture state is deliberately injected, not claimed as a legal route"
+}
