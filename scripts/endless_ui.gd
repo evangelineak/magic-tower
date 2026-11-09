@@ -190,7 +190,10 @@ func _unhandled_input(event):
   if Rect2(950,354,284,32).has_point(p) and world!=null and world.has_method("growth_view"):open_growth();return
   if Rect2(768,562,476,24).has_point(p):open_build();return
   if Rect2(768,587,476,24).has_point(p):open_case();return
-  if Rect2(768,662,220,44).has_point(p):center_camera();return
+  if Rect2(768,662,220,44).has_point(p):
+   if world!=null and world.has_method("camp_return_view"):await start_camp_return()
+   else:center_camera()
+   return
   if Rect2(1000,662,244,44).has_point(p):modal="ranking";return
   if Rect2(768,714,220,44).has_point(p):modal="new";return
   if Rect2(1000,714,244,44).has_point(p):get_tree().change_scene_to_file("res://main.tscn");return
@@ -209,6 +212,7 @@ func _unhandled_input(event):
    elif event.keycode==KEY_ENTER:await confirm_modal()
    elif modal in ["choices","case","build","encounter","contract","items"] and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():await transact("act",choices[event.keycode-KEY_1].id)
    return
+  if event.keycode==KEY_T:await start_camp_return();return
   if event.keycode==KEY_SPACE:center_camera();return
   if event.keycode==KEY_N:modal="new";return
   if event.keycode==KEY_Q:open_case();return
@@ -345,6 +349,7 @@ func _draw():
   draw_wrapped(notice,Vector2(768,554),468,13,TEAL,1)
  else:draw_wrapped(notice,Vector2(768,463),468,16,TEAL,6)
  var labels=["结束本局并记入本设备榜","回到角色 · Space","本设备历史榜","重新开始 · N","返回经典魔塔"]
+ if world.has_method("camp_return_view"):labels[1]=camp_button_label(world.camp_return_view())
  var rects=[Rect2(768,610,476,42),Rect2(768,662,220,44),Rect2(1000,662,244,44),Rect2(768,714,220,44),Rect2(1000,714,244,44)]
  for i in rects.size():panel(rects[i],Color("293e50"));text(rects[i].position+Vector2(12,28),labels[i],16)
  text(Vector2(24,796),"视窗 (%d,%d) · 自动保存 · H玩法说明 · 经典存档独立保留"%[camera.x,camera.y],13,TEAL)
@@ -355,6 +360,12 @@ func _draw():
   panel(Rect2(768,587,476,22),Color("293e50"))
   text(Vector2(776,604),"Q · 信使历史路线图与回访线索",13,GOLD)
  if modal!="":draw_modal()
+ elif world.has_method("camp_return_view") and Rect2(768,662,220,44).has_point(get_global_mouse_position()):
+  var camp_info:Dictionary=world.camp_return_view()
+  var camp_text=camp_tooltip(camp_info)
+  var camp_box=tooltip_layout(camp_text,Vector2(760,570))
+  panel(camp_box,Color("07121c"));draw_rect(camp_box,TEAL,false,1)
+  draw_wrapped(camp_text,camp_box.position+Vector2(12,23),camp_box.size.x-24,15,INK,14)
  elif hover.x>=0 and hover.y>=0 and not busy:
   var info:Dictionary=world.preview(hover)
   var content=str(info.get("title",""))
@@ -411,6 +422,7 @@ func draw_modal():
   "choices":title="选择行动";body=""
  if modal=="help" and world!=null and world.has_method("growth_view"):body=growth_help_text()
  if modal=="help" and world!=null and world.has_method("contract_view"):body=body.replace("R营地遭遇", "R遭遇/订单（Tab切换）")
+ if modal=="help" and world!=null and world.has_method("camp_return_view"):body=body.replace("右拖地图，空格回角色", "T安全回营（一次保存），空格回角色")
  text(Vector2(280,190),title,26,GOLD)
  if modal=="choices":
   for i in mini(6,choices.size()):panel(Rect2(280,215+i*52,720,48),Color("2a4051"));draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(293,241+i*52),690,16,INK,2)
@@ -591,3 +603,31 @@ func contract_body(data:Dictionary)->String:
  if phase=="voucher":cost="押金已经退还，不会再次领取。兑换是可选的。"
  if phase=="closed":cost="此层订单已结算，不重复购买、接单或领奖。"
  return cost+"\n目标：第%d层 · %s；剩%d名。兑现须回第%d层商人。\n完成先退12，再自选8金币换%d件道具；也可免费放弃兑换。\n不限时；未履约取消或结束旅程，未退押金损失。" % [int(data.get("source",0)),str(data.get("route_label","指定路线")),int(data.get("remaining",0)),int(data.get("source",0)),int(data.get("reward_count",1))]
+
+func camp_button_label(data:Dictionary)->String:
+ if data.get("available",false):return "T 安全回营 · %d步" % int(data.get("steps",0))
+ return "T 安全回营 · 已到" if "已经在营地" in str(data.get("reason","")) else "T 安全回营 · 不可用"
+func camp_tooltip(data:Dictionary)->String:
+ if not data.get("available",false):return str(data.get("reason","暂无安全路线。"))+"\n仅同层安全空地；不会穿过物品、怪物、门或楼梯。"
+ var target:Vector2i=data.get("target",Vector2i.ZERO)
+ return "沿安全空路快速回营 %d步\n第%d层商人邻格（%d,%d）\n一次保存全部步行记录，不沿途互动、不跨层。触发后不能中途撤销；保存未确认时画面不前进。" % [int(data.get("steps",0)),int(data.get("source_floor",0)),target.x,target.y]
+func start_camp_return():
+ if busy or modal!="" or world==null:return
+ walk.clear()
+ if not world.has_method("camp_return_view"):
+  notice="此旧规则旅程没有安全快捷回营；可继续使用安全空地寻路。";return
+ var view:Dictionary=world.camp_return_view()
+ if not view.get("available",false):notice=str(view.get("reason","没有安全回营路线。"));return
+ if not store.has_method("commit_walk"):
+  notice="快捷回营存储尚不可用，没有移动。";return
+ busy=true
+ var candidate=world.clone()
+ var outcome:Dictionary=candidate.return_to_camp()
+ if not outcome.get("changed",false):
+  busy=false;notice=str(outcome.get("message","安全路线已变化，没有移动。"));return
+ var result:Dictionary=await store.commit_walk(candidate.save_data(),revision)
+ busy=false
+ if not result.get("ok",false):
+  notice="回营保存未确认，位置未前进：%s。按L核对已存旅程。" % str(result.get("status","unknown"));queue_redraw();return
+ world=candidate;revision=int(result.revision);records=result.get("records",records);center_camera()
+ notice="已沿%d格安全空路回到本层商人旁；每步均已记录。" % int(view.get("steps",0));queue_redraw()

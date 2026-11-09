@@ -59,6 +59,18 @@ func validated(s:Dictionary):
  else:w=World.from_data(s)
  if w!=null:cache_world=w;cache_snapshot=s.duplicate(true)
  return w
+func validated_walk(base:Dictionary,s:Dictionary):
+ if not snapshot_shape(base) or not snapshot_shape(s) or base.version!=10 or s.version!=10 or base.seed!=s.seed:return null
+ var count:int=s.actions.size()-base.actions.size()
+ if count<1 or count>224 or s.actions.slice(0,base.actions.size())!=base.actions:return null
+ for code in s.actions.slice(base.actions.size()):
+  if code not in ["U","D","L","R"]:return null
+ var original=validated(base)
+ if original==null or original.ended:return null
+ var candidate=original.clone()
+ var moved:Dictionary=candidate.return_to_camp()
+ if not moved.get("changed",false) or candidate.save_data()!=s:return null
+ return candidate
 func native_read()->Dictionary:
  if not FileAccess.file_exists(path):return {"ok":true,"envelope":fresh()}
  var file=FileAccess.open(path,FileAccess.READ)
@@ -105,6 +117,7 @@ func read()->Dictionary:
  return r
 func start(snapshot:Dictionary,expected_revision:int)->Dictionary:return await write("start",snapshot,expected_revision)
 func commit(snapshot:Dictionary,expected_revision:int)->Dictionary:return await write("commit",snapshot,expected_revision)
+func commit_walk(snapshot:Dictionary,expected_revision:int)->Dictionary:return await write("commit_walk",snapshot,expected_revision)
 func finish(snapshot:Dictionary,expected_revision:int)->Dictionary:return await write("finish",snapshot,expected_revision)
 func write(operation:String,s:Dictionary,expected:int)->Dictionary:
  if not snapshot_shape(s) or JSON.stringify(s).length()>MAX_BYTES:return fail("invalid")
@@ -112,7 +125,16 @@ func write(operation:String,s:Dictionary,expected:int)->Dictionary:
  var current=await read()
  if not current.get("ok",false):return current
  # Validate before writes; clone/apply-one never trusts a new history prefix.
- var w=validated(s)
+ var w=null
+ if operation=="commit_walk":
+  if s.version!=10:return fail("invalid")
+  var acknowledged:bool=current.status=="active" and current.snapshot==s and expected==current.revision-1
+  if acknowledged:w=validated(s)
+  else:
+   if expected!=current.revision:return fail("conflict")
+   if current.status!="active":return fail("invalid")
+   w=validated_walk(current.snapshot,s)
+ else:w=validated(s)
  if w==null:return fail("invalid")
  var r:Dictionary={}
  if operation=="finish":
@@ -120,12 +142,16 @@ func write(operation:String,s:Dictionary,expected:int)->Dictionary:
   r={"run_id":current.run_id,"seed":w.seed,"max_floor":w.max_floor,"kills":w.kills,"gold":w.gold,"reason":w.ended_reason,"rule_version":int(s.version)}
   if not valid_record(r):return fail("invalid")
  var args={"snapshot":s,"expected_revision":expected,"record":r}
- if use_web:return await web(operation,args)
+ if use_web:
+  var reply:Dictionary=await web(operation,args)
+  if reply.get("ok",false) and operation=="commit_walk":cache_world=w;cache_snapshot=s.duplicate(true)
+  return reply
  var directory=path.get_base_dir()
  if DirAccess.make_dir_recursive_absolute(directory)!=OK and not DirAccess.dir_exists_absolute(directory):return fail("io_error")
  var lock_path=path+".lock"
  if not acquire_native_lock(lock_path):return fail("locked")
  var outcome=native_write_locked(operation,args)
+ if outcome.get("ok",false) and operation=="commit_walk":cache_world=w;cache_snapshot=s.duplicate(true)
  DirAccess.remove_absolute(lock_path+"/owner.json")
  DirAccess.remove_absolute(lock_path)
  return outcome
@@ -163,7 +189,7 @@ func native_write_locked(operation:String,a:Dictionary)->Dictionary:
  if not loaded.ok:return loaded
  var e:Dictionary=loaded.envelope;var s:Dictionary=a.snapshot;var expected:int=a.expected_revision
  if operation=="finish" and e.finished and e.active==s and expected==int(e.revision)-1:return result(e)
- if not e.finished and e.active==s and expected==int(e.revision)-1 and ((operation=="start" and s.actions.is_empty()) or (operation=="commit" and not s.actions.is_empty())):return result(e)
+ if not e.finished and e.active==s and expected==int(e.revision)-1 and ((operation=="start" and s.actions.is_empty()) or (operation=="commit" and not s.actions.is_empty()) or (operation=="commit_walk" and s.version==10 and not s.actions.is_empty())):return result(e)
  if expected!=int(e.revision):return fail("conflict")
  if e.revision>=MAX_COUNTER:return fail("limit")
  var n=e.duplicate(true);n.revision=int(n.revision)+1
@@ -172,6 +198,9 @@ func native_write_locked(operation:String,a:Dictionary)->Dictionary:
   n.run_id=int(n.run_id)+1;n.active=s.duplicate(true);n.finished=false
  elif operation=="commit":
   if e.active==null or e.finished or s.version!=e.active.version or s.seed!=e.active.seed or s.actions.size()!=e.active.actions.size()+1 or s.actions.slice(0,-1)!=e.active.actions:return fail("invalid")
+  n.active=s.duplicate(true)
+ elif operation=="commit_walk":
+  if e.active==null or e.finished or validated_walk(e.active,s)==null:return fail("invalid")
   n.active=s.duplicate(true)
  elif operation=="finish":
   if e.active==null or e.finished or e.active!=s or not valid_record(a.record) or a.record.run_id!=e.run_id or a.record.get("rule_version",1)!=s.version:return fail("invalid")
