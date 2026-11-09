@@ -51,26 +51,26 @@ check(S.execute(store,'finish',args({...v2done,version:1},3,{...r,run_id:2,rule_
 check(S.execute(store,'finish',args(v2done,3,{...r,run_id:2})).status==='invalid');
 check(S.execute(store,'finish',args(v2done,3,{...r,run_id:2,rule_version:2})).records[0].rule_version===2);
 check(S.execute(store,'finish',args({...v2done,version:1},3,{...r,run_id:2,rule_version:2})).status==='conflict');
-for(const version of [0,7,1.5,'1',true,null,{},[],NaN,Infinity]){
+for(const version of [0,8,1.5,'1',true,null,{},[],NaN,Infinity]){
  check(!S.snapshot({...snap,version}));
  check(S.execute(store,'start',args({...snap,version},4)).status==='invalid');
 }
-store.value=JSON.stringify({...S.fresh(),revision:1,run_id:1,active:{...snap,version:7}});
+store.value=JSON.stringify({...S.fresh(),revision:1,run_id:1,active:{...snap,version:8}});
 check(S.execute(store,'read',{}).status==='corrupt');
 const legacy={version:1,revision:3,run_id:1,active:done,finished:true,records:[r]};
 check(S.valid(legacy));
-for(const rule_version of [0,7,'2',null,1.5,true]){
+for(const rule_version of [0,8,'2',null,1.5,true]){
  check(!S.valid({...legacy,records:[{...r,rule_version}]}));
 }
 check(S.valid({...legacy,records:[{...r,rule_version:1}]}));
 check(!S.valid({...legacy,records:[{...r,rule_version:1,extra:true}]}));
 store.value=null;
-for(const version of [1,2,3,4,5,6]){
+for(const version of [1,2,3,4,5,6,7]){
  let current=S.execute(store,'read',{});
  const started={...snap,version};
  current=S.execute(store,'start',args(started,current.revision));
  check(current.ok&&current.snapshot.version===version);
- for(const targetVersion of [1,2,3,4,5,6]){
+ for(const targetVersion of [1,2,3,4,5,6,7]){
   if(targetVersion===version)continue;
   const original=store.value;
   check(S.execute(store,'commit',args({...started,version:targetVersion,actions:['retire']},current.revision)).status==='invalid');

@@ -224,7 +224,19 @@ func run_tests():
  check(ui.world.armed_item=="ward" and ui.world.items.ward==1,"inventory and equipped item restored")
  await ui.transact("act","arm_none")
  check(ui.world.armed_item=="" and ui.world.items.ward==1,"unarming keeps inventory")
- await ui.start_run(21)
- check(ui.world.rule_version()==6,"fresh UI follows current v6 registry")
+ await ui.start_run(21,6)
+ check(ui.world.rule_version()==6,"explicit v6 run retains its rules")
+ for enemy_seed in [0,8]:
+  var foe_world=World.new_run(enemy_seed,7)
+  go_new(foe_world,Vector2i(3,6))
+  memory.snapshot=foe_world.save_data();memory.revision+=1
+  await ui.reload_run();await ui.map_click(Vector2i(3,7))
+  check(ui.battle.get("token","") in ["r","c"] and ui.battle_time>0,"new enemy adjacent click starts real battle result")
+  check(ui.battle.has("mechanic_note") and ui.battle.has("opening_damage"),"new battle explains its deterministic mechanism")
+  ui.queue_redraw();await process_frame
+  var after_foe=ui.world.save_data();await ui.reload_run()
+  check(ui.world.save_data()==after_foe and ui.world.kills==1,"new enemy result replays exactly once")
+ await ui.start_run(1)
+ check(ui.world.rule_version()==7,"new UI journey uses current v7 rules")
  ui.queue_free();await process_frame
  print("ENDLESS UI: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks]);quit(0 if failures==0 else 1)

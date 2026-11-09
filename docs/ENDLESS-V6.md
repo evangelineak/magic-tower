@@ -28,3 +28,5 @@ The classic homepage labels the newer endless entry explicitly, including when t
 - Native seed623936153: restored v5, explicitly started v6, paid20HP at the altar for one ward, equipped it, used the normal20HP supply, then fought the northern heavy guard. HP150→130→150→146 matched mitigation. The ward became zero and unarmed; L reload preserved both inventory and combat result. New entry, restart text and encounter/item panels visually inspected.
 
 The new enemies requested by the user are not yet added here. Global ranking remains unimplemented. Offline replay benchmarks in `docs/benchmarks/` establish costs on this machine only, not Cloudflare CPU performance. No service/account/payment or player-data upload was created. Cloud browser WebGL is still blocked, so Godot Web engine gameplay is not claimed as verified.
+
+New runs now use v7; see [ENDLESS-V7.md](ENDLESS-V7.md). Existing v6 runs retain their rules.
