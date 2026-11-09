@@ -7,7 +7,7 @@ func _draw():
  draw_rect(Rect2(0,0,1280,800),Color("0b1420"))
  draw_string(font,Vector2(32,42),"ENEMY SILHOUETTES | 64 / 40 / 24 / 128 px",0,-1,24,Old.GOLD)
  var tokens=["g","b","w","V","r","c"]
- var names=["IRON WARDEN","TWIN BLADES","ROBED WATCHER","VAULT BULWARK","INTERCEPT RIDER","CHARGED HAMMER"]
+ var names=["IRON WARDEN","TWIN BLADES","ROBED WATCHER","VAULT BULWARK","INTERCEPT SCOUT","CHARGED HAMMER"]
  for i in tokens.size():
   var x=110+i*210
   draw_string(font,Vector2(x-91,90),names[i],0,-1,14,Old.TEAL)

@@ -5,3 +5,7 @@ export/
 *.log
 __pycache__/
 *.pyc
+
+# Reproducible raw balance outputs; lossless archives are versioned.
+/docs/benchmarks/endless-v8-balance.json
+/docs/benchmarks/endless-v8-relics.json

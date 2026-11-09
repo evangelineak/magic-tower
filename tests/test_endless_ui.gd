@@ -237,6 +237,6 @@ func run_tests():
   var after_foe=ui.world.save_data();await ui.reload_run()
   check(ui.world.save_data()==after_foe and ui.world.kills==1,"new enemy result replays exactly once")
  await ui.start_run(1)
- check(ui.world.rule_version()==7,"new UI journey uses current v7 rules")
+ check(ui.world.rule_version()==World.CURRENT_VERSION,"new UI journey uses current rules")
  ui.queue_free();await process_frame
  print("ENDLESS UI: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks]);quit(0 if failures==0 else 1)
