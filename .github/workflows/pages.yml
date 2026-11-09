@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export keyed twin-arm bridge release
+      - name: Verify and export budget choices and preserved relics release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower verified keyed twin-arm bridge release\nGame source: a87773523a3a7f86a00ddf2c5ed1f8ddc2acd873\nWeb deployment source: %s\nNative legal-v16 treasure and shortcut journeys verified: no-key refusal, safe distant click, cancellation, one-key payment, independent extra battle and two-tool cache, mandatory remaining guard, retained skipped enemy, paired stairs, reload and safe camp return. Original flat 40/64px raised/open/locked bridges inspected. Independent closed/short/loot geometry and native persistence passed; twelve legal 100-floor policies compare actual combat and economy costs. Real Chrome production storage passed 415 checks across sixteen rule versions. Old versions remain frozen. Device-local rankings only; no backend/account/fee/player upload created. Economy inflation is not solved. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nExplicit new journey required for v16 bridges; only some odd floors contain them. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower verified budget choices and preserved relics release\nGame source: 6beb0f92761477df88c6aa8421adbbbb0ba4dfce\nWeb deployment source: %s\nNative legal-v17 journey verified: treasure bridge guardian actual14HP/22gold, box2wards+2spikes, medicine144-to180 costs15 with unused healing shown, insufficient-money refusal, ward purchase4gold and reload. Independent legal 888-action relic revisit preserves zero-benefit relic then heals30 on return; 16 legal100-floor budget policies compare no-door and all-door incomes. Real Chrome production storage passed471 checks across17 versions; final101 Godot suites plus Node passed. Ordinary bounty/tool costs reduced, but every keyed cache still gives40gold and wealth inflation is NOT solved. Device-local rankings only; no backend/account/fee/player upload created. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nExplicit new journey required for v17 economics; old versions remain frozen. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output

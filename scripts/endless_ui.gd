@@ -120,7 +120,7 @@ func transact(kind:String,value,confirmed=false):
  var r:Dictionary=await store.commit(candidate.save_data(),revision)
  busy=false
  if not r.get("ok",false):
-  walk.clear();notice="保存未确认，画面未前进：%s。按L核对已存旅程。"%str(r.get("status","unknown"));queue_redraw();return
+  walk.clear();notice="保存未确认，画面未前进：%s。按L核对已存旅程。"%str(r.get("status","unknown"));modal_notice=notice;queue_redraw();return
  clear_target_feedback()
  world=candidate;revision=int(r.revision);records=r.get("records",records);modal="";modal_notice="";notice=str(result.get("message",""));center_camera()
  if result.get("battle") is Dictionary:
@@ -219,14 +219,14 @@ func _unhandled_input(event):
     if Rect2(645,480+i*44,540,40).has_point(p):await transact("act",choices[i].id);return
    return
   if modal!="":
-   if Rect2(280,575,330,48).has_point(p):await confirm_modal();return
-   if Rect2(650,575,330,48).has_point(p):
+   if Rect2(280,choice_footer_y(),330,48).has_point(p):await confirm_modal();return
+   if Rect2(650,choice_footer_y(),330,48).has_point(p):
     if modal=="start":get_tree().change_scene_to_file("res://main.tscn")
     else:modal=""
     return
    if modal=="choices":
     for i in choices.size():
-     if Rect2(280,215+i*52,720,48).has_point(p):await transact("act",choices[i].id);return
+     if choice_rect(i).has_point(p):await transact("act",choices[i].id);return
    return
   if rune_hit_rect().has_point(p):open_rune();return
   if Rect2(950,396,138,32).has_point(p):open_supply_panel("encounter");return
@@ -490,7 +490,7 @@ func draw_modal():
  if modal=="growth":draw_growth();return
  if modal=="case":draw_case();return
  if modal=="build":draw_build();return
- panel(Rect2(0,0,1280,800),Color(0,0,0,0.70));panel(Rect2(245,145,790,505),Color("152736"))
+ panel(Rect2(0,0,1280,800),Color(0,0,0,0.70));panel(Rect2(245,100,790,620) if quoted_choice_page() else Rect2(245,145,790,505),Color("152736"))
  var title="确认"
  var body=notice
  match modal:
@@ -508,9 +508,12 @@ func draw_modal():
  if modal=="help" and world!=null and world.has_method("contract_view"):body=body.replace("R营地遭遇", "R遭遇/订单（Tab切换）")
  if modal=="help" and world!=null and world.has_method("gear_view"):body=body.replace("I道具", "I道具/装备（Tab切换）")
  if modal=="help" and world!=null and world.has_method("camp_return_view"):body=body.replace("右拖地图，空格回角色", "T安全回营（一次保存），空格回角色")
- text(Vector2(280,190),title,26,GOLD)
+ text(Vector2(280,160 if quoted_choice_page() else 190),title,26,GOLD)
  if modal=="choices":
-  for i in mini(6,choices.size()):panel(Rect2(280,215+i*52,720,48),Color("2a4051"));draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(293,241+i*52),690,16,INK,2)
+  if quoted_choice_page():text(Vector2(280,195),choice_resources_text(),17,TEAL)
+  for i in mini(6,choices.size()):
+   var rect=choice_rect(i);panel(rect,Color("2a4051"))
+   draw_wrapped("%d  %s" % [i+1,choice_display_text(choices[i])],rect.position+Vector2(13,24),690,16,INK,2)
  elif modal=="ranking":
   draw_wrapped(body,Vector2(280,230),710,16,TEAL,2)
   for i in mini(8,records.size()):
@@ -518,9 +521,9 @@ func draw_modal():
    draw_wrapped("%d.  v%d · 第%d层 · 击杀%d · 金币%d"%[i+1,int(record.get("rule_version",1)),int(record.get("max_floor",1)),int(record.get("kills",0)),int(record.get("gold",0))],Vector2(280,285+i*32),710,16,INK,1)
  elif modal in ["help","start"]:draw_wrapped(body,Vector2(280,230),710,17,INK,14)
  else:draw_wrapped(body,Vector2(280,245),710,20,INK,11)
- if modal_notice!="" and modal in ["choices","new","start"]:draw_wrapped(modal_notice,Vector2(280,535),710,15,Color("efb18e"),2)
- panel(Rect2(280,575,330,48),Color("365347"));text(Vector2(300,606),"确认 / Enter" if modal not in ["ranking","choices","help"] else "关闭",18)
- panel(Rect2(650,575,330,48),Color("384152"));text(Vector2(670,606),"取消 / Esc",18)
+ if modal_notice!="" and modal in ["choices","new","start"]:draw_wrapped(modal_notice,Vector2(280,595 if quoted_choice_page() else 535),710,15,Color("efb18e"),2)
+ panel(Rect2(280,choice_footer_y(),330,48),Color("365347"));text(Vector2(300,choice_footer_y()+31),"确认 / Enter" if modal not in ["ranking","choices","help"] else "关闭",18)
+ panel(Rect2(650,choice_footer_y(),330,48),Color("384152"));text(Vector2(670,choice_footer_y()+31),"取消 / Esc",18)
 func open_case():
  if world==null or not world.has_method("case_view"):
   notice="这段旧规则旅程没有信使事件。新局使用新版规则。";return
@@ -547,7 +550,8 @@ func draw_case():
  draw_wrapped(str(data.get("status","调查时可以对照路线图，先排除不符合线索的地点。")),Vector2(645,359),530,17,TEAL,4)
  for i in mini(5,choices.size()):
   panel(Rect2(645,480+i*44,540,40),Color("2a4051"))
-  draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(655,505+i*44),515,15,INK,1)
+  var quoted:bool=choices[i].has("quote")
+  draw_wrapped("%d  %s"%[i+1,choice_display_text(choices[i])],Vector2(655,(499 if quoted else 505)+i*44),515,14 if quoted else 15,INK,2 if quoted else 1)
  if choices.is_empty():draw_wrapped("当前没有可执行的事件行动，请查看上方进度条件。" if data.get("available",false) else "这里只读查看。调查、选择或领奖请回第4层商人旁。",Vector2(645,500),530,17,GOLD,3)
  text(Vector2(100,629),"旗帜=起点  钟楼=必经  水井=禁行",14,TEAL)
  text(Vector2(100,652),"锁门/守卫不可过；仓/庭/驿是待调查地点。",14,TEAL)
@@ -630,7 +634,7 @@ func draw_supply_panel():
  draw_wrapped(body,Vector2(160,220 if tabbed else 185),950,19,INK,4 if tabbed else 7)
  var status:String=""
  if modal=="encounter":
-  status=str(data.get("status",""))+"\n"+("本层机会已用完。" if data.get("resolved",false) else ("现在可选；一次选择，不是无限商店。" if data.get("available",false) else "靠近本层篷车商人后才能选择。"))
+  status=(choice_resources_text()+" · 钥匙%d" % world.keys if world.has_method("action_quote") and not data.get("resolved",false) else str(data.get("status","")))+"\n"+("本层机会已用完。" if data.get("resolved",false) else ("现在可选；一次选择，不是无限商店。" if data.get("available",false) else "靠近本层篷车商人后才能选择。"))
  elif modal=="contract":
   status=str(data.get("status",""))
  else:
@@ -639,7 +643,7 @@ func draw_supply_panel():
  draw_wrapped(status,Vector2(160,350),950,17,TEAL,3)
  for i in mini(3,choices.size()):
   panel(Rect2(185,425+i*70,910,62),Color("2a4051"))
-  draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(200,451+i*70),880,17,INK,2)
+  draw_wrapped("%d  %s"%[i+1,choice_display_text(choices[i])],Vector2(200,451+i*70),880,17,INK,2)
  if modal_notice!="":draw_wrapped(modal_notice,Vector2(160,665),720,15,Color("efb18e"),2)
  panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(928,715),"关闭 · Esc",18)
 
@@ -685,10 +689,12 @@ func contract_heading(data:Dictionary)->String:
 
 func contract_body(data:Dictionary)->String:
  var phase=str(data.get("phase","offer"))
- var cost="可直接买1护符12金 / 1凿甲钉18金，或押12金接单。" if phase=="offer" else "已接订单：12金币是押金，退还不是额外收入。"
+ var ward_price:int=world.tool_price("ward") if world!=null and world.has_method("tool_price") else 12
+ var pierce_price:int=world.tool_price("pierce") if world!=null and world.has_method("tool_price") else 18
+ var cost="可直接买1护符%d金 / 1凿甲钉%d金，或押12金接单。" % [ward_price,pierce_price] if phase=="offer" else "已接订单：12金币是押金，退还不是额外收入。"
  if phase=="voucher":cost="押金已经退还，不会再次领取。兑换是可选的。"
  if phase=="closed":cost="此层订单已结算，不重复购买、接单或领奖。"
- return cost+"\n目标：第%d层 · %s；剩%d名。兑现须回第%d层商人。\n完成先退12，再自选8金币换%d件道具；也可免费放弃兑换。\n不限时；未履约取消或结束旅程，未退押金损失。" % [int(data.get("source",0)),str(data.get("route_label","指定路线")),int(data.get("remaining",0)),int(data.get("source",0)),int(data.get("reward_count",1))]
+ return cost+"\n目标：第%d层 · %s；剩%d名。兑现须回第%d层商人。\n完成先退12，再自选%d金币换%d件道具；也可免费放弃兑换。\n不限时；未履约取消或结束旅程，未退押金损失。" % [int(data.get("source",0)),str(data.get("route_label","指定路线")),int(data.get("remaining",0)),int(data.get("source",0)),int(data.get("exchange_price",8)),int(data.get("reward_count",1))]
 
 func camp_button_label(data:Dictionary)->String:
  if data.get("available",false):return "T 安全回营 · %d步" % int(data.get("steps",0))
@@ -922,7 +928,7 @@ func draw_bridge_panel():
   if str(arm.id)=="short":
    draw_wrapped("绕过："+bridge_enemy_text(arm.get("bypassed",{}))+"\n暂不击杀则暂不获%d金币" % int(arm.get("bypassed",{}).get("gold",0))+"\n仍需面对："+bridge_enemy_text(arm.get("remaining",{})),Vector2(x,418),460,17,TEAL,4)
   else:
-   draw_wrapped("额外守卫："+bridge_enemy_text(arm.get("guardian",{}))+"\n奖励："+bridge_reward_text(arm.get("reward",{})),Vector2(x,418),460,17,TEAL,4)
+   draw_wrapped(bridge_loot_text(arm),Vector2(x,418),460,17,TEAL,4)
   text(Vector2(x,550),{"raised":"尚未选择","lowered":"已放下，可通行，不再收费","locked":"已永久锁死"}.get(str(arm.state),str(arm.state)),17,GOLD)
   panel(Rect2(x,590,470,55),Color("365347") if data.get("available",false) else Color("293e50"))
   text(Vector2(x+12,624),"%d 确认花1钥匙：%s" % [i+1,"短桥" if str(arm.id)=="short" else "宝桥"] if data.get("available",false) else "不能激活：查看下方原因",18,INK)
@@ -930,5 +936,33 @@ func draw_bridge_panel():
  text(Vector2(145,717),"查看/关闭不收费；只预估当前状态，不代替自动战斗。",14,TEAL)
  panel(Rect2(880,686,250,44),Color("384152"));text(Vector2(900,716),"关闭 · Esc",18)
 
+func bridge_loot_text(arm:Dictionary)->String:
+ var guardian:Dictionary=arm.get("guardian",{})
+ var bounty="守卫已清除，不再获得赏金" if guardian.get("cleared",false) else "击败守卫另得%d金币" % int(guardian.get("gold",0))
+ return "额外守卫："+bridge_enemy_text(guardian)+"\n"+bounty+"\n箱内："+bridge_reward_text(arm.get("reward",{}))
+
 func bridge_reward_text(reward:Dictionary)->String:
  return "护符%d件 + 凿甲钉%d件，%s" % [int(reward.get("ward",0)),int(reward.get("pierce",0)),"无金币" if int(reward.get("gold",0))==0 else "%d金币" % int(reward.gold)]
+
+func quoted_choice_page()->bool:
+ return modal=="choices" and world!=null and world.has_method("action_quote")
+func choice_rect(index:int)->Rect2:
+ return Rect2(280,215+index*(58 if quoted_choice_page() else 52),720,54 if quoted_choice_page() else 48)
+func choice_footer_y()->int:return 650 if quoted_choice_page() else 575
+func choice_resources_text()->String:
+ if world==null:return ""
+ var cap=int(world.growth_view().get("hp_cap",0)) if world.has_method("growth_view") else 0
+ return "生命 %d%s · 金币 %d" % [world.hp," / %d" % cap if cap>0 else "",world.gold]
+func choice_display_text(row:Dictionary)->String:
+ var label=str(row.get("label",""));var quote:Dictionary=row.get("quote",{})
+ if quote.is_empty():return label
+ var hp_line="生命%d→%d（实际+%d）" % [int(quote.hp_before),int(quote.hp_after),int(quote.heal_actual)]
+ var price="%d金币" % int(quote.cost_gold) if int(quote.cost_gold)>0 else ""
+ # Preserve non-gold costs and opportunity costs from the authoritative row label.
+ var heading=label
+ if str(row.get("id","")) in ["buy_potion","enc_medicine"]:heading=price+" · "+hp_line
+ else:heading=label
+ var detail="完整药效%d，未用%d不保留" % [int(quote.heal_nominal),int(quote.overflow)]
+ if str(row.get("id","")) not in ["buy_potion","enc_medicine"]:detail=hp_line+" · 药效%d，未用%d不保留" % [int(quote.heal_nominal),int(quote.overflow)]
+ if not quote.get("allowed",false):detail=str(quote.get("reason","当前不能购买。"))+" 不会扣费。"
+ return heading+"\n"+detail
