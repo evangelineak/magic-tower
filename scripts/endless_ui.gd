@@ -1,5 +1,6 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const Enemies7=preload("res://scripts/endless_enemy_v7_art.gd")
 const Props=preload("res://scripts/endless_interaction_art.gd")
 const Actors=preload("res://scripts/endless_actor_art.gd")
 const Symbols=preload("res://scripts/map_symbols.gd")
@@ -234,6 +235,7 @@ func draw_hero(c:Vector2):
  stance={"brace":"guard","reap":"harvest"}.get(stance,stance)
  Actors.draw_hero(self,c,stance,64)
 func draw_token(c:Vector2,t:String):
+ if Enemies7.draw_enemy(self,c,t,64):return
  if t in ["g","b","w","V"]:
   Actors.draw_enemy(self,c,t,64);return
  if Props.draw_token(self,c,t,64):return
@@ -343,14 +345,16 @@ func _draw():
    panel(box,Color("07121c"));draw_rect(box,TEAL,false,1)
    draw_wrapped(content,box.position+Vector2(12,23),box.size.x-24,15,INK,14)
  if battle_time>0:
-  panel(Rect2(150,220,560,250),Color("252432"));text(Vector2(180,258),"战斗结算",23,GOLD)
+  panel(Rect2(150,220,560,300),Color("252432"));text(Vector2(180,258),"战斗结算",23,GOLD)
   draw_hero(Vector2(260,332));draw_token(Vector2(585,332),str(battle.get("token","g")))
   var strike=Vector2(310,330).lerp(Vector2(540,330),clampf((2.4-battle_time)/1.2,0,1))
   draw_line(strike-Vector2(12,17),strike+Vector2(12,-17),GOLD,4)
-  draw_wrapped("%s · %d击 · 损失%d生命"%[str(battle.get("title","敌人")),int(battle.get("rounds",0)),int(battle.get("damage",0))],Vector2(180,407),500,17,INK,2)
+  draw_wrapped("%s · %d击 · 损失%d生命"%[str(battle.get("title","敌人")).get_slice("：",0),int(battle.get("rounds",0)),int(battle.get("damage",0))],Vector2(180,407),500,17,INK,2)
   if battle.has("heal_after"):
    text(Vector2(180,435),"实际承伤%d · 胜后恢复%d · 净损耗%d"%[int(battle.damage),int(battle.heal_after),int(battle.get("net_damage",battle.damage))],14,TEAL)
-  text(Vector2(180,457),"示意动画，结算仅一次 · 点击或按键跳过",13,TEAL)
+  if battle.has("mechanic_note"):
+   draw_wrapped(str(battle.mechanic_note),Vector2(180,461),500,15,GOLD,2)
+  text(Vector2(180,507),"示意动画，结算仅一次 · 点击或按键跳过",13,TEAL)
  if busy:panel(Rect2(380,15,370,43),Color("293e50"));text(Vector2(397,43),"正在安全保存，请稍候……",18,GOLD)
 func tooltip_layout(content:String,desired:Vector2)->Rect2:
  # Keep complete battle reasoning beside its tile, including narrow-view edges.

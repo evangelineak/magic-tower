@@ -45,11 +45,11 @@ r=await call(other,'read');check(r.ok&&r.snapshot.version===2&&r.records.some(x=
 r=await call(api,'start',args(first,7));check(r.ok&&r.snapshot.version===1,'explicit v1 new run still supported');
 const beforeDowngrade=localStorage.getItem(key);
 r=await call(other,'commit',args(modernEnd,8));check(r.status==='invalid'&&localStorage.getItem(key)===beforeDowngrade,'v2 action cannot enter v1 run');
-for(const version of [1,2,3,4,5,6]){
+for(const version of [1,2,3,4,5,6,7]){
  r=await call(api,'read');
  const snapshot={...first,version};
  r=await call(api,'start',args(snapshot,r.revision));check(r.ok&&r.snapshot.version===version,'explicit factory protocol version '+version);
- for(const targetVersion of [1,2,3,4,5,6]){
+ for(const targetVersion of [1,2,3,4,5,6,7]){
   if(targetVersion===version)continue;
   const retained=localStorage.getItem(key);
   const rejected=await call(other,'commit',args({...snapshot,version:targetVersion,actions:['retire']},r.revision));
@@ -63,8 +63,8 @@ for(const version of [1,2,3,4,5,6]){
 }
 const beforeUnknownRules=localStorage.getItem(key);
 r=await call(api,'read');
-const unknown=await call(other,'start',args({...first,version:7},r.revision));
-check(unknown.status==='invalid'&&localStorage.getItem(key)===beforeUnknownRules,'unknown rules 7 rejected without changing save');
+const unknown=await call(other,'start',args({...first,version:8},r.revision));
+check(unknown.status==='invalid'&&localStorage.getItem(key)===beforeUnknownRules,'unknown rules 8 rejected without changing save');
 localStorage.setItem(key,'{broken');r=await call(api,'read');check(!r.ok,'corrupt JSON rejected');check(localStorage.getItem(key)==='{broken','corruption not silently replaced');
 output.textContent=`PASS: ${count} checks. Actual production JS callback + Web Locks + localStorage + second browsing context. No Godot engine gameplay claim.`;
 }catch(e){output.textContent=`FAIL after ${count}: ${e.stack}`;}
