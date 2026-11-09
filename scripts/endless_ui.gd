@@ -1,5 +1,7 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const WaterArt=preload("res://scripts/endless_water_art.gd")
+const BattleEffects=preload("res://scripts/endless_battle_effect_art.gd")
 const ProgressArt=preload("res://scripts/endless_progress_art.gd")
 const Heroes20=preload("res://scripts/endless_hero_v20_art.gd")
 const CartArt=preload("res://scripts/endless_cart_art.gd")
@@ -29,6 +31,8 @@ var notice="正在读取独立的无尽旅程……"
 var modal_notice=""
 var camera=Vector2i.ZERO
 var hover=Vector2i(-1,-1)
+var water_cache_key=""
+var water_cache:Dictionary={}
 var cart_cache_key=""
 var cart_cache:Dictionary={}
 var bridge_cache_key=""
@@ -143,6 +147,7 @@ func transact(kind:String,value,confirmed=false):
  if not r.get("ok",false):
   walk.clear();notice="保存未确认，画面未前进：%s。按L核对已存旅程。"%str(r.get("status","unknown"));modal_notice=notice;queue_redraw();return
  clear_target_feedback()
+ if result.get("water_changed",false) or (kind=="act" and str(value).begins_with("water_")):walk.clear()
  ingest_profile(r)
  world=candidate;revision=int(r.revision);records=r.get("records",records);modal="";modal_notice="";notice=str(result.get("message",""));center_camera()
  if result.get("battle") is Dictionary:
@@ -168,6 +173,8 @@ func settle_run():
 func map_click(target:Vector2i):
  if busy or world==null or world.ended or modal!="":return
  walk.clear()
+ if water_data().get("present",false) and target in water_data().controls and absi(target.x-world.pos.x)+absi(target.y-world.pos.y)==1:
+  await transact("act",str(water_data().action));return
  if cart_data().get("present",false) and target==cart_data().reset and absi(target.x-world.pos.x)+absi(target.y-world.pos.y)==1:
   await transact("act","cart_reset");return
  if bridge_map_click(target):return
@@ -421,7 +428,8 @@ func _draw():
   for x in VIEW:
    var p=Vector2i(x,y)+camera;var c=ORIGIN+Vector2(x,y)*CELL+Vector2(32,32)
    draw_ground_tile(c,p,camp_region)
-   if draw_cart_tile(c,p):pass
+   if draw_water_tile(c,p):pass
+   elif draw_cart_tile(c,p):pass
    elif world.tile(p)=="$" and world.has_method("vault_quote"):
     VaultArt.draw_cache(self,c,str(world.vault_quote(p).kind))
    elif not draw_bridge_tile(c,p):draw_token(c,world.tile(p))
@@ -461,11 +469,15 @@ func _draw():
  for y in 15:
   for x in 15:
    var t=world.tile(Vector2i(x,y));var color=Color("344655") if t=="#" else Color("14212d")
-   if t in ["<",">"]:color=TEAL
+   if t=="~":color=Color("102d40")
+   elif t=="F" and water_data().get("present",false):color=Color("b39b64")
+   elif water_pool_at(Vector2i(x,y))!="":color=Color("89978d")
+   elif t in ["<",">"]:color=TEAL
    elif t in ["D","$","T","B"] or (cart_data().get("present",false) and t in ["J","L"]):color=GOLD
    elif t not in ["#","."]:color=Color("ab7970")
    var mini_rect=Rect2(768+x*11,264+y*11,10,10)
    panel(mini_rect,color)
+   if t=="~":draw_line(mini_rect.position+Vector2(2,5),mini_rect.position+Vector2(8,5),Color("365b6b"),1)
    if RevisitArt.status(world,Vector2i(x,y)).get("blocked",false):draw_rect(mini_rect.grow(-2),Color("14212d"),true)
  draw_rect(Rect2(Vector2(768,264)+Vector2(camera)*11,Vector2(121,121)),INK,false,1)
  draw_circle(Vector2(773,269)+Vector2(world.pos)*11,4,TEAL)
@@ -529,16 +541,21 @@ func _draw():
    panel(box,Color("07121c"));draw_rect(box,TEAL,false,1)
    draw_wrapped(content,box.position+Vector2(12,23),box.size.x-24,15,INK,16)
  if battle_time>0:
-  panel(Rect2(150,220,560,330) if battle.has("reflection_damage") or battle.has("regen_total") else Rect2(150,220,560,300),Color("252432"));text(Vector2(180,258),"战斗结算",23,GOLD)
-  draw_hero(Vector2(260,332));draw_token(Vector2(585,332),str(battle.get("token","g")))
-  var strike=Vector2(310,330).lerp(Vector2(540,330),clampf((2.4-battle_time)/1.2,0,1))
-  draw_line(strike-Vector2(12,17),strike+Vector2(12,-17),GOLD,4)
-  draw_wrapped("%s · %d击 · 损失%d生命"%[str(battle.get("title","敌人")).get_slice("：",0),int(battle.get("rounds",0)),int(battle.get("damage",0))],Vector2(180,407),500,17,INK,2)
+  var modern=battle.has("hero_skill_used")
+  panel(Rect2(150,205,600,370) if modern else (Rect2(150,220,560,330) if battle.has("reflection_damage") or battle.has("regen_total") else Rect2(150,220,560,300)),Color("252432"))
+  text(Vector2(180,248 if modern else 258),"战斗结算",23,GOLD)
+  draw_hero(Vector2(260,322 if modern else 332));draw_token(Vector2(585,322 if modern else 332),str(battle.get("token","g")))
+  if int(battle.get("rounds",0))>0:
+   var hero_id=str(world.hero_view().id) if world!=null and world.has_method("hero_view") else ""
+   BattleEffects.draw_attack(self,Vector2(310,320 if modern else 330),Vector2(540,320 if modern else 330),hero_id,clampf((2.4-battle_time)/1.2,0,1))
+  draw_wrapped("%s · %d击 · 损失%d生命"%[str(battle.get("title","敌人")).get_slice("：",0),int(battle.get("rounds",0)),int(battle.get("damage",0))],Vector2(180,387 if modern else 407),530 if modern else 500,17,INK,2)
   if battle.has("heal_after"):
-   text(Vector2(180,435),"实际承伤%d · 胜后恢复%d · 净损耗%d"%[int(battle.damage),int(battle.heal_after),int(battle.get("net_damage",battle.damage))],14,TEAL)
+   text(Vector2(180,415 if modern else 435),"实际承伤%d · 胜后恢复%d · 净损耗%d"%[int(battle.damage),int(battle.heal_after),int(battle.get("net_damage",battle.damage))],14,TEAL)
+  if modern:draw_wrapped(battle_hero_contribution(battle),Vector2(180,443),535,15,TEAL,2)
   var mechanism=battle_mechanism_text(battle)
-  if mechanism!="":draw_wrapped(mechanism,Vector2(180,461),500,15,GOLD,3 if battle.has("reflection_damage") or battle.has("regen_total") else 2)
-  text(Vector2(180,537 if battle.has("reflection_damage") or battle.has("regen_total") else 507),"示意动画，结算仅一次 · 点击或按键跳过",13,TEAL)
+  if mechanism!="":draw_wrapped(mechanism,Vector2(180,490 if modern else 461),530 if modern else 500,15,GOLD,2 if modern else (3 if battle.has("reflection_damage") or battle.has("regen_total") else 2))
+  text(Vector2(180,557 if modern else (537 if battle.has("reflection_damage") or battle.has("regen_total") else 507)),"示意动画，非逐击回放 · 结算仅一次 · 点击或按键跳过" if modern else "示意动画，结算仅一次 · 点击或按键跳过",13,TEAL)
+
  if busy:panel(Rect2(380,15,370,43),Color("293e50"));text(Vector2(397,43),"正在安全保存，请稍候……",18,GOLD)
 func tooltip_layout(content:String,desired:Vector2)->Rect2:
  # Keep complete battle reasoning beside its tile, including narrow-view edges.
@@ -936,9 +953,11 @@ func camp_floor_cells()->Dictionary:
 func draw_ground_tile(center:Vector2,p:Vector2i,region:Dictionary):
  panel(Rect2(center-Vector2(31,31),Vector2(62,62)),Color("152432") if (p.x+p.y)%2==0 else Color("192a38"))
  CampFloor.draw_floor(self,center,p,region,64)
+ draw_water_ground(center,p)
  draw_cart_ground(center,p)
 
-func draw_path_marker(center:Vector2):draw_circle(center,4,TEAL)
+func draw_path_marker(center:Vector2):
+ draw_circle(center,6,Color("08131d"));draw_circle(center,4,INK);draw_circle(center,2.5,TEAL)
 
 func bridge_data()->Dictionary:
  if world==null or not world.has_method("bridge_view"):return {}
@@ -1238,3 +1257,34 @@ func talent_ready()->bool:
  if world==null or not world.has_method("talent_view") or world.ended:return false
  var view:Dictionary=world.talent_view()
  return int(view.next_kills)>0 and int(view.kills)>=int(view.next_kills)
+
+func battle_hero_contribution(info:Dictionary)->String:
+ if not info.has("hero_skill_used"):return ""
+ var used=bool(info.hero_skill_used)
+ var cost=int(info.get("skill_cost",1)) if used else 0
+ return "本战英雄：减免%d生命 · 额外忽防%d · 消耗%d专注%s" % [int(info.get("hero_reduction",0)),int(info.get("hero_pierce",0)),cost,"" if used else "（未使用技能）"]
+
+func water_data()->Dictionary:
+ if world==null or not world.has_method("water_view"):return {}
+ var key="%s:%d:%d:%s:%d" % [world.get_instance_id(),revision,world.floor_number,str(world.pos),world.actions.size()]
+ if key!=water_cache_key:water_cache=world.water_view();water_cache_key=key
+ return water_cache
+func water_pool_at(point:Vector2i)->String:
+ var data=water_data()
+ if not data.get("present",false):return ""
+ for name in data.pools:
+  if point in data.pools[name]:return str(name)
+ return ""
+func draw_water_ground(center:Vector2,point:Vector2i):
+ var pool=water_pool_at(point)
+ if pool=="":return
+ var data=water_data();var edges=0;var dirs=[Vector2i.UP,Vector2i.RIGHT,Vector2i.DOWN,Vector2i.LEFT]
+ for i in 4:
+  if point+dirs[i] not in data.pools[pool]:edges|=1<<i
+ WaterArt.draw_pool(self,center,str(data.pool_states[pool])=="deep",edges)
+func draw_water_tile(center:Vector2,point:Vector2i)->bool:
+ var data=water_data()
+ if not data.get("present",false):return false
+ if point in data.controls:
+  WaterArt.draw_valve(self,center,"A" if int(data.state)==0 else "B",true);return true
+ return water_pool_at(point)!="" and world.tile(point) in [".","~"]
