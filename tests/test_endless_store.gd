@@ -24,7 +24,7 @@ func run_tests():
  var path="/tmp/tower-endless-store-"+str(Time.get_ticks_usec())+"/endless.json"
  var a=Store.new(path);var b=Store.new(path)
  var r=await a.read();check(r.ok and r.status=="empty","independent empty slot")
- var w=World.new_run(12);var fresh=w.save_data()
+ var w=World.new_run(12,1);var fresh=w.save_data()
  r=await a.start(fresh,0);check(r.ok and r.revision==1,"start persisted")
  check((await a.start(fresh,0)).revision==1,"start ack retry idempotent")
  var p=w.pos;var moved=w.step(Vector2i.RIGHT)
@@ -55,7 +55,7 @@ func run_tests():
  check((await a.start(forged,r.revision)).status=="invalid","unknown snapshot field rejected")
  forged=fresh.duplicate(true);forged.actions=["invalid"]
  check((await a.commit(forged,r.revision)).status=="invalid","unknown action rejected by replay")
- w=World.new_run(12);r=await a.start(w.save_data(),r.revision)
+ w=World.new_run(12,1);r=await a.start(w.save_data(),r.revision)
  w.step(Vector2i.RIGHT);r=await a.commit(w.save_data(),r.revision)
  var steps=route(w,Vector2i(9,10))
  check(not steps.is_empty(),"real route reaches optional guard")
@@ -70,6 +70,44 @@ func run_tests():
  check(r.ok and w.ended and w.ended_reason=="death","actual confirmed death persisted")
  r=await a.finish(w.save_data(),r.revision)
  check(r.ok and r.records.size()==2,"actual death records once alongside retirement")
+ # Versioned replay must not reinterpret old runs or cross rules on one run.
+ var legacy_record={"run_id":1,"seed":12,"max_floor":1,"kills":0,"gold":0,"reason":"retired"}
+ check(a.valid_record(legacy_record),"unversioned old records remain readable as v1")
+ for bad_version in [0,3,1.5,"1",true,null]:
+  var bad_record=legacy_record.duplicate();bad_record.rule_version=bad_version
+  check(not a.valid_record(bad_record),"record rejects invalid rule version")
+ var version_path=path+".versions"
+ var versions=Store.new(version_path)
+ var old=World.new_run(12,1);var modern=World.new_run(12)
+ check(old.save_data().version==1 and modern.save_data().version==2,"factory defaults v2 with explicit v1")
+ var vr=await versions.start(old.save_data(),0)
+ check(vr.ok,"version one start")
+ check((await versions.start(modern.save_data(),0)).status=="conflict","different-version start is not ack retry")
+ modern.act("retire")
+ check((await versions.commit(modern.save_data(),1)).status=="invalid","cannot upgrade active run via commit")
+ old.act("retire")
+ check((await versions.commit(old.save_data(),1)).ok,"old rules still replay and commit")
+ vr=await versions.finish(old.save_data(),2)
+ check(vr.ok and vr.records[0].rule_version==1,"old rules settle and label")
+ modern=World.new_run(12)
+ vr=await versions.start(modern.save_data(),3)
+ check(vr.ok and vr.snapshot.version==2,"explicit new run changes version")
+ check((await Store.new(version_path).read()).snapshot.version==2,"v2 disk roundtrip preserves version")
+ modern.act("retire")
+ vr=await versions.commit(modern.save_data(),4)
+ check(vr.ok,"v2 action commits")
+ var switched=modern.save_data();switched.version=1
+ check((await versions.finish(switched,5)).status=="invalid","finish cannot change rules")
+ vr=await versions.finish(modern.save_data(),5)
+ check(vr.ok and vr.records[1].rule_version==2,"v2 finish and label")
+ check((await versions.finish(switched,5)).status=="conflict","finish retry checks version")
+ for bad_version in [0,3,1.5,"1",true,null,{},[]]:
+  var bad=modern.save_data();bad.version=bad_version
+  check(World.from_data(bad)==null,"facade rejects invalid version")
+  check((await versions.start(bad,6)).status=="invalid","storage rejects invalid version")
+ var roundtrip=JSON.parse_string(JSON.stringify(old.save_data()))
+ check(World.from_data(roundtrip).save_data()==old.save_data(),"JSON number version accepted without migration")
+ DirAccess.remove_absolute(version_path)
  var lock=path+".lock"
  DirAccess.make_dir_absolute(lock)
  var owner=FileAccess.open(lock+"/owner.json",FileAccess.WRITE);owner.store_string(JSON.stringify({"pid":OS.get_process_id()}));owner.close()

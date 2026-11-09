@@ -1,5 +1,5 @@
 extends SceneTree
-const World=preload("res://scripts/endless_world.gd")
+const World=preload("res://scripts/endless_world_v1.gd")
 var checks:=0
 var failures:=0
 func check(ok:bool,label:String):

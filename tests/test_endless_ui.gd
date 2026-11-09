@@ -41,7 +41,7 @@ func run_tests():
  var ui=load("res://endless.tscn").instantiate();var memory=MemoryStore.new();ui.store=memory;root.add_child(ui)
  await process_frame
  check(ui.modal=="start" and ui.world==null,"fresh mode offers new independent journey")
- await ui.start_run(1)
+ await ui.start_run(1,1)
  check(ui.world!=null and memory.writes==1,"new journey saved before showing")
  var old=ui.world.save_data().duplicate(true)
  memory.failing=true
@@ -75,7 +75,7 @@ func run_tests():
  check(ui.world.save_data()==old,"modal blocks world click")
  ui.modal=""
  # A fully valid replay state near a door, built with actual rule steps.
- var w=World.new_run(7)
+ var w=World.new_run(7,1)
  for target in [Vector2i(3,3),Vector2i(9,3)]:
   var path=route(w,target);check(not path.is_empty(),"door setup real route exists")
   for p in path:check(w.step(p-w.pos).changed,"setup uses real model step")
@@ -96,8 +96,28 @@ func run_tests():
  await ui.settle_run()
  check(memory.records.size()==1,"settlement retry is not duplicate")
  check(ui.screen_tile(Vector2(0,0))==Vector2i(-1,-1),"outside viewport rejects tile")
- ui.world=World.new_run(9);ui.world.pos=Vector2i(13,13);ui.center_camera()
+ ui.world=World.new_run(9,1);ui.world.pos=Vector2i(13,13);ui.center_camera()
  check(ui.camera==Vector2i(4,4),"camera follows into larger map edge")
  check(ui.screen_tile(ui.ORIGIN+Vector2(32,32))==Vector2i(4,4),"mouse maps viewport to world coordinate")
+ # New UI defaults to v2; old v1 fixture above remains replay-compatible.
+ await ui.start_run(1)
+ check(ui.world.rule_version()==2 and memory.snapshot.version==2,"new mode uses v2 explicitly")
+ check(ui.world.summary().routes.size()==2,"two route budgets exposed")
+ await ui.map_click(Vector2i(2,1))
+ await ui.map_click(Vector2i(3,1))
+ check(ui.modal=="choices" and ui.choices[1].id=="cargo_accept","adjacent sealed supply offers real choice")
+ check(ui.world.hp==150,"opening choices does not auto consume supply")
+ await ui.transact("act","cargo_accept")
+ check(ui.world.hp==150 and ui.world.cargo.target==3 and ui.world.tile(Vector2i(3,1))==".","transport trades immediate healing for later modification")
+ await ui.reload_run()
+ check(ui.world.rule_version()==2 and ui.world.cargo.state=="carried","v2 task restores by replay")
+ await ui.map_click(Vector2i(2,2))
+ check(ui.modal=="choices" and ui.choices.back().id=="cargo_open","merchant permits reversible cargo decision")
+ await ui.transact("act","cargo_open")
+ check(ui.world.hp==170 and ui.world.cargo.state=="opened","opening cargo heals once and forfeits reward")
+ var after_open=ui.world.save_data()
+ await ui.transact("act","cargo_open")
+ check(ui.world.save_data()==after_open,"duplicate opening cannot farm health")
+ ui.queue_redraw();await process_frame
  ui.queue_free();await process_frame
  print("ENDLESS UI: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks]);quit(0 if failures==0 else 1)
