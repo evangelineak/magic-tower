@@ -60,7 +60,7 @@ func validated(s:Dictionary):
  if w!=null:cache_world=w;cache_snapshot=s.duplicate(true)
  return w
 func validated_walk(base:Dictionary,s:Dictionary):
- if not snapshot_shape(base) or not snapshot_shape(s) or not int(base.version) in [10,11,12,13,14,15,16,17,18] or s.version!=base.version or base.seed!=s.seed:return null
+ if not snapshot_shape(base) or not snapshot_shape(s) or not int(base.version) in [10,11,12,13,14,15,16,17,18,19] or s.version!=base.version or base.seed!=s.seed:return null
  var count:int=s.actions.size()-base.actions.size()
  if count<1 or count>224 or s.actions.slice(0,base.actions.size())!=base.actions:return null
  for code in s.actions.slice(base.actions.size()):
@@ -127,7 +127,7 @@ func write(operation:String,s:Dictionary,expected:int)->Dictionary:
  # Validate before writes; clone/apply-one never trusts a new history prefix.
  var w=null
  if operation=="commit_walk":
-  if not int(s.version) in [10,11,12,13,14,15,16,17,18]:return fail("invalid")
+  if not int(s.version) in [10,11,12,13,14,15,16,17,18,19]:return fail("invalid")
   var acknowledged:bool=current.status=="active" and current.snapshot==s and expected==current.revision-1
   if acknowledged:w=validated(s)
   else:
@@ -189,7 +189,7 @@ func native_write_locked(operation:String,a:Dictionary)->Dictionary:
  if not loaded.ok:return loaded
  var e:Dictionary=loaded.envelope;var s:Dictionary=a.snapshot;var expected:int=a.expected_revision
  if operation=="finish" and e.finished and e.active==s and expected==int(e.revision)-1:return result(e)
- if not e.finished and e.active==s and expected==int(e.revision)-1 and ((operation=="start" and s.actions.is_empty()) or (operation=="commit" and not s.actions.is_empty()) or (operation=="commit_walk" and int(s.version) in [10,11,12,13,14,15,16,17,18] and not s.actions.is_empty())):return result(e)
+ if not e.finished and e.active==s and expected==int(e.revision)-1 and ((operation=="start" and s.actions.is_empty()) or (operation=="commit" and not s.actions.is_empty()) or (operation=="commit_walk" and int(s.version) in [10,11,12,13,14,15,16,17,18,19] and not s.actions.is_empty())):return result(e)
  if expected!=int(e.revision):return fail("conflict")
  if e.revision>=MAX_COUNTER:return fail("limit")
  var n=e.duplicate(true);n.revision=int(n.revision)+1

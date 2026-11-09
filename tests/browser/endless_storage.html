@@ -45,11 +45,11 @@ r=await call(other,'read');check(r.ok&&r.snapshot.version===2&&r.records.some(x=
 r=await call(api,'start',args(first,7));check(r.ok&&r.snapshot.version===1,'explicit v1 new run still supported');
 const beforeDowngrade=localStorage.getItem(key);
 r=await call(other,'commit',args(modernEnd,8));check(r.status==='invalid'&&localStorage.getItem(key)===beforeDowngrade,'v2 action cannot enter v1 run');
-for(const version of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]){
+for(const version of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]){
  r=await call(api,'read');
  const snapshot={...first,version};
  r=await call(api,'start',args(snapshot,r.revision));check(r.ok&&r.snapshot.version===version,'explicit factory protocol version '+version);
- for(const targetVersion of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]){
+ for(const targetVersion of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]){
   if(targetVersion===version)continue;
   const retained=localStorage.getItem(key);
   const rejected=await call(other,'commit',args({...snapshot,version:targetVersion,actions:['retire']},r.revision));
@@ -62,12 +62,12 @@ for(const version of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]){
  r=await call(api,'read');check(r.ok&&r.snapshot.version===version,'read preserves rules '+version);
 }
 r=await call(api,'read');
-for(const walkVersion of [10,11,12,13,14,15,16,17,18]){
+for(const walkVersion of [10,11,12,13,14,15,16,17,18,19]){
 const walkBase={...first,version:walkVersion};
 r=await call(api,'start',args(walkBase,r.revision));check(r.ok,'dedicated walk setup '+walkVersion);
 const walkRevision=r.revision, walkTarget={...walkBase,actions:['R','R']};
 const plainBatch=await call(api,'commit',args(walkTarget,walkRevision));check(plainBatch.status==='invalid','ordinary commit still rejects multi-step');
-for(const targetVersion of [10,11,12,13,14,15,16,17,18]){if(targetVersion===walkVersion)continue;const switched=await call(api,'commit_walk',args({...walkTarget,version:targetVersion},walkRevision));check(switched.status==='invalid','walk cannot switch supported rules');}
+for(const targetVersion of [10,11,12,13,14,15,16,17,18,19]){if(targetVersion===walkVersion)continue;const switched=await call(api,'commit_walk',args({...walkTarget,version:targetVersion},walkRevision));check(switched.status==='invalid','walk cannot switch supported rules');}
 const walkPair=await Promise.all([call(api,'commit_walk',args(walkTarget,walkRevision)),call(other,'commit_walk',args({...walkBase,actions:['L','L']},walkRevision))]);
 check(walkPair.filter(x=>x.ok).length===1&&walkPair.filter(x=>x.status==='conflict').length===1,'walk batch cross-context atomic CAS');
 r=await call(other,'read');check(r.ok&&r.revision===walkRevision+1&&r.snapshot.actions.length===2,'walk writes complete batch once');
@@ -77,8 +77,8 @@ const unsafeShape=await call(api,'commit_walk',args({...walkWinner,actions:[...w
 }
 const beforeUnknownRules=localStorage.getItem(key);
 r=await call(api,'read');
-const unknown=await call(other,'start',args({...first,version:19},r.revision));
-check(unknown.status==='invalid'&&localStorage.getItem(key)===beforeUnknownRules,'unknown rules 19 rejected without changing save');
+const unknown=await call(other,'start',args({...first,version:20},r.revision));
+check(unknown.status==='invalid'&&localStorage.getItem(key)===beforeUnknownRules,'unknown rules 20 rejected without changing save');
 localStorage.setItem(key,'{broken');r=await call(api,'read');check(!r.ok,'corrupt JSON rejected');check(localStorage.getItem(key)==='{broken','corruption not silently replaced');
 output.textContent=`PASS: ${count} checks. Actual production JS callback + Web Locks + localStorage + second browsing context. No Godot engine gameplay claim.`;
 }catch(e){output.textContent=`FAIL after ${count}: ${e.stack}`;}
