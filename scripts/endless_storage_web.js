@@ -3,7 +3,7 @@
 'use strict';
 const KEY='magic-tower.endless.v1', LOCK='magic-tower.endless.v1.write', MAX=2*1024*1024;
 // Kept in parity with the explicit GDScript router by the protocol test.
-const SUPPORTED_VERSIONS=Object.freeze([1,2,3,4,5,6,7,8]);
+const SUPPORTED_VERSIONS=Object.freeze([1,2,3,4,5,6,7,8,9]);
 const rulesVersion=v=>Number.isSafeInteger(v)&&SUPPORTED_VERSIONS.includes(v);
 const integer=(v,a,b)=>Number.isSafeInteger(v)&&v>=a&&v<=b;
 const exact=(v,keys)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));

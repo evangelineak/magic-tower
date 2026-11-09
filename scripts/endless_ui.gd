@@ -89,6 +89,8 @@ func transact(kind:String,value,confirmed=false):
  busy=true
  var candidate=world.clone()
  var result:Dictionary=candidate.step(value,confirmed) if kind=="step" else candidate.act(str(value))
+ if result.get("confirm",false) and kind=="act" and str(value)=="job_cancel":
+  busy=false;walk.clear();pending_revision=revision;pending_origin=world.pos;pending_floor=world.floor_number;modal="confirm_job";notice=str(result.get("message","取消委托会损失12金币押金。"));queue_redraw();return
  if result.get("confirm",false):
   busy=false;walk.clear();pending=value;pending_revision=revision;pending_origin=world.pos;pending_floor=world.floor_number;pending_token=world.tile(world.pos+value);modal="confirm";notice=str(result.get("message","确认行动？"));queue_redraw();return
  if not result.get("changed",false):
@@ -104,6 +106,7 @@ func transact(kind:String,value,confirmed=false):
  if str(value).begins_with("case_") and kind=="act":open_case();modal_notice=notice
  if str(value).begins_with("tactic_") and kind=="act":open_build();modal_notice=notice
  if str(value).begins_with("enc_") and kind=="act":open_supply_panel("encounter");modal_notice=notice
+ if str(value).begins_with("job_") and kind=="act":open_supply_panel("contract");modal_notice=notice
  if str(value).begins_with("arm_") and kind=="act":open_supply_panel("items");modal_notice=notice
  if world.ended:
   await settle_run()
@@ -154,7 +157,10 @@ func _unhandled_input(event):
   if modal=="growth":
    if Rect2(910,687,250,45).has_point(p):modal=""
    return
-  if modal in ["encounter","items"]:
+  if modal in ["encounter","contract"] and world!=null and world.has_method("contract_view"):
+   if Rect2(160,102,250,38).has_point(p):open_supply_panel("encounter");return
+   if Rect2(430,102,250,38).has_point(p):open_supply_panel("contract");return
+  if modal in ["encounter","contract","items"]:
    if Rect2(910,687,250,45).has_point(p):modal="";return
    for i in choices.size():
     if Rect2(185,425+i*70,910,62).has_point(p):await transact("act",choices[i].id);return
@@ -195,11 +201,13 @@ func _unhandled_input(event):
   if busy:return
   if event.keycode==KEY_L:await reload_run();return
   if modal!="":
+   if event.keycode==KEY_TAB and modal in ["encounter","contract"] and world!=null and world.has_method("contract_view"):
+    open_supply_panel("contract" if modal=="encounter" else "encounter");return
    if event.keycode==KEY_ESCAPE:
     if modal=="start":get_tree().change_scene_to_file("res://main.tscn")
     else:modal=""
    elif event.keycode==KEY_ENTER:await confirm_modal()
-   elif modal in ["choices","case","build","encounter","items"] and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():await transact("act",choices[event.keycode-KEY_1].id)
+   elif modal in ["choices","case","build","encounter","contract","items"] and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():await transact("act",choices[event.keycode-KEY_1].id)
    return
   if event.keycode==KEY_SPACE:center_camera();return
   if event.keycode==KEY_N:modal="new";return
@@ -226,6 +234,11 @@ func _unhandled_input(event):
 func confirm_modal():
  match modal:
   "start","new","ended":await start_run(randi_range(0,2147483647))
+  "confirm_job":
+   modal=""
+   if world==null or revision!=pending_revision or world.pos!=pending_origin or world.floor_number!=pending_floor:
+    notice="旅程状态已变化，请重新查看委托再确认取消。";return
+   await transact("act","job_cancel!")
   "confirm":
    modal=""
    if world==null or revision!=pending_revision or world.pos!=pending_origin or world.floor_number!=pending_floor or world.tile(world.pos+pending)!=pending_token:
@@ -320,7 +333,7 @@ func _draw():
  if world.has_method("growth_view"):
   panel(Rect2(950,354,284,32),Color("365347"));text(Vector2(958,376),"G 成长 / 全旅程预算",15,GOLD)
  if world.has_method("encounter_view"):
-  panel(Rect2(950,396,138,32),Color("293e50"));text(Vector2(958,418),"R 营地遭遇",15,GOLD)
+  panel(Rect2(950,396,138,32),Color("293e50"));text(Vector2(958,418),"R 遭遇/订单" if world.has_method("contract_view") else "R 营地遭遇",15,GOLD)
   panel(Rect2(1096,396,138,32),Color("293e50"));text(Vector2(1104,418),"I 战斗道具",15,GOLD)
  if not overview.is_empty():
   var line_y=456
@@ -378,7 +391,7 @@ func tooltip_layout(content:String,desired:Vector2)->Rect2:
  return Rect2(Vector2(clampf(desired.x,20,1260-width),clampf(desired.y,70,780-height)),Vector2(width,height))
 
 func draw_modal():
- if modal in ["encounter","items"]:draw_supply_panel();return
+ if modal in ["encounter","contract","items"]:draw_supply_panel();return
  if modal=="growth":draw_growth();return
  if modal=="case":draw_case();return
  if modal=="build":draw_build();return
@@ -390,12 +403,14 @@ func draw_modal():
   "help":title="怎样让这趟远征走得更远";body="B：查看战术。仅在商人旁免费切换。普通训练最高3级，宝库遗物最多再加2级。\nR：本层营地遭遇，选择前看清代价；I：装备或收起一次性战斗道具。\nQ：查看信使历史图。第四层商人给出可推理的路线线索。\n封存箱：立即回复20生命，或保留运到两层后的商人换奖励；中途可拆封。\n门与宝库：钥匙换有价值的奖励，强敌可以回访，不必当场硬打。\n鼠标：邻格互动，远处空地安全寻路；右拖地图，空格回到角色。\nL重新读取；N明确重开。旧规则不自动升级。\n本设备榜不是全球榜。安全上限为100万层、10万动作。"
 
   "new":title="重新开始无尽旅程？";body="将创建规则v%d的新局，并替换当前无尽旅程。已有旅程不会自动升级；取消可继续旧局。经典魔塔存档与已结算的本设备历史榜保留。" % WorldType.CURRENT_VERSION
+  "confirm_job":title="放弃委托并损失12金币押金？";body=notice+"\n仅放弃当前委托，不会结束整局。取消这个弹窗则保留委托。"
   "retire":title="结束并结算本局？";body="结算后不能继续这次无尽旅程，成绩只保存在本设备。不是公开全球排名。"
   "ranking":title="本设备历史榜";body="仅本设备可见，不上传服务器；不同规则版本难度不同，标注版本，不代表同难度竞技。"
   "ended":title="本次远征结束";body="成绩已保存到本设备历史榜。下一次仍有不同路线与成长选择。"
   "finish_retry":title="结算等待重试"
   "choices":title="选择行动";body=""
  if modal=="help" and world!=null and world.has_method("growth_view"):body=growth_help_text()
+ if modal=="help" and world!=null and world.has_method("contract_view"):body=body.replace("R营地遭遇", "R遭遇/订单（Tab切换）")
  text(Vector2(280,190),title,26,GOLD)
  if modal=="choices":
   for i in mini(6,choices.size()):panel(Rect2(280,215+i*52,720,48),Color("2a4051"));draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(293,241+i*52),690,16,INK,2)
@@ -496,18 +511,30 @@ func draw_build():
 
 func open_supply_panel(kind:String):
  if world==null:return
- var view_method="encounter_view" if kind=="encounter" else "item_view"
- var option_method="encounter_options" if kind=="encounter" else "item_options"
+ var view_method={"encounter":"encounter_view","contract":"contract_view","items":"item_view"}.get(kind,"item_view")
+ var option_method={"encounter":"encounter_options","contract":"contract_options","items":"item_options"}.get(kind,"item_options")
  if not world.has_method(view_method):notice="此旧规则旅程没有这项内容；可继续旧局或明确新开局。";return
- walk.clear();choices=world.call(option_method);modal=kind;modal_notice="";queue_redraw()
+ walk.clear();choices=world.call(option_method) if world.has_method(option_method) else world.call(view_method).get("options",[]);modal=kind;modal_notice="";queue_redraw()
 func draw_supply_panel():
- var data:Dictionary=world.encounter_view() if modal=="encounter" else world.item_view()
+ var data:Dictionary=world.call({"encounter":"encounter_view","contract":"contract_view","items":"item_view"}[modal])
  panel(Rect2(0,0,1280,800),Color(0,0,0,0.70));panel(Rect2(120,85,1040,665),Color("152736"))
- text(Vector2(160,140),str(data.get("title","营地选择")),26,GOLD)
- draw_wrapped(str(data.get("body",data.get("description",""))),Vector2(160,185),950,19,INK,7)
+ var tabbed:bool=modal in ["encounter","contract"] and world.has_method("contract_view")
+ if tabbed:
+  for i in 2:
+   var active:bool=(modal=="encounter" and i==0) or (modal=="contract" and i==1)
+   panel(Rect2(160+i*270,102,250,38),Color("365347") if active else Color("293e50"))
+   text(Vector2(174+i*270,128),["本层遭遇","路线委托"][i],19,GOLD if active else INK)
+  text(Vector2(725,128),"Tab 切换 · 不会自动接单",15,TEAL)
+ var heading=str(data.get("title","营地选择"))
+ if modal=="contract":heading=contract_heading(data)
+ text(Vector2(160,180 if tabbed else 140),heading,26,GOLD)
+ var body=contract_body(data) if modal=="contract" else str(data.get("body",data.get("description","")))
+ draw_wrapped(body,Vector2(160,220 if tabbed else 185),950,19,INK,4 if tabbed else 7)
  var status:String=""
  if modal=="encounter":
   status=str(data.get("status",""))+"\n"+("本层机会已用完。" if data.get("resolved",false) else ("现在可选；一次选择，不是无限商店。" if data.get("available",false) else "靠近本层篷车商人后才能选择。"))
+ elif modal=="contract":
+  status=str(data.get("status",""))
  else:
   var inventory:Dictionary=data.get("inventory",{})
   status="护符 %d / 凿甲钉 %d；已装备：%s" % [int(inventory.get("ward",0)),int(inventory.get("pierce",0)),{"":"无","ward":"护符","pierce":"凿甲钉"}.get(str(data.get("armed","")),"无")]
@@ -553,3 +580,14 @@ func draw_growth():
  draw_wrapped("只读预算，不会购买或战斗。预估按当前战术、已装备道具顺序结算，不含途中拾取、购物或新成长。不是自动通关承诺。",Vector2(665,383),480,17,INK,5)
  draw_wrapped("旧旅程保持原规则；这份预算只适用于当前新版旅程。",Vector2(665,560),480,17,TEAL,3)
  panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(930,717),"关闭 · Esc / Enter",17)
+
+func contract_heading(data:Dictionary)->String:
+ var phase=str(data.get("phase","offer"))
+ return {"offer":"订单预览 · 尚未接单","active":"已接委托 · 第%d层" % int(data.get("source",0)),"complete":"目标完成 · 等待退押金","voucher":"押金已退 · 可折价兑换","closed":"本层订单已结束"}.get(phase,"路线委托")
+
+func contract_body(data:Dictionary)->String:
+ var phase=str(data.get("phase","offer"))
+ var cost="可直接买1护符12金 / 1凿甲钉18金，或押12金接单。" if phase=="offer" else "已接订单：12金币是押金，退还不是额外收入。"
+ if phase=="voucher":cost="押金已经退还，不会再次领取。兑换是可选的。"
+ if phase=="closed":cost="此层订单已结算，不重复购买、接单或领奖。"
+ return cost+"\n目标：第%d层 · %s；剩%d名。兑现须回第%d层商人。\n完成先退12，再自选8金币换%d件道具；也可免费放弃兑换。\n不限时；未履约取消或结束旅程，未退押金损失。" % [int(data.get("source",0)),str(data.get("route_label","指定路线")),int(data.get("remaining",0)),int(data.get("source",0)),int(data.get("reward_count",1))]
