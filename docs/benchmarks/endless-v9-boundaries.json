@@ -1,0 +1,12 @@
+{
+  "checks": 30,
+  "cross_floor": true,
+  "design": "CONTRACT-9B",
+  "failures": 0,
+  "fixture_actions": 634,
+  "fixture_problem": "",
+  "full_ward_inventory": 9,
+  "replay_verified": true,
+  "reward_count": 2,
+  "source_floor": 12
+}

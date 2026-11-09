@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export bounded-growth budget release
+      - name: Verify and export optional supply orders release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower latest verified bounded-growth budget release\nGame source: c1c43c08c570eea95ba1ebe843b0a33f5915482a\nWeb deployment source: %s\nNative v7 restore and v8 new-run budget, lessons, relief, discard, battles, capped potion and reload verified. Real Chrome production storage passed 115 checks across eight rules versions. Independent 72-policy legal 100-floor audit: 44 completed, 28 died; all 36 medicine-shop policies completed. Eight legal double-relic return runs completed. Permanent zero-damage collapse improved in tested samples; gold economy remains generous, not universally balanced. Device-local rankings only, no global leaderboard. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nOlder journeys preserve their original rules. Explicit new journey required for v8. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower latest verified optional supply orders release\nGame source: 3fc93bd43d598b34edcf89d731043bdf8f2db072\nWeb deployment source: %s\nNative v8 restore and v9 legal funded double-route order, cancellation dismissal, combat, refund, voluntary 8-gold exchange and reload verified. Real Chrome production storage passed 135 checks across nine rule versions. Independent 20-policy legal 50-floor order audit and 30 legal transaction boundary checks passed. Orders add optional spending and goals, not new map geometry; return walking and generous gold economy remain design debt. Device-local rankings only. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nOlder journeys preserve their original rules. Explicit new journey required for v9. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output
