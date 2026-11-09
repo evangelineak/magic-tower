@@ -24,3 +24,5 @@ Original flat vector silhouettes replace the endless hero and four enemy archety
 - Native contact sheet and live game checked actor silhouettes and build panel text. Real-event core tests separately cover both relics, level 5, stance tradeoffs and lethal-before-heal cases.
 
 Cloud browser WebGL remains blocklisted; no claim of Godot Web engine play verification. Records remain device-local, version-labelled and untrusted for a global leaderboard. No ranking backend or new account has been created.
+
+New runs now use v5; see [ENDLESS-V5.md](ENDLESS-V5.md). Existing v4 journeys retain these rules.
