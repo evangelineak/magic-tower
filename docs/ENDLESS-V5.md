@@ -24,3 +24,5 @@ Nearby mouse tooltips now explain training, relic caps, cargo and camp actions, 
 - Real Chrome production storage: 67 checks across five rule versions, Web Locks/localStorage and second browsing context. This is storage verification, not Godot Web engine gameplay.
 
 Cloud WebGL remains blocked; Godot Web gameplay is not verified here. Rankings remain explicitly device-local. `GLOBAL-RANKING-PLAN.md` is research only: no backend, account, payment or player-data upload has been performed.
+
+New runs now use v6; see [ENDLESS-V6.md](ENDLESS-V6.md). Existing v5 journeys keep their rules.

@@ -2,14 +2,15 @@ class_name TowerEndlessWorld
 extends RefCounted
 ## Rules router. Saved action logs always replay with their original rules.
 const MAX_ACTIONS:=100000
-const CURRENT_VERSION:=5
-const SUPPORTED_VERSIONS=[1,2,3,4,5]
+const CURRENT_VERSION:=6
+const SUPPORTED_VERSIONS=[1,2,3,4,5,6]
 const RULE_SCRIPTS={
  1:"res://scripts/endless_world_v1.gd",
  2:"res://scripts/endless_world_v2.gd",
  3:"res://scripts/endless_world_v3.gd",
  4:"res://scripts/endless_world_v4.gd",
  5:"res://scripts/endless_world_v5.gd",
+ 6:"res://scripts/endless_world_v6.gd",
 }
 static func supports_version(version)->bool:
  # JSON numeric values are floats. Never coerce strings, booleans or fractions.

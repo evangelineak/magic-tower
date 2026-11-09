@@ -66,6 +66,7 @@ func reload_run():
   revision=int(r.revision);records=r.get("records",[])
   if r.get("snapshot") is Dictionary and not r.snapshot.is_empty():
    world=WorldType.from_data(r.snapshot);notice="旅程已恢复。经典魔塔存档不受影响。"
+   if world!=null and world.rule_version()<WorldType.CURRENT_VERSION:notice="继续规则v%d；新版v%d内容需明确新开局。" % [world.rule_version(),WorldType.CURRENT_VERSION]
    if world!=null and world.ended:modal="ended" if r.get("status")=="finished" else "finish_retry"
   else:modal="start";notice="全新的15×15连续远征，与经典旅程分开保存。"
  else:
@@ -101,6 +102,8 @@ func transact(kind:String,value,confirmed=false):
   battle=result.battle;battle_time=2.4;walk.clear()
  if str(value).begins_with("case_") and kind=="act":open_case();modal_notice=notice
  if str(value).begins_with("tactic_") and kind=="act":open_build();modal_notice=notice
+ if str(value).begins_with("enc_") and kind=="act":open_supply_panel("encounter");modal_notice=notice
+ if str(value).begins_with("arm_") and kind=="act":open_supply_panel("items");modal_notice=notice
  if world.ended:
   await settle_run()
  queue_redraw()
@@ -147,6 +150,11 @@ func _unhandled_input(event):
   walk.clear()
   if busy:return
   var p=event.position
+  if modal in ["encounter","items"]:
+   if Rect2(910,687,250,45).has_point(p):modal="";return
+   for i in choices.size():
+    if Rect2(185,425+i*70,910,62).has_point(p):await transact("act",choices[i].id);return
+   return
   if modal=="build":
    if Rect2(910,687,250,45).has_point(p):modal="";return
    for i in choices.size():
@@ -167,6 +175,8 @@ func _unhandled_input(event):
     for i in choices.size():
      if Rect2(280,215+i*52,720,48).has_point(p):await transact("act",choices[i].id);return
    return
+  if Rect2(950,396,138,32).has_point(p):open_supply_panel("encounter");return
+  if Rect2(1096,396,138,32).has_point(p):open_supply_panel("items");return
   if Rect2(768,562,476,24).has_point(p):open_build();return
   if Rect2(768,587,476,24).has_point(p):open_case();return
   if Rect2(768,662,220,44).has_point(p):center_camera();return
@@ -184,12 +194,15 @@ func _unhandled_input(event):
     if modal=="start":get_tree().change_scene_to_file("res://main.tscn")
     else:modal=""
    elif event.keycode==KEY_ENTER:await confirm_modal()
-   elif modal in ["choices","case","build"] and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():await transact("act",choices[event.keycode-KEY_1].id)
+   elif modal in ["choices","case","build","encounter","items"] and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():await transact("act",choices[event.keycode-KEY_1].id)
    return
   if event.keycode==KEY_SPACE:center_camera();return
   if event.keycode==KEY_N:modal="new";return
   if event.keycode==KEY_Q:open_case();return
   if event.keycode==KEY_B:open_build();return
+  if event.keycode==KEY_H:modal="help";return
+  if event.keycode==KEY_R:open_supply_panel("encounter");return
+  if event.keycode==KEY_I:open_supply_panel("items");return
   if world==null or world.ended:return
   match event.keycode:
    KEY_W,KEY_UP:await transact("step",Vector2i.UP)
@@ -296,9 +309,10 @@ func _draw():
    panel(Rect2(768+x*11,264+y*11,10,10),color)
  draw_rect(Rect2(Vector2(768,264)+Vector2(camera)*11,Vector2(121,121)),INK,false,1)
  draw_circle(Vector2(773,269)+Vector2(world.pos)*11,4,TEAL)
- draw_wrapped("WASD / 方向键移动\n点击邻格拾取、战斗或互动\n点击空地仅走安全路径\n右键拖动地图，空格回到角色
-概览：红=互动/敌人
-金=门/宝物，青=楼梯",Vector2(950,280),282,16,INK,8)
+ draw_wrapped("WASD / 方向键移动\n点击邻格互动，远处安全寻路\n右拖地图，空格回到角色\nH查看玩法；金=宝物，青=楼梯",Vector2(950,280),282,16,INK,5)
+ if world.has_method("encounter_view"):
+  panel(Rect2(950,396,138,32),Color("293e50"));text(Vector2(958,418),"R 营地遭遇",15,GOLD)
+  panel(Rect2(1096,396,138,32),Color("293e50"));text(Vector2(1104,418),"I 战斗道具",15,GOLD)
  if not overview.is_empty():
   var line_y=456
   for route in overview.get("routes",[]):
@@ -311,11 +325,13 @@ func _draw():
  var labels=["结束本局并记入本设备榜","回到角色 · Space","本设备历史榜","重新开始 · N","返回经典魔塔"]
  var rects=[Rect2(768,610,476,42),Rect2(768,662,220,44),Rect2(1000,662,244,44),Rect2(768,714,220,44),Rect2(1000,714,244,44)]
  for i in rects.size():panel(rects[i],Color("293e50"));text(rects[i].position+Vector2(12,28),labels[i],16)
- text(Vector2(24,796),"视窗 (%d,%d) · 自动保存 · 经典存档独立保留"%[camera.x,camera.y],13,TEAL)
+ text(Vector2(24,796),"视窗 (%d,%d) · 自动保存 · H玩法说明 · 经典存档独立保留"%[camera.x,camera.y],13,TEAL)
  if world.has_method("build_view"):
-  text(Vector2(768,579),"B · 英雄战术与遗物成长："+str(world.build_view().get("title","")),13,GOLD)
+  panel(Rect2(768,562,476,22),Color("293e50"))
+  text(Vector2(776,579),"B · 英雄战术与遗物成长："+str(world.build_view().get("title","")),13,GOLD)
  if world.has_method("case_view"):
-  text(Vector2(768,599),"Q · 信使历史路线图与回访线索",13,GOLD)
+  panel(Rect2(768,587,476,22),Color("293e50"))
+  text(Vector2(776,604),"Q · 信使历史路线图与回访线索",13,GOLD)
  if modal!="":draw_modal()
  elif hover.x>=0 and hover.y>=0 and not busy:
   var info:Dictionary=world.preview(hover)
@@ -351,16 +367,19 @@ func tooltip_layout(content:String,desired:Vector2)->Rect2:
  return Rect2(Vector2(clampf(desired.x,20,1260-width),clampf(desired.y,70,780-height)),Vector2(width,height))
 
 func draw_modal():
+ if modal in ["encounter","items"]:draw_supply_panel();return
  if modal=="case":draw_case();return
  if modal=="build":draw_build();return
  panel(Rect2(0,0,1280,800),Color(0,0,0,0.70));panel(Rect2(245,145,790,505),Color("152736"))
  var title="确认"
  var body=notice
  match modal:
-  "start":title="踏入更深的塔";body="15×15地图，安全寻路与相邻点击。新局使用v5，四类布局：先取训练，再比较重甲短路与轻敌长路的损伤。封存补给可立即使用，也可承担两层运输委托；中途允许拆封。强敌宝库可成长后回访。第四层商人处有可推理的信使奇遇，Q查看历史图。B查看英雄战术，在商人旁切换；训练上限3级，遗物可额外提高2级。旧v1至v4旅程按原规则继续。无尽模式独立保存，不替换经典旅程。首版数值安全界限100万层、10万动作，达到动作界限仍可结算。"
-  "new":title="重新开始无尽旅程？";body="会替换当前无尽旅程。经典魔塔存档与已结算的本设备历史榜保留。"
+  "start":title="第一次远征：先学会选择";body="1. 点击身旁的剑盾训练包，获得基础成长。\n2. 靠近篷车商人按B，免费选择战术；先看伤害再开战。\n3. 观察两条关隘路线，选择付得起代价的一条。\n\n点击邻格才互动，远处只沿安全空地寻路；强敌宝库可以留到成长后再来。\n\nH随时查看完整玩法。新局使用规则v%d，已有旧局不会偷偷改变规则。独立存档，不覆盖经典旅程。" % WorldType.CURRENT_VERSION
+  "help":title="怎样让这趟远征走得更远";body="B：查看战术。仅在商人旁免费切换。普通训练最高3级，宝库遗物最多再加2级。\nR：本层营地遭遇，选择前看清代价；I：装备或收起一次性战斗道具。\nQ：查看信使历史图。第四层商人给出可推理的路线线索。\n封存箱：立即回复20生命，或保留运到两层后的商人换奖励；中途可拆封。\n门与宝库：钥匙换有价值的奖励，强敌可以回访，不必当场硬打。\n鼠标：邻格互动，远处空地安全寻路；右拖地图，空格回到角色。\nL重新读取；N明确重开。旧规则不自动升级。\n本设备榜不是全球榜。安全上限为100万层、10万动作。"
+
+  "new":title="重新开始无尽旅程？";body="将创建规则v%d的新局，并替换当前无尽旅程。已有旅程不会自动升级；取消可继续旧局。经典魔塔存档与已结算的本设备历史榜保留。" % WorldType.CURRENT_VERSION
   "retire":title="结束并结算本局？";body="结算后不能继续这次无尽旅程，成绩只保存在本设备。不是公开全球排名。"
-  "ranking":title="本设备历史榜";body="仅本设备可见，不上传服务器；v1与v2规则不同，标注版本，不代表同难度竞技。"
+  "ranking":title="本设备历史榜";body="仅本设备可见，不上传服务器；不同规则版本难度不同，标注版本，不代表同难度竞技。"
   "ended":title="本次远征结束";body="成绩已保存到本设备历史榜。下一次仍有不同路线与成长选择。"
   "finish_retry":title="结算等待重试"
   "choices":title="选择行动";body=""
@@ -372,9 +391,10 @@ func draw_modal():
   for i in mini(8,records.size()):
    var record:Dictionary=records[i]
    draw_wrapped("%d.  v%d · 第%d层 · 击杀%d · 金币%d"%[i+1,int(record.get("rule_version",1)),int(record.get("max_floor",1)),int(record.get("kills",0)),int(record.get("gold",0))],Vector2(280,285+i*32),710,16,INK,1)
+ elif modal in ["help","start"]:draw_wrapped(body,Vector2(280,230),710,17,INK,14)
  else:draw_wrapped(body,Vector2(280,245),710,20,INK,11)
  if modal_notice!="" and modal in ["choices","new","start"]:draw_wrapped(modal_notice,Vector2(280,535),710,15,Color("efb18e"),2)
- panel(Rect2(280,575,330,48),Color("365347"));text(Vector2(300,606),"确认 / Enter" if modal not in ["ranking","choices"] else "关闭",18)
+ panel(Rect2(280,575,330,48),Color("365347"));text(Vector2(300,606),"确认 / Enter" if modal not in ["ranking","choices","help"] else "关闭",18)
  panel(Rect2(650,575,330,48),Color("384152"));text(Vector2(670,606),"取消 / Esc",18)
 func open_case():
  if world==null or not world.has_method("case_view"):
@@ -460,3 +480,27 @@ func draw_build():
    draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(677,301+i*74),470,17,INK,2)
  draw_wrapped(modal_notice,Vector2(665,656),485,14,Color("efb18e"),2)
  panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(930,717),"关闭 · Esc",18)
+
+func open_supply_panel(kind:String):
+ if world==null:return
+ var view_method="encounter_view" if kind=="encounter" else "item_view"
+ var option_method="encounter_options" if kind=="encounter" else "item_options"
+ if not world.has_method(view_method):notice="此旧规则旅程没有这项内容；可继续旧局或明确新开局。";return
+ walk.clear();choices=world.call(option_method);modal=kind;modal_notice="";queue_redraw()
+func draw_supply_panel():
+ var data:Dictionary=world.encounter_view() if modal=="encounter" else world.item_view()
+ panel(Rect2(0,0,1280,800),Color(0,0,0,0.70));panel(Rect2(120,85,1040,665),Color("152736"))
+ text(Vector2(160,140),str(data.get("title","营地选择")),26,GOLD)
+ draw_wrapped(str(data.get("body",data.get("description",""))),Vector2(160,185),950,19,INK,7)
+ var status:String=""
+ if modal=="encounter":
+  status=str(data.get("status",""))+"\n"+("本层机会已用完。" if data.get("resolved",false) else ("现在可选；一次选择，不是无限商店。" if data.get("available",false) else "靠近本层篷车商人后才能选择。"))
+ else:
+  var inventory:Dictionary=data.get("inventory",{})
+  status="护符 %d / 凿甲钉 %d；已装备：%s" % [int(inventory.get("ward",0)),int(inventory.get("pierce",0)),{"":"无","ward":"护符","pierce":"凿甲钉"}.get(str(data.get("armed","")),"无")]
+ draw_wrapped(status,Vector2(160,350),950,17,TEAL,3)
+ for i in mini(3,choices.size()):
+  panel(Rect2(185,425+i*70,910,62),Color("2a4051"))
+  draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(200,451+i*70),880,17,INK,2)
+ if modal_notice!="":draw_wrapped(modal_notice,Vector2(160,665),720,15,Color("efb18e"),2)
+ panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(928,715),"关闭 · Esc",18)
