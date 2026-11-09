@@ -45,6 +45,10 @@
       "sha256": "6c70fd4d0e7c21c8e9d06e83903fb73e39f06f2cb192f6fcba3f4b0181536260"
     },
     {
+      "path": "scripts/endless_generation.gd",
+      "sha256": "360c50169959c6eacf8f008b4b30eee445210d8e4eb76c5bd5e87454ca1ca0fc"
+    },
+    {
       "path": "scripts/expedition.gd",
       "sha256": "e669d2b04b2796285118df64fc8a8d20742c72671ddeb230990e05a27a069eb9"
     },
@@ -106,7 +110,7 @@
     },
     {
       "path": "scripts/navigation.gd",
-      "sha256": "e143e1a7b5d7ede922b579f7748c07d5f13c30ef64318ff6cf37781a9b6153aa"
+      "sha256": "356df339fbc5c1e5efe891e6cb1eeeb94eb92a55ab35008d27e8bd3ef6483839"
     },
     {
       "path": "scripts/progression.gd",
@@ -134,7 +138,7 @@
     },
     {
       "path": "scripts/world.gd",
-      "sha256": "c1cf5e8ae575e13ed9f108d4cdb0e635b9e5c81093e8cffbbcc66419ddea0ae2"
+      "sha256": "b78051ee8fabcf643a1d7661733422bec3544ae383e658f16e7eec0a17f172bc"
     },
     {
       "path": "project.godot",

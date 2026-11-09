@@ -104,12 +104,14 @@ static func route(state:Dictionary,target:Dictionary)->Dictionary:
 # Only already empty '.' cells may be traversed; no stairs, NPCs or open bridges.
 static func walk_path(grid:Array,start:Vector2i,target:Vector2i)->Array[Vector2i]:
 	var empty:Array[Vector2i]=[]
-	if grid.size()!=11: return empty
+	if grid.size()<3 or not grid[0] is Array or grid[0].size()<3: return empty
+	var height: int=grid.size()
+	var width: int=grid[0].size()
 	for row in grid:
-		if not row is Array or row.size()!=11: return empty
+		if not row is Array or row.size()!=width: return empty
 		for token in row:
 			if not token is String or token.length()!=1: return empty
-	if start.x<1 or start.x>9 or start.y<1 or start.y>9 or target.x<1 or target.x>9 or target.y<1 or target.y>9: return empty
+	if start.x<1 or start.x>=width-1 or start.y<1 or start.y>=height-1 or target.x<1 or target.x>=width-1 or target.y<1 or target.y>=height-1: return empty
 	if start==target or grid[start.y][start.x]=="#" or grid[target.y][target.x]!=".": return empty
 	var queue:Array[Vector2i]=[start]
 	var parents:Dictionary={start:start}
@@ -123,6 +125,6 @@ static func walk_path(grid:Array,start:Vector2i,target:Vector2i)->Array[Vector2i
 			return path
 		for direction in DIRS:
 			var next:Vector2i=p+direction
-			if next.x<1 or next.x>9 or next.y<1 or next.y>9 or parents.has(next) or grid[next.y][next.x]!=".": continue
+			if next.x<1 or next.x>=width-1 or next.y<1 or next.y>=height-1 or parents.has(next) or grid[next.y][next.x]!=".": continue
 			parents[next]=p; queue.append(next)
 	return empty
