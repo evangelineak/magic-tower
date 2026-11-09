@@ -1,0 +1,28 @@
+{
+  "checks": 317,
+  "failures": 0,
+  "inventory_boundaries": "five explicit inventory clones and one cleared-floor rune clone, not legal acquisition histories",
+  "reports": [
+    {
+      "bridges": {
+        "1": "short"
+      },
+      "choice": "short",
+      "events": 38,
+      "hp": 142,
+      "keys": 0,
+      "seed": 1
+    },
+    {
+      "bridges": {
+        "1": "loot"
+      },
+      "choice": "loot",
+      "events": 48,
+      "hp": 120,
+      "keys": 0,
+      "seed": 1
+    }
+  ],
+  "rules": 17
+}
