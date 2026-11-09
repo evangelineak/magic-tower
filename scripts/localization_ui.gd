@@ -1,5 +1,24 @@
 extends RefCounted
 const EXACT = {
+"Click to fight this adjacent enemy. Dangerous fights still require confirmation.":"点击攻击相邻怪物。危险战斗仍保留原有确认。",
+"Click to collect this adjacent item.":"点击拾取相邻物品。",
+"Click to open this object's choices. Nothing is spent until you choose.":"点击打开该对象的选项。选择前不消耗资源。",
+"Click to rescue Mira.":"点击救出米拉。",
+"Click to request opening this door. Key confirmation is unchanged.":"点击请求开门，仍需确认钥匙消耗。",
+"Click to use these adjacent stairs.":"点击使用相邻楼梯。",
+
+"WASD / arrows: move, pick up, fight and use stairs.":"WASD / 方向键：移动、拾取、战斗、上下楼。",
+"Mouse only inspects. Use WASD / arrows for manual actions.":"鼠标只查看。使用 WASD / 方向键主动操作。",
+"You are here. Use WASD / arrows to move.":"你在这里。使用 WASD / 方向键移动。",
+"No safe route. Clear the way manually first.":"没有完全安全的路线，请先手动打通道路。",
+"Wall: no walking route.":"墙壁无法通行。",
+"Mouse only inspects. Move into this enemy with WASD / arrows to fight.":"鼠标只查看。用 WASD / 方向键走向相邻怪物才会战斗。",
+"Mouse only inspects. Move into this door with WASD / arrows to request opening.":"鼠标只查看。用 WASD / 方向键走向相邻门，确认后才开门。",
+"Mouse only inspects. Move into these stairs with WASD / arrows.":"鼠标只查看。用 WASD / 方向键走入楼梯才能上下楼。",
+"Mouse only inspects. Move into this item with WASD / arrows to collect.":"鼠标只查看。用 WASD / 方向键走入物品格才会拾取。",
+"Mouse only inspects. Approach with WASD / arrows, then press E to interact.":"鼠标只查看。用 WASD / 方向键走近后，按 E 交互。",
+"Read-only journey. L reloads before you can move.":"当前旅程只读，请按 L 重载后再移动。",
+
 "ONE-WAY FERRY ROPE":"单程摆渡绳",
 "Confirm: spend 1 focus and cross once":"确认：消耗 1 专注，摆渡一次",
 "Cancel: stay on this bank":"取消：留在此岸",
@@ -169,7 +188,7 @@ const EXACT = {
 "DEBT":"欠款",
 "C: hero, equipment and skills":"C：英雄、装备与技能",
 "Walking safely... Any key or click stops.":"正在安全步行；任意按键或点击立即停止。",
-"Click clear floor to walk. Other objects: inspect only.":"点击空地安全步行；其他对象只查看，不触发。",
+"Click nearby objects to act; clear floor to walk safely.":"点击相邻对象操作；点击空地安全步行。",
 "WASD / arrows: manual actions. R / N twice: restart.":"WASD / 方向键：手动操作；连按 R / N 重开。",
 
 "Flank barrier active":"侧袭挡板生效",
@@ -507,6 +526,7 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+  ["Safe route: %d steps. Click to walk; any key or click stops.","安全路线：%d 步。点击行走；按键或点击可停止。"],
 ["Takeoff (%d,%d) -> landing (%d,%d) / cost 1 focus","起点 (%d,%d) → 落点 (%d,%d) / 消耗 1 专注"],
 
 ["P: YOU (%d,%d)","P 玩家 (%d,%d)"],
