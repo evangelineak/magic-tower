@@ -1,5 +1,6 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const CartArt=preload("res://scripts/endless_cart_art.gd")
 const VaultArt=preload("res://scripts/endless_vault_art.gd")
 const RevisitArt=preload("res://scripts/endless_revisit_art.gd")
 const BridgeArt=preload("res://scripts/endless_bridge_art.gd")
@@ -26,6 +27,8 @@ var notice="正在读取独立的无尽旅程……"
 var modal_notice=""
 var camera=Vector2i.ZERO
 var hover=Vector2i(-1,-1)
+var cart_cache_key=""
+var cart_cache:Dictionary={}
 var bridge_cache_key=""
 var bridge_cache:Dictionary={}
 var camp_floor_key=""
@@ -68,6 +71,8 @@ func draw_wrapped(s:String,p:Vector2,width:float,size=16,color=INK,max_lines=9):
   if ch!="\n":line+=ch
  if line!="":text(Vector2(p.x,y),line,size,color)
 func center_camera():
+ if world!=null and cart_data().get("present",false) and Rect2i(4,1,6,8).has_point(world.pos):
+  camera=cart_data().focus_rect.position;return
  if world!=null:camera=Vector2i(clampi(world.pos.x-5,0,4),clampi(world.pos.y-5,0,4))
 func screen_tile(p:Vector2)->Vector2i:
  var q=Vector2i(((p-ORIGIN)/CELL).floor())
@@ -146,6 +151,8 @@ func settle_run():
 func map_click(target:Vector2i):
  if busy or world==null or world.ended or modal!="":return
  walk.clear()
+ if cart_data().get("present",false) and target==cart_data().reset and absi(target.x-world.pos.x)+absi(target.y-world.pos.y)==1:
+  await transact("act","cart_reset");return
  if bridge_map_click(target):return
  var delta:Vector2i=target-world.pos
  if absi(delta.x)+absi(delta.y)==1:
@@ -363,10 +370,12 @@ func _draw():
   for x in VIEW:
    var p=Vector2i(x,y)+camera;var c=ORIGIN+Vector2(x,y)*CELL+Vector2(32,32)
    draw_ground_tile(c,p,camp_region)
-   if world.tile(p)=="$" and world.has_method("vault_quote"):
+   if draw_cart_tile(c,p):pass
+   elif world.tile(p)=="$" and world.has_method("vault_quote"):
     VaultArt.draw_cache(self,c,str(world.vault_quote(p).kind))
    elif not draw_bridge_tile(c,p):draw_token(c,world.tile(p))
    if RevisitArt.status(world,p).get("blocked",false):RevisitArt.draw_seal(self,c)
+ draw_cart_push_hint()
  for p in walk:
   var screen=Vector2(p-camera)
   if screen.x>=0 and screen.y>=0 and screen.x<VIEW and screen.y<VIEW:draw_path_marker(ORIGIN+screen*CELL+Vector2(32,32))
@@ -402,7 +411,7 @@ func _draw():
   for x in 15:
    var t=world.tile(Vector2i(x,y));var color=Color("344655") if t=="#" else Color("14212d")
    if t in ["<",">"]:color=TEAL
-   elif t in ["D","$","T","B"]:color=GOLD
+   elif t in ["D","$","T","B"] or (cart_data().get("present",false) and t in ["J","L"]):color=GOLD
    elif t not in ["#","."]:color=Color("ab7970")
    var mini_rect=Rect2(768+x*11,264+y*11,10,10)
    panel(mini_rect,color)
@@ -456,6 +465,9 @@ func _draw():
   var revisit=RevisitArt.status(world,pointed)
   if revisit.get("blocked",false):content+="回访封签 · "+str(revisit.reason)+"\n"
   content+=str(info.get("title",""))
+  if cart_data().get("present",false) and pointed==cart_data().cart_pos:
+   for push in cart_data().pushes:
+    if world.pos+push.delta==pointed:content+="\n"+("点击向前推一格；落点已标出。" if push.allowed else str(push.reason))
   for line in info.get("lines",[]):
    if str(line)!=str(info.get("title","")):content+="\n"+str(line)
   if content!="":
@@ -864,6 +876,7 @@ func camp_floor_cells()->Dictionary:
 func draw_ground_tile(center:Vector2,p:Vector2i,region:Dictionary):
  panel(Rect2(center-Vector2(31,31),Vector2(62,62)),Color("152432") if (p.x+p.y)%2==0 else Color("192a38"))
  CampFloor.draw_floor(self,center,p,region,64)
+ draw_cart_ground(center,p)
 
 func draw_path_marker(center:Vector2):draw_circle(center,4,TEAL)
 
@@ -975,3 +988,55 @@ func choice_display_text(row:Dictionary)->String:
  if str(row.get("id","")) not in ["buy_potion","enc_medicine"]:detail=hp_line+" · 药效%d，未用%d不保留" % [int(quote.heal_nominal),int(quote.overflow)]
  if not quote.get("allowed",false):detail=str(quote.get("reason","当前不能购买。"))+" 不会扣费。"
  return heading+"\n"+detail
+
+func cart_data()->Dictionary:
+ if world==null or not world.has_method("cart_view"):return {}
+ var key="%s:%d:%d:%s:%d:%s:%d:%d:%d:%d" % [world.get_instance_id(),revision,world.floor_number,str(world.pos),world.hp,str(world.items),world.bonus_atk,world.bonus_def,world.relic_bonus,world.actions.size()]
+ if key!=cart_cache_key:cart_cache=world.cart_view();cart_cache_key=key
+ return cart_cache
+func draw_cart_ground(center:Vector2,p:Vector2i):
+ var data=cart_data()
+ if not data.get("present",false):return
+ if p in data.board:CartArt.draw_track(self,center,p==data.origin)
+ # Local cable fragments terminate at tile edges, never masquerade as a walk rail.
+ var lines:Array=[]
+ if p==Vector2i(5,5):lines=[Vector2(-27,0),Vector2(-27,-32)]
+ elif p==Vector2i(5,4):lines=[Vector2(-27,32),Vector2(-27,-32)]
+ elif p==Vector2i(5,3):lines=[Vector2(-27,32),Vector2(-27,0),Vector2(-20,0)]
+ elif p==Vector2i(6,4):lines=[Vector2(0,27),Vector2(32,27)]
+ elif p==Vector2i(7,4):lines=[Vector2(-32,27),Vector2(32,27)]
+ elif p==Vector2i(8,4):lines=[Vector2(-32,27),Vector2(27,27),Vector2(27,-32)]
+ elif p==Vector2i(8,3):lines=[Vector2(27,32),Vector2(27,0),Vector2(20,0)]
+ var points=PackedVector2Array()
+ for at in lines:points.append(center+at)
+ CartArt.draw_wire(self,points)
+ for side in data.sockets:
+  if p==data.sockets[side]:CartArt.draw_socket(self,center,side,p==data.cart_pos)
+func draw_cart_tile(center:Vector2,p:Vector2i)->bool:
+ var data=cart_data()
+ if not data.get("present",false):return false
+ if p==data.cart_pos:CartArt.draw_cart(self,center,data.claim!="");return true
+ if p==data.reset:CartArt.draw_reset(self,center,data.reset_allowed);return true
+ for side in data.gates:
+  var gate:Dictionary=data.gates[side]
+  if p==gate.pos:CartArt.draw_gate(self,center,side,gate.open,gate.locked);return true
+ for side in data.rewards:
+  var reward:Dictionary=data.rewards[side]
+  if p==reward.pos and world.tile(p) in ["J","L"]:
+   CartArt.draw_reward(self,center,side,data.claim!="")
+   if data.claim=="" and not reward.quote.allowed:RevisitArt.draw_seal(self,center)
+   return true
+ return false
+func draw_cart_push_hint():
+ var data=cart_data()
+ if not data.get("present",false) or modal!="" or busy or not target_tooltips_visible():return
+ for push in data.pushes:
+  if not push.allowed:continue
+  var target:Vector2i=data.cart_pos+push.delta
+  if target.x<camera.x or target.y<camera.y or target.x>=camera.x+VIEW or target.y>=camera.y+VIEW:continue
+  var c=ORIGIN+Vector2(target-camera)*CELL+Vector2(32,32)
+  draw_rect(Rect2(c-Vector2(28,28),Vector2(56,56)),TEAL,false,2)
+  var d=Vector2(push.delta);var cross=Vector2(-d.y,d.x)
+  draw_line(c-d*12,c+d*12,TEAL,3)
+  draw_line(c+d*12,c+d*4+cross*7,TEAL,3)
+  draw_line(c+d*12,c+d*4-cross*7,TEAL,3)

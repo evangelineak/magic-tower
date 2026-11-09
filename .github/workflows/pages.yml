@@ -1,4 +1,4 @@
-name: Publish verified specialized vaults at original homepage
+name: Publish verified spatial cart courtyards at original homepage
 on:
   push:
     branches: ['pages/playtest']
@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export budget choices and preserved relics release
+      - name: Verify and export spatial cart courtyard release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower verified specialized vault and revisit release\nGame source: f839f1aaf063bf0456c1173a9f6ae690be583d3d\nWeb deployment source: %s\nFinal core 618ad3a84706e25485bb9ff49a4b9a20a0f83a1ceb3510c0e1089407ef409f3f. Four-floor seeded blocks each contain cash40, direct healing100, wards6 and spikes3; exact actual reward preview, no zero-benefit or partial bundle consumption. Original flat silhouettes and return tags. Native final-rule spike pickup, cancel, reload and full-health medicine preserved then actual16HP healing after real scout battle verified. Independent24 legal100-floor policies plus frozen-v17 baseline passed; final105 Godot suites plus Node passed. Actual Chrome production storage531 checks across18 versions passed. Cash inflation and late-game low spending remain unresolved; free medicine/tools replace purchases. Device-local rankings only; no global backend/account/fee/player uploads. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nExplicit N new journey required for v18; old1-17 rules frozen. Classic and Session saves separate. Stone-cart event is only a future design.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower verified spatial cart courtyard release\nGame source: 1326d14053678b1af3728861a6112fece30e30ad\nWeb deployment source: %s\nFinal core 283e2fc26462911404efdeecd1b2fdcbdb5891388a9b7eeb818a2b9b29260023. At most two early stone-cart courtyards: physical pushing, visible socket/gate wiring, free reset before shared exclusive reward claim, no respawn or duplicate bounty. Supply tools versus guarded capped relic, capacity and zero-gain preservation. Native seed1165695190 played normally from floor1 to5; exact129 damage, reset, re-selection, cancel/claim and actual process restart restored state. Independent122 maps,33 spatial states per variant,127 resource checks,4164 native store checks,12 legal100-floor policies,107 Godot suites plus Node and cart contract gate passed. Real Chrome storage595 checks passed, NOT Godot Web-engine gameplay.\nExplicit N new journey required for v19; old1-18 rules frozen. Event is finite early content, not a solution to deep repetition or economic inflation. Classic hero/reincarnation systems remain separate. Device-local rankings only; no global backend/account/fee/player uploads. Godot Web-engine gameplay remains unverified in cloud WebGL-blocklisted browser. Root homepage only.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output
