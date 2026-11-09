@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "adae9a75f45753d0671f0391095de0e59d60199686614b62c63e57183a10e140",
-  "bytes": 461792,
+  "output_sha256": "7708a202f264040f7d2aa8e06dfbbdbc0aec08452bb5a440159700b4f7e940fa",
+  "bytes": 476948,
   "coverage": {
-    "mapped_codepoints": 1163,
-    "glyphs": 2298,
-    "required_codepoints": 1010,
+    "mapped_codepoints": 1193,
+    "glyphs": 2359,
+    "required_codepoints": 1041,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -49,8 +49,16 @@
       "sha256": "85460f24d9055cc738ab02b6f801e485a852a2b7bcbacadb5759a351d8545fda"
     },
     {
+      "path": "scripts/endless_enemy_v12_art.gd",
+      "sha256": "f1f6a7772cad04107ee1a6685ded8db076e24938b78b2291954cd0fc98e51f84"
+    },
+    {
       "path": "scripts/endless_enemy_v7_art.gd",
       "sha256": "63bd856a7fc83d02ed14e1d6d523bb1ee8d635d619ed49e48697bc395b9cf895"
+    },
+    {
+      "path": "scripts/endless_gear_art.gd",
+      "sha256": "433ca042a9e7c5f174011c360fac09b867d9981aa2bc71452a93e59b5aa5a19d"
     },
     {
       "path": "scripts/endless_generation.gd",
@@ -59,6 +67,18 @@
     {
       "path": "scripts/endless_generation_v1.gd",
       "sha256": "1d7f421877170bdd017e4e4bb09245a3ab1b15f0e687a3523a24508749156ec5"
+    },
+    {
+      "path": "scripts/endless_generation_v10.gd",
+      "sha256": "6cbc17d2e3f0db62b4064d95b5b2efd376dea5029617cc239402a5684f46c893"
+    },
+    {
+      "path": "scripts/endless_generation_v12.gd",
+      "sha256": "edf254c300255f47b7cf08e36ea35380a2a167aa4fabc0bdd80a2afe45331fe9"
+    },
+    {
+      "path": "scripts/endless_generation_v13.gd",
+      "sha256": "4a3b8f8a329eecdbbeea906599ce1d3713da51a58e7e0d80e05789434be7b17f"
     },
     {
       "path": "scripts/endless_generation_v2.gd",
@@ -85,24 +105,52 @@
       "sha256": "a99e53c683053aebb80ced2ab3f3a81ca02de9fe92d044a4b62f060b30ab78dd"
     },
     {
+      "path": "scripts/endless_generation_v8.gd",
+      "sha256": "c9d05830b0a7315120e6c92afe50ddaa781cd1513568d7db48cf0b1e2e0fc0a9"
+    },
+    {
+      "path": "scripts/endless_generation_v9.gd",
+      "sha256": "eb103f923cec5c70807924101dea716102362642c91cb7be2db876c7e57e2cf9"
+    },
+    {
       "path": "scripts/endless_interaction_art.gd",
       "sha256": "9d03a480b37a3a8447fe9f84ce42c37024f579754d54bce8b38f71485ab3f102"
     },
     {
+      "path": "scripts/endless_rune_art.gd",
+      "sha256": "ec7eed54337edc513333da32d2b7760dc2f65a7c12c9f2ad4939a9dc6a061d6d"
+    },
+    {
       "path": "scripts/endless_store.gd",
-      "sha256": "00d6f6bc31cde1c80b87f80cfd34e296f236447f2046164d50d54bcf8741fe5f"
+      "sha256": "385aa419449b2f418a731fbd70e1210372db8f2303e66976a328c4f1579b466f"
     },
     {
       "path": "scripts/endless_ui.gd",
-      "sha256": "1670b4bae06ef8775858a41bd20ef8746e80bfdbc2d00188e3533f11676ea867"
+      "sha256": "3a9342465937e68d695e04cea42ac2581ff5751a2e886a9a25e2e3a27c597634"
     },
     {
       "path": "scripts/endless_world.gd",
-      "sha256": "a507fd2617f318d1edd5520ae93c84bffda22d153e6aefd5da6a18254cf920d2"
+      "sha256": "68b97b973f0278ba60ecd32f6d6c5bbd10a513efb7b388c9ffd995d9abeccba1"
     },
     {
       "path": "scripts/endless_world_v1.gd",
       "sha256": "a1c9b8fa5e3dedadaa168642747df4aba72a2a4a940d6f6c2c6bc0c6245cedec"
+    },
+    {
+      "path": "scripts/endless_world_v10.gd",
+      "sha256": "1f8410231ee3a5fa0574ea21353f9f7197f9f952cd7a038ba6311b531db073e6"
+    },
+    {
+      "path": "scripts/endless_world_v11.gd",
+      "sha256": "efbab09ee3340756a87d977a91375e27269f711b4cb35a8ff89db47233914476"
+    },
+    {
+      "path": "scripts/endless_world_v12.gd",
+      "sha256": "e685d7c431f463786129e8eeff9dbab79c1789c85b90bd73bb9c4696f544446c"
+    },
+    {
+      "path": "scripts/endless_world_v13.gd",
+      "sha256": "decbf22c85ec245d3c4d8f6184563ab854235c5cea21b07e4d372505a5bee6cf"
     },
     {
       "path": "scripts/endless_world_v2.gd",
@@ -127,6 +175,14 @@
     {
       "path": "scripts/endless_world_v7.gd",
       "sha256": "b0c670271a31157d41ee4bbd44dfbd97d7f09b5bab95160d35d9f8d145427e21"
+    },
+    {
+      "path": "scripts/endless_world_v8.gd",
+      "sha256": "782d7bee3470059ee8e0bd5addbb7bb36810ec8632eb84d32bbf7967f358c764"
+    },
+    {
+      "path": "scripts/endless_world_v9.gd",
+      "sha256": "5ff790c19701fd4d09ff89d796beedd661ed01eaf5ce1ecb0ede39bd0ed3c9d8"
     },
     {
       "path": "scripts/expedition.gd",

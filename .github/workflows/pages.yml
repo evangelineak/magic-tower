@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export thorn and regeneration enemies release
+      - name: Verify and export optional floor inscriptions release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower verified thorn and regeneration enemies release\nGame source: fb91287ffda187b22799468b042744dc271d5f34\nWeb deployment source: %s\nNative v11 restore and v12 legal priest and thorn combats, previews, brace-versus-reflection settlement and reload verified. Eight original enemy silhouettes inspected at multiple sizes. Real Chrome production storage passed 231 checks across twelve rule versions. Independent 8610 combat combinations and twelve legal 100-floor roster policies passed. Seeded enemy variation preserves existing geometry and guard counts. Economy remains generous; device-local rankings only. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nOlder journeys preserve their original rules. Explicit new journey required for v12. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower verified optional floor inscriptions release\nGame source: a3fa97b5fb1944bdb22d8ccd255ceb33bbef1021\nWeb deployment source: %s\nNative old-v12 restore and legal-v13 shock activation, exact route comparison, adjacent one-hit battles and reload verified. Target-anchored remote-click guidance verified. Real Chrome production storage passed 271 checks across thirteen rule versions. Independent 68880 event combinations and twelve legal 100-floor inscription policies passed. Inscriptions change floor combat rules, not room geometry; blind purchases can worsen outcomes. Silence is situational and sampled forecast policies did not buy it. Economy remains generous; device-local rankings only. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nOlder journeys preserve their original rules. Explicit new journey required for v13. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output
