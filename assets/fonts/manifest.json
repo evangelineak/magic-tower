@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "ab8abecaab50ac75bcc61ce8c62fff74d3c305b995fcee5ac3cbbf3b9b0afd5d",
-  "bytes": 428660,
+  "output_sha256": "f2989e332d2effc827b0433fead8b7daee9f3ddce683b2501018676c61f3d013",
+  "bytes": 429844,
   "coverage": {
-    "mapped_codepoints": 1094,
-    "glyphs": 2162,
-    "required_codepoints": 938,
+    "mapped_codepoints": 1096,
+    "glyphs": 2166,
+    "required_codepoints": 940,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -90,7 +90,7 @@
     },
     {
       "path": "scripts/localization_ui.gd",
-      "sha256": "93ecdf00a69a43d5734c12395b6e6ee59a078d71101ec18dafb63bddcd0384c2"
+      "sha256": "36194a24d6ab1a780264b311ad9ce662dbd4e94085a36297cf13c7f2480e4ffe"
     },
     {
       "path": "scripts/localization_world.gd",
@@ -98,7 +98,7 @@
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "706c6df463186ce5a39ea3af024075d78d69a441d5ba8faf88498477721ad9b6"
+      "sha256": "db0837915ac8e98cc7c4472ab487ded97a6f51cad3ce4ddaaa2829531be175ba"
     },
     {
       "path": "scripts/navigation.gd",

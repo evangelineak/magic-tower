@@ -380,3 +380,10 @@ PCK JS SHA `2bc4bafce2f6738d111b9d42d5ea9583ff8fec9d5c8eeb2a5ee3807350f459b9` �
 - 最终绳端E直接打开专用说明页，避免无关贷款中间页；普通营地保留原入口，起落点/确认/撤销测试后UI262通过。实际spent落点重启最新源验证，rope-direct-e-spent-zh.png。
 - 最终真实Chrome生产JavaScript callback+IndexedDB109项全部通过，rope-browser-109.png。新增20项覆盖真实19旅程跨岸保存、幂等重试、Undo、出生规则拒改和真实18档迁移；测试服务器曾因目录错误导致fixture404，修正为repo根后重跑，没有修改生产或放宽验证。这不是Godot Web引擎实玩认证。
 - 最终直接绳页和harness修正冻结后，全套tools/test_all.sh exit0：58套Godot、Node1308、首章/远征各200种子、9条完整对抗路线及3882合法存读状态，无SCRIPT ERROR。UI262、localization99。最终日志/tmp/tower-rope-final-262.log；此前UI260版本完整日志保留/tmp/tower-rope-final.log，不与最终结果混淆。
+
+## 鼠标安全路线与就地操作指引（2026-11-09）
+
+- 悬停已清空地面直接显示安全路径、步数和终点；无法安全到达时就地显示叉号和原因。物品、敌人、门梯及NPC给出键盘操作方式，恢复底部WASD指引。鼠标不自动拾取、不战斗、不付费、不触发事件。
+- 悬停只读缓存按World身份、位置和目标失效；点击重新计算安全路径，不依赖显示缓存。移动、撤销及读档仍由原Session处理，不改变存档协议。
+- 新增test_mouse_guidance：190项，含缓存隔离、陈旧路线拒绝、对象只读、点击/取消、语言和边界布局、移动/Undo失效。完整tools/test_all.sh退出0，59套Godot及全部Node协议测试通过，无SCRIPT ERROR。
+- 真实Godot 4.6.3 GUI观察：中文安全路线1步，点击后人物确实移动且未消耗资源；NPC旁显示接近后E交互；隔墙空地显示不可达叉号及原因。该轮为原生GUI，不宣称浏览器Godot实玩通过。

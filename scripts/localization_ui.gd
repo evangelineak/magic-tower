@@ -1,5 +1,17 @@
 extends RefCounted
 const EXACT = {
+"WASD / arrows: move, pick up, fight and use stairs.":"WASD / 方向键：移动、拾取、战斗、上下楼。",
+"Mouse only inspects. Use WASD / arrows for manual actions.":"鼠标只查看。使用 WASD / 方向键主动操作。",
+"You are here. Use WASD / arrows to move.":"你在这里。使用 WASD / 方向键移动。",
+"No safe route. Clear the way manually first.":"没有完全安全的路线，请先手动打通道路。",
+"Wall: no walking route.":"墙壁无法通行。",
+"Mouse only inspects. Move into this enemy with WASD / arrows to fight.":"鼠标只查看。用 WASD / 方向键走向相邻怪物才会战斗。",
+"Mouse only inspects. Move into this door with WASD / arrows to request opening.":"鼠标只查看。用 WASD / 方向键走向相邻门，确认后才开门。",
+"Mouse only inspects. Move into these stairs with WASD / arrows.":"鼠标只查看。用 WASD / 方向键走入楼梯才能上下楼。",
+"Mouse only inspects. Move into this item with WASD / arrows to collect.":"鼠标只查看。用 WASD / 方向键走入物品格才会拾取。",
+"Mouse only inspects. Approach with WASD / arrows, then press E to interact.":"鼠标只查看。用 WASD / 方向键走近后，按 E 交互。",
+"Read-only journey. L reloads before you can move.":"当前旅程只读，请按 L 重载后再移动。",
+
 "ONE-WAY FERRY ROPE":"单程摆渡绳",
 "Confirm: spend 1 focus and cross once":"确认：消耗 1 专注，摆渡一次",
 "Cancel: stay on this bank":"取消：留在此岸",
@@ -507,6 +519,7 @@ const EXACT = {
   "W ARDEN": "守卫"
 }
 const TEMPLATES = [
+  ["Safe route: %d steps. Click to walk; any key or click stops.","安全路线：%d 步。点击行走；按键或点击可停止。"],
 ["Takeoff (%d,%d) -> landing (%d,%d) / cost 1 focus","起点 (%d,%d) → 落点 (%d,%d) / 消耗 1 专注"],
 
 ["P: YOU (%d,%d)","P 玩家 (%d,%d)"],

@@ -95,6 +95,13 @@ var walk_route: Array = []
 var walk_floor := -1
 var walk_origin := Vector2i(-1,-1)
 var walk_timer := 0.0
+var hover_walk_cache: Dictionary = {}
+var hover_walk_world = null
+var hover_walk_key: Array = []
+var hover_walk_refresh_count := 0
+var walk_feedback := ""
+var walk_feedback_target := Vector2i(-1,-1)
+var walk_feedback_time := 0.0
 var map_art: Dictionary = {}
 const MAP_ENEMY_ART := {"s":"mossling","g":"sentinel","u":"stalker","b":"briar","w":"juggernaut","V":"colossus","K":"regent","B":"gate_brute","Z":"archivist","H":"ferryman","W":"jailer"}
 func initial_seed() -> int:
@@ -141,6 +148,7 @@ func _ready():
 	queue_redraw()
 func _process(delta):
 	tick += delta
+	walk_feedback_time=maxf(0.0,walk_feedback_time-delta)
 	advance_walk(delta)
 	battle_time = maxf(0.0, battle_time-delta)
 	if battle_time<=0.0 and not modal_open(): talent_notice_time=maxf(0.0,talent_notice_time-delta)
@@ -197,6 +205,7 @@ func _draw():
 				draw_line(center+Vector2(-toward*12,0),center+Vector2(toward*12,0),TEAL,3)
 				draw_line(center+Vector2(toward*12,0),center+Vector2(toward*5,-7),TEAL,3)
 				draw_line(center+Vector2(toward*12,0),center+Vector2(toward*5,7),TEAL,3)
+	draw_hover_walk()
 	draw_rope_marker()
 	draw_target_marker()
 	var hero := ORIGIN+Vector2(world.pos)*CELL+Vector2(CELL/2,CELL/2)
@@ -222,6 +231,7 @@ func _draw():
 		draw_circle(ORIGIN+Vector2(point)*CELL+Vector2(CELL/2,CELL/2),4,TEAL)
 	if not walk_route.is_empty():
 		draw_circle(ORIGIN+Vector2(walk_route.back())*CELL+Vector2(CELL/2,CELL/2),23,TEAL,false,2)
+	label_at(Vector2(25,795),"WASD / arrows: move, pick up, fight and use stairs.",12,MUTED)
 	draw_sidebar()
 	if battle_time > 0.0: draw_battle()
 	if book: draw_book()
@@ -267,8 +277,6 @@ func draw_sidebar():
 		panel(buttons[i],Color("253748")); label_at(buttons[i].position+Vector2(12,26),titles[i],15)
 	panel(Rect2(768,738,476,32),Color("253748"))
 	label_at(Vector2(780,760),"X: retire this journey / record milestones",14,GOLD)
-	# Manual controls remain available by keyboard.
-	# label_at(Vector2(768,750),"WASD / arrows: manual actions. R / N twice: restart.",13,MUTED)
 func modal_open() -> bool:
 	return strategy_pending() or reset_armed or not lethal_snapshot.is_empty() or death_report or finish_pending!="" or is_terminal() or attuning or book or growth or interaction or journal or comparison or travel_menu or battle_time>0.0 or (world!=null and world.won)
 func wrapped_lines(source: String, width: float, size: int) -> Array[String]:
@@ -285,11 +293,60 @@ func wrapped_lines(source: String, width: float, size: int) -> Array[String]:
 func draw_wrapped(p: Vector2, source: String, width: float, size: int, color: Color, limit:=99):
 	var lines:=wrapped_lines(source,width,size)
 	for i in mini(limit,lines.size()): label_at(p+Vector2(0,i*(size+5)),lines[i],size,color)
+# Read-only mouse affordances; cache by committed World identity and cursor state.
+# Production mutations replace World in apply_session_result and invalidate here.
+func invalidate_hover_walk():
+	hover_walk_cache.clear(); hover_walk_world=null; hover_walk_key.clear()
+func hover_walk_info() -> Dictionary:
+	if world==null: return {"state":"outside","route":[],"hint":""}
+	var key: Array=[hover,world.floor_index,world.pos,world.moves,world.won,world.generation_valid,world.ended_reason]
+	if hover_walk_world==world and key==hover_walk_key and not hover_walk_cache.is_empty(): return hover_walk_cache.duplicate(true)
+	hover_walk_world=world; hover_walk_key=key; hover_walk_refresh_count+=1
+	var info: Dictionary={"state":"inspect","route":[],"hint":"Mouse only inspects. Use WASD / arrows for manual actions."}
+	if hover.x<0 or hover.y<0 or hover.x>=11 or hover.y>=11:
+		info={"state":"outside","route":[],"hint":""}
+	elif hover==world.pos:
+		info.state="current"; info.hint="You are here. Use WASD / arrows to move."
+	else:
+		var token: String=world.tile(hover)
+		if token==".":
+			info.route=world.safe_walk_path(hover)
+			info.state="ready" if not info.route.is_empty() else "blocked"
+			info.hint="Safe route: %d steps. Click to walk; any key or click stops." % info.route.size() if info.state=="ready" else "No safe route. Clear the way manually first."
+		elif token=="#": info.state="wall"; info.hint="Wall: no walking route."
+		elif World.ENEMIES.has(token): info.hint="Mouse only inspects. Move into this enemy with WASD / arrows to fight."
+		elif token in ["D","L"]: info.hint="Mouse only inspects. Move into this door with WASD / arrows to request opening."
+		elif token in ["<",">"]: info.hint="Mouse only inspects. Move into these stairs with WASD / arrows."
+		elif token in ["k","h","a","d","$","A","P","T","C","I","R","m"]: info.hint="Mouse only inspects. Move into this item with WASD / arrows to collect."
+		elif token in ["M","J","N","E","F","Q","O","X","U","Y","v","t","c"]: info.hint="Mouse only inspects. Approach with WASD / arrows, then press E to interact."
+	hover_walk_cache=info
+	return info.duplicate(true)
+func draw_hover_walk():
+	if modal_open() or not can_mutate(): return
+	var info:=hover_walk_info()
+	if walk_route.is_empty() and info.state=="ready":
+		var last: Vector2=ORIGIN+Vector2(world.pos)*CELL+Vector2(CELL/2,CELL/2)
+		for point in info.route:
+			var center: Vector2=ORIGIN+Vector2(point)*CELL+Vector2(CELL/2,CELL/2)
+			draw_line(last,center,Color(0.4,0.85,0.76,0.45),2)
+			draw_circle(center,3,TEAL)
+			last=center
+		draw_circle(last,22,TEAL,false,2)
+	elif info.state=="blocked":
+		var center: Vector2=ORIGIN+Vector2(hover)*CELL+Vector2(CELL/2,CELL/2)
+		draw_line(center-Vector2(8,8),center+Vector2(8,8),RED,2)
+		draw_line(center+Vector2(-8,8),center+Vector2(8,-8),RED,2)
+	if walk_feedback_time>0.0 and hover==walk_feedback_target:
+		draw_rect(Rect2(ORIGIN+Vector2(hover)*CELL+Vector2(4,4),Vector2(CELL-8,CELL-8)),RED if info.state in ["blocked","wall"] else GOLD,false,3)
 func tooltip_lines() -> Array[String]:
 	var lines: Array[String]=[]
 	if hover.x<0 or hover.y<0 or hover.x>=11 or hover.y>=11: return lines
 	var data: Dictionary=world.tooltip_data(hover)
 	if data.get("title","")!="": lines.append_array(wrapped_lines(str(data.title),298,15))
+	var navigation:=hover_walk_info()
+	var hint: String=walk_feedback if walk_feedback_time>0.0 and hover==walk_feedback_target else str(navigation.hint)
+	if session!=null and session.read_only: hint="Read-only journey. L reloads before you can move."
+	if hint!="": lines.append_array(wrapped_lines(hint,298,15))
 	for source in data.get("lines",[]): lines.append_array(wrapped_lines(str(source),298,15))
 	if World.ENEMIES.has(world.tile(hover)): lines.append_array(wrapped_lines("V: compare owned equipment",298,15))
 	return lines
@@ -315,8 +372,15 @@ func cancel_walk():
 func start_walk(target: Vector2i):
 	if not can_mutate(): return
 	cancel_walk()
-	if modal_open() or world.tile(target)!=".": return
+	if modal_open(): return
+	hover=target
+	var info:=hover_walk_info()
+	walk_feedback=str(info.hint); walk_feedback_target=target; walk_feedback_time=1.8
+	if info.state!="ready" or world.tile(target)!=".": return
+	# Re-prove at click time; the hover cache is for display only.
 	walk_route=world.safe_walk_path(target)
+	if walk_route.is_empty():
+		invalidate_hover_walk(); walk_feedback="No safe route. Clear the way manually first."
 	walk_floor=world.floor_index; walk_origin=world.pos; walk_timer=0.0
 func advance_walk(delta: float):
 	if walk_route.is_empty() or session==null or session.busy: return
@@ -1691,6 +1755,8 @@ func status_message() -> String:
 func can_mutate() -> bool:
 	return session!=null and world!=null and not session.busy and not session.read_only and not is_terminal()
 func apply_session_result(result: Dictionary):
+	invalidate_hover_walk()
+	walk_feedback_time=0.0
 	if result.get("ok",false):
 		world=session.world; history=session.history; ui_notice=""
 		compare_cache.clear(); compare_cache_world=null
