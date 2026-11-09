@@ -29,6 +29,22 @@ r=await call(other,'finish',args(ended,3,record));check(r.ok&&r.records.length==
 r=await call(api,'finish',args(ended,3,record));check(r.ok&&r.records.length===1,'finish retry no duplicate');
 r=await call(other,'read');check(r.status==='finished'&&r.records.length===1,'other context sees finished rank');
 const old=localStorage.getItem(key);r=await call(api,'start',args({...first,seed:18},2));check(r.status==='conflict'&&localStorage.getItem(key)===old,'stale new-run request does not overwrite');
+// Rules versions are part of identity, not an implicit save migration.
+const modern={...first,version:2};
+r=await call(api,'start',args(modern,4));check(r.ok&&r.snapshot.version===2&&r.run_id===2&&r.revision===5,'explicit new run switches to v2');
+const beforeVersionAttack=localStorage.getItem(key);
+r=await call(other,'commit',args({...first,actions:['R']},5));check(r.status==='invalid'&&localStorage.getItem(key)===beforeVersionAttack,'v1 action cannot enter v2 run');
+r=await call(api,'start',args(first,4));check(r.status==='conflict','cross-version start is not lost acknowledgment retry');
+const modernEnd={...modern,actions:['retire']};
+r=await call(api,'commit',args(modernEnd,5));check(r.ok&&r.revision===6,'v2 retirement saved');
+const modernRecord={...record,run_id:2,rule_version:2};
+r=await call(api,'finish',args(modernEnd,6,{...record,run_id:2}));check(r.status==='invalid','v2 finish requires correct record rules version');
+r=await call(other,'finish',args(modernEnd,6,modernRecord));check(r.ok&&r.revision===7&&r.records.some(x=>x.run_id===2&&x.rule_version===2),'v2 rank persisted with rules label');
+r=await call(api,'finish',args({...modernEnd,version:1},6,record));check(r.status==='conflict','cross-version finish cannot masquerade as retry');
+r=await call(other,'read');check(r.ok&&r.snapshot.version===2&&r.records.some(x=>x.run_id===1&&(x.rule_version===undefined||x.rule_version===1)),'v2 reload retains separate legacy v1 record');
+r=await call(api,'start',args(first,7));check(r.ok&&r.snapshot.version===1,'explicit v1 new run still supported');
+const beforeDowngrade=localStorage.getItem(key);
+r=await call(other,'commit',args(modernEnd,8));check(r.status==='invalid'&&localStorage.getItem(key)===beforeDowngrade,'v2 action cannot enter v1 run');
 localStorage.setItem(key,'{broken');r=await call(api,'read');check(!r.ok,'corrupt JSON rejected');check(localStorage.getItem(key)==='{broken','corruption not silently replaced');
 output.textContent=`PASS: ${count} checks. Actual production JS callback + Web Locks + localStorage + second browsing context. No Godot engine gameplay claim.`;
 }catch(e){output.textContent=`FAIL after ${count}: ${e.stack}`;}

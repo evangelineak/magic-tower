@@ -70,10 +70,10 @@ func reload_run():
   notice="读取失败：%s。没有覆盖存档。按L重试。"%str(r.get("status","unknown"))
   if str(r.get("status","")) in ["empty","missing"]:modal="start";revision=int(r.get("revision",0))
  center_camera();queue_redraw()
-func start_run(seed_value:int):
+func start_run(seed_value:int,rule_version:int=2):
  if busy:return
  busy=true;walk.clear()
- var candidate=WorldType.new_run(seed_value)
+ var candidate=WorldType.new_run(seed_value,rule_version)
  var r:Dictionary=await store.start(candidate.save_data(),revision)
  busy=false
  if r.get("ok",false):
@@ -151,7 +151,7 @@ func _unhandled_input(event):
     return
    if modal=="choices":
     for i in choices.size():
-     if Rect2(280,225+i*58,720,50).has_point(p):await transact("act",choices[i].id);return
+     if Rect2(280,215+i*52,720,48).has_point(p):await transact("act",choices[i].id);return
    return
   if Rect2(768,662,220,44).has_point(p):center_camera();return
   if Rect2(1000,662,244,44).has_point(p):modal="ranking";return
@@ -206,6 +206,29 @@ func draw_hero(c:Vector2):
  draw_colored_polygon(PackedVector2Array([c+Vector2(-25,-1),c+Vector2(-9,-1),c+Vector2(-10,16),c+Vector2(-17,23),c+Vector2(-24,16)]),GOLD)
  draw_line(c+Vector2(20,-22),c+Vector2(20,18),INK,4);draw_line(c+Vector2(12,7),c+Vector2(27,7),GOLD,3)
 func draw_token(c:Vector2,t:String):
+ if t=="C":
+  panel(Rect2(c+Vector2(-23,-17),Vector2(46,38)),Color("94724e"))
+  draw_rect(Rect2(c+Vector2(-23,-17),Vector2(46,38)),GOLD,false,3)
+  panel(Rect2(c+Vector2(-4,-19),Vector2(8,42)),Color("ded4af"))
+  draw_circle(c+Vector2(0,2),8,Color("bc6b68"));draw_line(c+Vector2(-4,2),c+Vector2(4,2),GOLD,2)
+  return
+ if t=="b":
+  draw_colored_polygon(PackedVector2Array([c+Vector2(-27,-7),c+Vector2(-11,-22),c+Vector2(0,-12),c+Vector2(11,-22),c+Vector2(27,-7),c+Vector2(16,11),c+Vector2(0,20),c+Vector2(-16,11)]),Color("bb9771"))
+  draw_circle(c+Vector2(-8,-3),4,Color("172735"));draw_circle(c+Vector2(8,-3),4,Color("172735"))
+  draw_line(c+Vector2(-20,19),c+Vector2(20,19),Color("a9bec9"),4)
+  draw_colored_polygon(PackedVector2Array([c+Vector2(17,13),c+Vector2(29,19),c+Vector2(17,25)]),INK)
+  return
+ if t=="w":
+  draw_colored_polygon(PackedVector2Array([c+Vector2(0,-29),c+Vector2(-16,-9),c+Vector2(-25,26),c+Vector2(0,18),c+Vector2(25,26),c+Vector2(16,-9)]),Color("8b718f"))
+  panel(Rect2(c+Vector2(-7,-12),Vector2(14,12)),Color("172735"));draw_line(c+Vector2(-4,-7),c+Vector2(4,-7),TEAL,3)
+  draw_line(c+Vector2(23,-15),c+Vector2(23,25),GOLD,3);draw_circle(c+Vector2(23,-21),6,TEAL)
+  return
+ if t=="g" and world!=null and world.rule_version()==2:
+  draw_colored_polygon(PackedVector2Array([c+Vector2(-25,-16),c+Vector2(-9,-27),c+Vector2(9,-27),c+Vector2(25,-16),c+Vector2(19,26),c+Vector2(-19,26)]),Color("647b8c"))
+  draw_line(c+Vector2(-9,-11),c+Vector2(9,-11),GOLD,3)
+  draw_colored_polygon(PackedVector2Array([c+Vector2(-23,0),c+Vector2(8,0),c+Vector2(8,21),c+Vector2(-7,30),c+Vector2(-23,21)]),Color("496b7b"))
+  draw_line(c+Vector2(-18,5),c+Vector2(3,23),GOLD,3);draw_line(c+Vector2(25,-23),c+Vector2(25,27),INK,4)
+  return
  if Symbols.draw_icon(self,t,Rect2(c-Vector2(29,29),Vector2(58,58))):return
  match t:
   "#":panel(Rect2(c-Vector2(28,28),Vector2(56,56)),Color("293b4b"));draw_line(c+Vector2(-25,-19),c+Vector2(25,-19),Color("3c5160"),2)
@@ -242,7 +265,7 @@ func _draw():
   if modal!="":draw_modal()
   return
  text(Vector2(768,34),"第 %d 层 · 已抵达 %d 层"%[world.floor_number,world.max_floor],21,GOLD)
- text(Vector2(768,59),"种子 %d · 按需生成，没有八层终点"%world.seed,14,TEAL)
+ text(Vector2(768,59),"种子 %d · 规则 v%d · 持续生成"%[world.seed,int(world.rule_version())],14,TEAL)
  panel(Rect2(20,68,712,712),Color("182a39"))
  for y in VIEW:
   for x in VIEW:
@@ -261,10 +284,14 @@ func _draw():
  for i in stats.size():
   var p=Vector2(768+(i%3)*160,96+(i/3)*72)
   text(p,str(stats[i][0]),15,TEAL);text(p+Vector2(0,29),str(stats[i][1]),25)
- var entrance_y=1 if world.floor_number%2==1 else 13
- var training=Vector2i(2 if entrance_y==1 else 12,entrance_y)
- var supply=Vector2i(3 if entrance_y==1 else 11,entrance_y)
- text(Vector2(768,239),"训练%s · 补给%s · 关隘%s"%["✓" if world.tile(training)=="." else "□","✓" if world.tile(supply)=="." else "□","✓" if world.tile(Vector2i(3,7))=="." else "□"],17,GOLD)
+ var overview:Dictionary=world.summary() if world.has_method("summary") else {}
+ if not overview.is_empty():
+  text(Vector2(768,239),str(overview.get("layout","双路线远征")),17,GOLD)
+ else:
+  var entrance_y=1 if world.floor_number%2==1 else 13
+  var training=Vector2i(2 if entrance_y==1 else 12,entrance_y)
+  var supply=Vector2i(3 if entrance_y==1 else 11,entrance_y)
+  text(Vector2(768,239),"训练%s · 补给%s · 关隘%s"%["✓" if world.tile(training)=="." else "□","✓" if world.tile(supply)=="." else "□","✓" if world.tile(Vector2i(3,7))=="." else "□"],17,GOLD)
  for y in 15:
   for x in 15:
    var t=world.tile(Vector2i(x,y));var color=Color("344655") if t=="#" else Color("14212d")
@@ -277,7 +304,15 @@ func _draw():
  draw_wrapped("WASD / 方向键移动\n点击邻格拾取、战斗或互动\n点击空地仅走安全路径\n右键拖动地图，空格回到角色
 概览：红=互动/敌人
 金=门/宝物，青=楼梯",Vector2(950,280),282,16,INK,8)
- draw_wrapped(notice,Vector2(768,463),468,16,TEAL,6)
+ if not overview.is_empty():
+  var line_y=456
+  for route in overview.get("routes",[]):
+   text(Vector2(768,line_y),"%s：%s · +%d金"%[str(route.get("label","路线")),"损失%d生命"%int(route.get("damage",0)) if route.get("valid",false) else "不能破防",int(route.get("gold",0))],15,GOLD)
+   line_y+=21
+  text(Vector2(768,line_y),"仅计剩余守卫；安全空地寻路不会自动战斗。",12,TEAL)
+  draw_wrapped(str(overview.get("cargo","")),Vector2(768,line_y+22),468,14,INK,2)
+  draw_wrapped(notice,Vector2(768,576),468,13,TEAL,1)
+ else:draw_wrapped(notice,Vector2(768,463),468,16,TEAL,6)
  var labels=["结束本局并记入本设备榜","回到角色 · Space","本设备历史榜","重新开始 · N","返回经典魔塔"]
  var rects=[Rect2(768,610,476,42),Rect2(768,662,220,44),Rect2(1000,662,244,44),Rect2(768,714,220,44),Rect2(1000,714,244,44)]
  for i in rects.size():panel(rects[i],Color("293e50"));text(rects[i].position+Vector2(12,28),labels[i],16)
@@ -310,21 +345,21 @@ func draw_modal():
  var title="确认"
  var body=notice
  match modal:
-  "start":title="踏入更深的塔";body="15×15地图，安全寻路与相邻点击。每层先找入口附近训练宝石与补给，再挑战关隘。强敌宝库可成长后回访。无尽模式独立保存，不替换经典旅程。首版数值安全界限100万层、10万动作，达到动作界限仍可结算。"
+  "start":title="踏入更深的塔";body="15×15地图，安全寻路与相邻点击。新局使用v2：先取训练，再比较重甲短路与轻敌长路的损伤。封存补给可立即使用，也可承担两层运输委托；中途允许拆封。强敌宝库可成长后回访。旧v1旅程按原规则继续。无尽模式独立保存，不替换经典旅程。首版数值安全界限100万层、10万动作，达到动作界限仍可结算。"
   "new":title="重新开始无尽旅程？";body="会替换当前无尽旅程。经典魔塔存档与已结算的本设备历史榜保留。"
   "retire":title="结束并结算本局？";body="结算后不能继续这次无尽旅程，成绩只保存在本设备。不是公开全球排名。"
-  "ranking":title="本设备历史榜";body="仅当前浏览器或电脑可见，不上传服务器，不是全球榜。"
+  "ranking":title="本设备历史榜";body="仅本设备可见，不上传服务器；v1与v2规则不同，标注版本，不代表同难度竞技。"
   "ended":title="本次远征结束";body="成绩已保存到本设备历史榜。下一次仍有不同路线与成长选择。"
   "finish_retry":title="结算等待重试"
   "choices":title="选择行动";body=""
  text(Vector2(280,190),title,26,GOLD)
  if modal=="choices":
-  for i in mini(6,choices.size()):panel(Rect2(280,225+i*58,720,50),Color("2a4051"));draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(293,253+i*58),690,16,INK,2)
+  for i in mini(6,choices.size()):panel(Rect2(280,215+i*52,720,48),Color("2a4051"));draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(293,241+i*52),690,16,INK,2)
  elif modal=="ranking":
   draw_wrapped(body,Vector2(280,230),710,16,TEAL,2)
   for i in mini(8,records.size()):
    var record:Dictionary=records[i]
-   draw_wrapped("%d.  第%d层 · 击杀%d · 金币%d · 种子%d"%[i+1,int(record.get("max_floor",1)),int(record.get("kills",0)),int(record.get("gold",0)),int(record.get("seed",0))],Vector2(280,285+i*32),710,16,INK,1)
+   draw_wrapped("%d.  v%d · 第%d层 · 击杀%d · 金币%d"%[i+1,int(record.get("rule_version",1)),int(record.get("max_floor",1)),int(record.get("kills",0)),int(record.get("gold",0))],Vector2(280,285+i*32),710,16,INK,1)
  else:draw_wrapped(body,Vector2(280,245),710,20,INK,11)
  if modal_notice!="" and modal in ["choices","new","start"]:draw_wrapped(modal_notice,Vector2(280,535),710,15,Color("efb18e"),2)
  panel(Rect2(280,575,330,48),Color("365347"));text(Vector2(300,606),"确认 / Enter" if modal not in ["ranking","choices"] else "关闭",18)

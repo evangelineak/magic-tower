@@ -27,14 +27,15 @@ func exact(value,keys:Array)->bool:
 func integer(value,low:int=0,high:int=MAX_COUNTER)->bool:
  return (value is int or value is float) and is_finite(float(value)) and value>=low and value<=high and floor(float(value))==value
 func snapshot_shape(s)->bool:
- if not exact(s,["version","mode","seed","actions"]) or s.version!=1 or s.mode!="endless" or not integer(s.seed,0,2147483647) or not s.actions is Array or s.actions.size()>100000:return false
+ if not exact(s,["version","mode","seed","actions"]) or not integer(s.version,1,2) or s.mode!="endless" or not integer(s.seed,0,2147483647) or not s.actions is Array or s.actions.size()>100000:return false
  for a in s.actions:
   if not a is String or a.is_empty() or a.length()>40:return false
  return true
 func canonical_snapshot(s:Dictionary)->Dictionary:
- return {"version":1,"mode":"endless","seed":int(s.seed),"actions":s.actions.duplicate()}
+ return {"version":int(s.version),"mode":"endless","seed":int(s.seed),"actions":s.actions.duplicate()}
 func valid_record(r)->bool:
- if not exact(r,["run_id","seed","max_floor","kills","gold","reason"]):return false
+ if not exact(r,["run_id","seed","max_floor","kills","gold","reason"]) and not exact(r,["run_id","seed","max_floor","kills","gold","reason","rule_version"]):return false
+ if not integer(r.get("rule_version",1),1,2):return false
  return integer(r.run_id,1) and integer(r.seed,0,2147483647) and integer(r.max_floor,1,1000000000) and integer(r.kills,0,1000000000) and integer(r.gold,0,1000000000) and r.reason in ["death","retired","action_limit"]
 func fresh()->Dictionary:return {"version":1,"revision":0,"run_id":0,"active":null,"finished":false,"records":[]}
 func valid_envelope(e)->bool:
@@ -51,7 +52,7 @@ func validated(s:Dictionary):
  if not snapshot_shape(s):return null
  if cache_world!=null and s==cache_snapshot:return cache_world
  var w=null
- if cache_world!=null and s.seed==cache_snapshot.seed and s.actions.size()==cache_snapshot.actions.size()+1 and s.actions.slice(0,-1)==cache_snapshot.actions:
+ if cache_world!=null and s.version==cache_snapshot.version and s.seed==cache_snapshot.seed and s.actions.size()==cache_snapshot.actions.size()+1 and s.actions.slice(0,-1)==cache_snapshot.actions:
   w=cache_world.clone()
   var action_result:Dictionary=w.apply_code(str(s.actions[-1]))
   if not action_result.get("changed",false) or w.save_data()!=s:w=null
@@ -116,7 +117,7 @@ func write(operation:String,s:Dictionary,expected:int)->Dictionary:
  var r:Dictionary={}
  if operation=="finish":
   if not w.ended:return fail("invalid")
-  r={"run_id":current.run_id,"seed":w.seed,"max_floor":w.max_floor,"kills":w.kills,"gold":w.gold,"reason":w.ended_reason}
+  r={"run_id":current.run_id,"seed":w.seed,"max_floor":w.max_floor,"kills":w.kills,"gold":w.gold,"reason":w.ended_reason,"rule_version":int(s.version)}
   if not valid_record(r):return fail("invalid")
  var args={"snapshot":s,"expected_revision":expected,"record":r}
  if use_web:return await web(operation,args)
@@ -170,10 +171,10 @@ func native_write_locked(operation:String,a:Dictionary)->Dictionary:
   if not s.actions.is_empty() or e.run_id>=MAX_COUNTER:return fail("invalid")
   n.run_id=int(n.run_id)+1;n.active=s.duplicate(true);n.finished=false
  elif operation=="commit":
-  if e.active==null or e.finished or s.seed!=e.active.seed or s.actions.size()!=e.active.actions.size()+1 or s.actions.slice(0,-1)!=e.active.actions:return fail("invalid")
+  if e.active==null or e.finished or s.version!=e.active.version or s.seed!=e.active.seed or s.actions.size()!=e.active.actions.size()+1 or s.actions.slice(0,-1)!=e.active.actions:return fail("invalid")
   n.active=s.duplicate(true)
  elif operation=="finish":
-  if e.active==null or e.finished or e.active!=s or not valid_record(a.record) or a.record.run_id!=e.run_id:return fail("invalid")
+  if e.active==null or e.finished or e.active!=s or not valid_record(a.record) or a.record.run_id!=e.run_id or a.record.get("rule_version",1)!=s.version:return fail("invalid")
   n.finished=true;n.records.append(a.record.duplicate(true))
   n.records.sort_custom(func(x,y):return x.max_floor>y.max_floor if x.max_floor!=y.max_floor else (x.kills>y.kills if x.kills!=y.kills else (x.gold>y.gold if x.gold!=y.gold else x.run_id<y.run_id)))
   n.records=n.records.slice(0,10)

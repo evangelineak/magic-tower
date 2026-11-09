@@ -31,4 +31,32 @@ store.value='bad json';check(!S.execute(store,'read',{}).ok);
 store.value=JSON.stringify({...S.fresh(),unexpected:1});check(S.execute(store,'read',{}).status==='corrupt');
 store.value=' '.repeat(S.MAX+1);check(S.execute(store,'read',{}).status==='corrupt');
 check(!S.snapshot({...snap,atk:999}));check(!S.snapshot({...snap,actions:['x'.repeat(41)]}));
+// Rules version is part of run identity, including acknowledgement retries.
+store.value=null;
+check(S.execute(store,'start',args(snap,0)).ok);
+const v2={...snap,version:2};
+check(S.execute(store,'start',args(v2,0)).status==='conflict');
+check(S.execute(store,'commit',args({...v2,actions:['R']},1)).status==='invalid');
+check(S.execute(store,'start',args(v2,1)).snapshot.version===2);
+check(S.execute(store,'start',args(v2,1)).revision===2);
+check(S.execute(store,'commit',args({...snap,actions:['R']},2)).status==='invalid');
+const v2done={...v2,actions:['retire']};
+check(S.execute(store,'commit',args(v2done,2)).ok);
+check(S.execute(store,'finish',args({...v2done,version:1},3,{...r,run_id:2,rule_version:2})).status==='invalid');
+check(S.execute(store,'finish',args(v2done,3,{...r,run_id:2})).status==='invalid');
+check(S.execute(store,'finish',args(v2done,3,{...r,run_id:2,rule_version:2})).records[0].rule_version===2);
+check(S.execute(store,'finish',args({...v2done,version:1},3,{...r,run_id:2,rule_version:2})).status==='conflict');
+for(const version of [0,3,1.5,'1',true,null,{},[],NaN,Infinity]){
+ check(!S.snapshot({...snap,version}));
+ check(S.execute(store,'start',args({...snap,version},4)).status==='invalid');
+}
+store.value=JSON.stringify({...S.fresh(),revision:1,run_id:1,active:{...snap,version:3}});
+check(S.execute(store,'read',{}).status==='corrupt');
+const legacy={version:1,revision:3,run_id:1,active:done,finished:true,records:[r]};
+check(S.valid(legacy));
+for(const rule_version of [0,3,'2',null,1.5,true]){
+ check(!S.valid({...legacy,records:[{...r,rule_version}]}));
+}
+check(S.valid({...legacy,records:[{...r,rule_version:1}]}));
+check(!S.valid({...legacy,records:[{...r,rule_version:1,extra:true}]}));
 console.log(`ENDLESS WEB STORAGE: PASS (${count} checks; production envelope/CAS/quota/idempotence, not browser nor World replay)`);
