@@ -27,7 +27,7 @@ func run():
  var ui=load("res://endless.tscn").instantiate();var memory=Memory.new();ui.store=memory;root.add_child(ui)
  await process_frame;ui.set_process(false)
  ui.world=load("res://scripts/endless_world_v19.gd").new_run(7);ui.modal=""
- var old=ui.world.save_data();await ui.start_run(42)
+ var old=ui.world.save_data();await ui.start_run(42,20)
  check(ui.modal=="hero_setup" and ui.hero_setup_seed==42 and ui.world.save_data()==old and memory.starts==0,"prepare fixed seed without replacing old journey")
  await ui.confirm_hero_setup()
  check(memory.starts==0 and "选择" in ui.modal_notice,"no implicit hero on Enter")
@@ -35,7 +35,7 @@ func run():
  check(ui.hero_setup_selection=="ranger" and ui.hero_setup_seed==42,"selection leaves seed fixed")
  key.keycode=KEY_ESCAPE;await ui._unhandled_input(key)
  check(ui.world.save_data()==old and ui.modal=="" and memory.starts==0,"cancel retains old journey")
- await ui.start_run(42);ui.hero_setup_selection="ranger";memory.failing=true;await ui.confirm_hero_setup()
+ await ui.start_run(42,20);ui.hero_setup_selection="ranger";memory.failing=true;await ui.confirm_hero_setup()
  check(ui.world.save_data()==old and ui.modal=="hero_setup" and ui.hero_setup_seed==42,"failed atomic start retains old journey and same pending seed")
  memory.failing=false;await ui.confirm_hero_setup()
  check(ui.world.hero_view().id=="ranger" and ui.world.actions==["hero_ranger"] and memory.starts==1,"successful atomic hero start records exactly one setup event")
@@ -60,7 +60,7 @@ func run():
  check(ui.world.hp==174 and ui.world.hero_view().focus==focus_before-1,"scholar actual healing follows finalized24 not old40")
  ui.modal="";await ui.start_run(11,19)
  check(ui.world.rule_version()==19 and ui.modal=="","explicit old-version creation remains supported")
- await ui.start_run(13);ui.queue_redraw();await process_frame
+ await ui.start_run(13,20);ui.queue_redraw();await process_frame
  check(ui.hero_catalog_rows().size()==3,"three actual catalog cards render")
  var click=InputEventMouseButton.new();click.pressed=true;click.button_index=MOUSE_BUTTON_LEFT;click.position=Vector2(220,260);await ui._unhandled_input(click)
  check(ui.hero_setup_selection=="warden" and ui.hero_setup_seed==13,"mouse selects card without changing pending seed")

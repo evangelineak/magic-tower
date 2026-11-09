@@ -1,5 +1,6 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const ProgressArt=preload("res://scripts/endless_progress_art.gd")
 const Heroes20=preload("res://scripts/endless_hero_v20_art.gd")
 const CartArt=preload("res://scripts/endless_cart_art.gd")
 const VaultArt=preload("res://scripts/endless_vault_art.gd")
@@ -40,6 +41,12 @@ var target_feedback:Dictionary={}
 var feedback_remaining=0.0
 var walk:Array=[]
 var walk_time=0.0
+var setup_version=20
+var legacy_selection="none"
+var profile:Dictionary={}
+var legacy_points=0
+var settlement:Dictionary={}
+var talent_selection=""
 var hero_setup_seed=0
 var hero_setup_selection=""
 var build_tab="hero"
@@ -87,6 +94,7 @@ func reload_run():
  var r:Dictionary=await store.read()
  busy=false
  if r.get("ok",false):
+  ingest_profile(r)
   modal="";pending=Vector2i.ZERO;pending_revision=-1;choices.clear();battle.clear();battle_time=0
   revision=int(r.revision);records=r.get("records",[])
   if r.get("snapshot") is Dictionary and not r.snapshot.is_empty():
@@ -101,7 +109,7 @@ func reload_run():
 func start_run(seed_value:int,rule_version:int=0):
  if busy:return
  if rule_version>=20 or (rule_version==0 and WorldType.CURRENT_VERSION>=20):
-  hero_setup_seed=seed_value;hero_setup_selection="";walk.clear();modal="hero_setup";modal_notice="";queue_redraw();return
+  setup_version=WorldType.CURRENT_VERSION if rule_version==0 else rule_version;legacy_selection="none";hero_setup_seed=seed_value;hero_setup_selection="";walk.clear();modal="hero_setup";modal_notice="";queue_redraw();return
  busy=true;walk.clear();clear_target_feedback()
  var candidate=WorldType.new_run(seed_value,WorldType.CURRENT_VERSION if rule_version==0 else rule_version)
  var r:Dictionary=await store.start(candidate.save_data(),revision)
@@ -135,10 +143,12 @@ func transact(kind:String,value,confirmed=false):
  if not r.get("ok",false):
   walk.clear();notice="保存未确认，画面未前进：%s。按L核对已存旅程。"%str(r.get("status","unknown"));modal_notice=notice;queue_redraw();return
  clear_target_feedback()
+ ingest_profile(r)
  world=candidate;revision=int(r.revision);records=r.get("records",records);modal="";modal_notice="";notice=str(result.get("message",""));center_camera()
  if result.get("battle") is Dictionary:
   battle=result.battle;battle_time=2.4;walk.clear()
  if str(value).begins_with("case_") and kind=="act":open_case();modal_notice=notice
+ if str(value).begins_with("tal_") and kind=="act":talent_selection="";open_build();modal_notice=notice
  if str(value).begins_with("skill_") and kind=="act":open_build();modal_notice=notice
  if str(value).begins_with("tactic_") and kind=="act":open_build();modal_notice=notice
  if str(value).begins_with("enc_") and kind=="act":open_supply_panel("encounter");modal_notice=notice
@@ -153,7 +163,7 @@ func settle_run():
  busy=true;walk.clear()
  var r:Dictionary=await store.finish(world.save_data(),revision)
  busy=false
- if r.get("ok",false):revision=int(r.revision);records=r.get("records",records);modal="ended"
+ if r.get("ok",false):ingest_profile(r);revision=int(r.revision);records=r.get("records",records);modal="ended"
  else:notice="结算未写入：%s。可以重试，不会重复登记。"%str(r.get("status","unknown"));modal="finish_retry"
 func map_click(target:Vector2i):
  if busy or world==null or world.ended or modal!="":return
@@ -201,6 +211,14 @@ func _unhandled_input(event):
   walk.clear()
   if busy:return
   var p=event.position
+  if modal=="legacy_setup":
+   var rows=legacy_rows()
+   for i in rows.size():
+    if Rect2(130,185+i*98,760,88).has_point(p):legacy_selection=str(rows[i].id);queue_redraw();return
+    if Rect2(910,185+i*98,240,88).has_point(p):await unlock_setup_legacy(str(rows[i].id));return
+   if Rect2(130,650,490,55).has_point(p):modal="hero_setup";return
+   if Rect2(660,650,490,55).has_point(p):await start_legacy_setup();return
+   return
   if modal=="hero_setup":
    for i in 3:
     if Rect2(130+i*345,190,325,365).has_point(p):hero_setup_selection=["warden","ranger","scholar"][i];queue_redraw();return
@@ -232,8 +250,14 @@ func _unhandled_input(event):
    return
   if modal=="build":
    if world.has_method("hero_view"):
-    if Rect2(125,180,240,40).has_point(p):build_tab="hero";open_build();return
-    if Rect2(375,180,240,40).has_point(p):build_tab="tactic";open_build();return
+    var tabs=build_tabs()
+    for i in tabs.size():
+     if Rect2(125+i*250,180,240,40).has_point(p):build_tab=tabs[i];open_build();return
+   if build_tab=="talent" and world.has_method("talent_view"):
+    for i in choices.size():
+     if Rect2(665,245+i*112,495,104).has_point(p):talent_selection=str(choices[i].id);queue_redraw();return
+    if Rect2(665,600,495,55).has_point(p):await confirm_talent();return
+    return
    if Rect2(910,687,250,45).has_point(p):modal="";return
    for i in choices.size():
     if Rect2(665,275+i*74,495,65).has_point(p):await transact("act",choices[i].id);return
@@ -274,7 +298,9 @@ func _unhandled_input(event):
   if event.keycode==KEY_L:await reload_run();return
   if modal!="":
    if modal=="hero_setup" and event.keycode in [KEY_1,KEY_2,KEY_3]:hero_setup_selection=["warden","ranger","scholar"][event.keycode-KEY_1];queue_redraw();return
-   if modal=="build" and event.keycode==KEY_TAB and world.has_method("hero_view"):build_tab="hero" if build_tab=="tactic" else "tactic";open_build();return
+   if modal=="build" and event.keycode==KEY_TAB and world.has_method("hero_view"):var tabs=build_tabs();build_tab=tabs[(tabs.find(build_tab)+1)%tabs.size()];open_build();return
+   if modal=="legacy_setup" and event.keycode==KEY_ESCAPE:modal="hero_setup";return
+   if modal=="build" and build_tab=="talent" and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():talent_selection=str(choices[event.keycode-KEY_1].id);queue_redraw();return
    if modal=="hero_setup" and event.keycode==KEY_ESCAPE:modal="" if world!=null else "start";return
    if modal=="bridge" and event.keycode in [KEY_1,KEY_2]:
     await confirm_bridge("short" if event.keycode==KEY_1 else "loot");return
@@ -314,6 +340,9 @@ func _unhandled_input(event):
 func confirm_modal():
  match modal:
   "hero_setup":await confirm_hero_setup()
+  "legacy_setup":await start_legacy_setup()
+  "build":
+   if build_tab=="talent":await confirm_talent()
   "start","new","ended":await start_run(randi_range(0,2147483647))
   "bridge":modal_notice="请明确选择短桥或宝桥；Enter不会代替选择。"
   "rune":
@@ -462,7 +491,7 @@ func _draw():
  text(Vector2(24,796),"视窗 (%d,%d) · 自动保存 · H玩法说明 · 经典存档独立保留"%[camera.x,camera.y],13,TEAL)
  if world.has_method("build_view"):
   panel(Rect2(768,562,476,22),Color("293e50"))
-  text(Vector2(776,579),("B · 英雄构筑："+str(world.hero_view().name)+" · 专注%d/%d" % [world.hero_view().focus,world.hero_view().focus_cap]) if world.has_method("hero_view") else "B · 英雄战术与遗物成长："+str(world.build_view().get("title","")),13,GOLD)
+  text(Vector2(776,579),("B · 英雄构筑："+str(world.hero_view().name)+" · 专注%d/%d" % [world.hero_view().focus,world.hero_view().focus_cap]+(" · 有天赋待选" if talent_ready() else "")) if world.has_method("hero_view") else "B · 英雄战术与遗物成长："+str(world.build_view().get("title","")),13,GOLD)
  if world.has_method("case_view"):
   panel(Rect2(768,587,476,22),Color("293e50"))
   text(Vector2(776,604),"Q · 信使历史路线图与回访线索",13,GOLD)
@@ -527,6 +556,7 @@ func tooltip_layout(content:String,desired:Vector2)->Rect2:
 
 func draw_modal():
  if modal=="hero_setup":draw_hero_setup();return
+ if modal=="legacy_setup":draw_legacy_setup();return
  if modal=="bridge":draw_bridge_panel();return
  if modal=="rune":draw_rune_panel();return
  if modal=="gear":draw_gear_panel();return
@@ -545,7 +575,7 @@ func draw_modal():
   "confirm_job":title="放弃委托并损失12金币押金？";body=notice+"\n仅放弃当前委托，不会结束整局。取消这个弹窗则保留委托。"
   "retire":title="结束并结算本局？";body="结算后不能继续这次无尽旅程，成绩只保存在本设备。不是公开全球排名。"
   "ranking":title="本设备历史榜";body="仅本设备可见，不上传服务器；不同规则版本难度不同，标注版本，不代表同难度竞技。"
-  "ended":title="本次远征结束";body="成绩已保存到本设备历史榜。下一次仍有不同路线与成长选择。"
+  "ended":title="本次远征结束";body=settlement_text()
   "finish_retry":title="结算等待重试"
   "choices":title="选择行动";body=""
  if modal=="help" and world!=null and world.has_method("growth_view"):body=growth_help_text()
@@ -628,9 +658,13 @@ func draw_case_token(c:Vector2,t:String):
 func open_build():
  if world==null or not world.has_method("build_view"):
   notice="这段旧规则旅程没有战术槽，新局可体验新版构筑。";return
- walk.clear();var info:Dictionary=world.hero_view() if world.has_method("hero_view") and build_tab=="hero" else world.build_view();choices=info.get("options",[])
+ walk.clear()
+ if build_tab=="talent" and world.has_method("talent_view"):
+  choices=world.talent_view().offers;modal="build";modal_notice="";queue_redraw();return
+ var info:Dictionary=world.hero_view() if world.has_method("hero_view") and build_tab=="hero" else world.build_view();choices=info.get("options",[])
  modal="build";modal_notice="";queue_redraw()
 func draw_build():
+ if build_tab=="talent" and world.has_method("talent_view"):draw_talents();return
  if world.has_method("hero_view") and build_tab=="hero":draw_hero_build();return
  var info:Dictionary=world.build_view()
  panel(Rect2(0,0,1280,800),Color(0,0,0,0.8));panel(Rect2(95,85,1090,665),Color("152736"))
@@ -1068,7 +1102,7 @@ func draw_cart_push_hint():
   draw_line(c+d*12,c+d*4-cross*7,TEAL,3)
 
 func hero_catalog_rows()->Array:
- var catalog=WorldType.new_run(hero_setup_seed,20).hero_catalog()
+ var catalog=WorldType.new_run(hero_setup_seed,setup_version).hero_catalog()
  if catalog is Array:return catalog
  var rows:Array=[]
  for id in ["warden","ranger","scholar"]:
@@ -1077,8 +1111,9 @@ func hero_catalog_rows()->Array:
 func confirm_hero_setup():
  if busy or modal!="hero_setup":return
  if hero_setup_selection not in ["warden","ranger","scholar"]:modal_notice="请先选择一位英雄，查看技能后再开始。";queue_redraw();return
+ if setup_version>=21:modal="legacy_setup";modal_notice="";queue_redraw();return
  busy=true
- var candidate=WorldType.new_run(hero_setup_seed,20)
+ var candidate=WorldType.new_run(hero_setup_seed,setup_version)
  var chosen:Dictionary=candidate.act("hero_"+hero_setup_selection)
  if not chosen.get("changed",false):busy=false;modal_notice=str(chosen.get("message","无法选择英雄。"));return
  var result:Dictionary=await store.start_hero(candidate.save_data(),revision)
@@ -1088,7 +1123,7 @@ func confirm_hero_setup():
 func draw_hero_setup():
  panel(Rect2(0,0,1280,800),Color("0b1420"))
  text(Vector2(130,105),"准备远征 · 选择本局英雄",29,GOLD)
- draw_wrapped("规则 v20 · 种子 %d。选卡只预览；按最终开始后才替换当前无尽旅程。此版没有轮回点或天赋抽选。" % hero_setup_seed,Vector2(130,145),1030,17,INK,2)
+ draw_wrapped("规则 v%d · 种子 %d。选卡只预览；最终开始才替换旧旅程。%s" % [setup_version,hero_setup_seed,"下一步选择传承。" if setup_version>=21 else "此版没有轮回点或天赋抽选。"],Vector2(130,145),1030,17,INK,2)
  var rows=hero_catalog_rows()
  for i in mini(3,rows.size()):
   var row:Dictionary=rows[i];var x=130+i*345
@@ -1100,11 +1135,13 @@ func draw_hero_setup():
  draw_wrapped(recovery+"\n每次技能消耗1专注；护卫/游侠预备不扣点，实际开战才扣。",Vector2(130,571),1020,14,TEAL,3)
  draw_wrapped(modal_notice,Vector2(130,627),1020,15,Color("efb18e"),1)
  panel(Rect2(130,645,490,55),Color("384152"));text(Vector2(150,680),"取消 · 保留原旅程",20)
- panel(Rect2(660,645,490,55),Color("365347"));text(Vector2(680,680),"以选中英雄开始 · Enter",20)
+ panel(Rect2(660,645,490,55),Color("365347"));text(Vector2(680,680),"下一步：传承 · Enter" if setup_version>=21 else "以选中英雄开始 · Enter",20)
+func build_tabs()->Array:return ["hero","talent","tactic"] if world.has_method("talent_view") else ["hero","tactic"]
 func draw_build_tabs():
- for i in 2:
-  panel(Rect2(125+i*250,180,240,40),Color("365347") if (build_tab=="hero")== (i==0) else Color("293e50"))
-  text(Vector2(137+i*250,207),["英雄技能","营地战术 · Tab"][i],17)
+ var tabs=build_tabs()
+ for i in tabs.size():
+  panel(Rect2(125+i*250,180,240,40),Color("365347") if build_tab==tabs[i] else Color("293e50"))
+  text(Vector2(137+i*250,207),{"hero":"英雄技能","talent":"天赋 · 三选一","tactic":"营地战术 · Tab"}[tabs[i]],17)
 func draw_hero_build():
  var info:Dictionary=world.hero_view()
  panel(Rect2(0,0,1280,800),Color(0,0,0,0.8));panel(Rect2(95,85,1090,665),Color("152736"))
@@ -1112,9 +1149,92 @@ func draw_hero_build():
  draw_build_tabs();Heroes20.draw_hero(self,Vector2(245,297),str(info.id),100)
  text(Vector2(125,399),"专注 %d / %d · %s" % [info.focus,info.focus_cap,"技能已预备" if info.armed else "未预备"],22,TEAL)
  draw_wrapped(str(info.skill_description),Vector2(125,440),485,18,INK,6)
- if choices.is_empty():draw_wrapped("旅程已结束。" if world.ended else ("专注不足，等待抵达新的恢复层数。" if int(info.focus)<=0 else "生命已满，不消耗专注。"),Vector2(665,300),470,18,TEAL,3)
+ if choices.is_empty():draw_wrapped("旅程已结束。" if world.ended else ("专注不足，等待抵达新的恢复层数。" if int(info.focus)<int(info.get("focus_cost",1)) else "生命已满，不消耗专注。"),Vector2(665,300),470,18,TEAL,3)
  draw_wrapped(str(info.get("focus_recovery",""))+"\n英雄身份固定；战术与装备另行调整，先看战斗预览。",Vector2(125,550),485,15,TEAL,6)
  for i in mini(5,choices.size()):
   panel(Rect2(665,275+i*74,495,65),Color("2a4051"));draw_wrapped("%d  %s" % [i+1,str(choices[i].label)],Vector2(677,301+i*74),470,17,INK,2)
  draw_wrapped(modal_notice,Vector2(665,656),485,14,Color("efb18e"),2)
  panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(930,717),"关闭 · Esc",18)
+
+func ingest_profile(result:Dictionary):
+ if not result.get("ok",false):return
+ if result.get("profile") is Dictionary:profile=result.profile.duplicate(true)
+ if result.has("points"):legacy_points=int(result.points)
+ if result.get("settlement") is Dictionary:settlement=result.settlement.duplicate(true)
+func settlement_text()->String:
+ var body="成绩已保存到本设备历史榜。"
+ if world==null or world.rule_version()<21:return body+"\n这段旧规则旅程不发轮回点；新版内容需明确新开局。"
+ if settlement.is_empty():return body+"\n本局轮回结算回执尚未确认，请L核对；不预先计入点数。"
+ var awards:Array=settlement.get("awarded",[])
+ return body+"\n本次确认新增 %d 点（新里程碑：%s）。\n结算时余额 %d；当前可用 %d 点。\n同一里程碑只奖励一次，反复死亡或读取不重复发点。" % [awards.size(),str(awards) if not awards.is_empty() else "无",int(settlement.get("balance_after",0)),legacy_points]
+func legacy_rows()->Array:return WorldType.new_run(hero_setup_seed,setup_version).legacy_catalog()
+func owns_legacy(id:String)->bool:return id=="none" or id in profile.get("unlocks",[])
+func unlock_setup_legacy(id:String):
+ if busy or modal!="legacy_setup" or owns_legacy(id):return
+ busy=true
+ var result:Dictionary=await store.unlock_legacy(id,revision)
+ busy=false
+ if not result.get("ok",false):modal_notice="解锁未确认，未改本地余额："+str(result.get("status","unknown"));queue_redraw();return
+ ingest_profile(result);revision=int(result.revision);modal_notice="已永久解锁；还需点卡选择。新旅程尚未开始，退出不退解锁点。";queue_redraw()
+func start_legacy_setup():
+ if busy or modal!="legacy_setup":return
+ if not owns_legacy(legacy_selection):modal_notice="该传承尚未解锁；请选择默认无传承，或明确付点解锁。";queue_redraw();return
+ busy=true
+ var candidate=WorldType.new_run(hero_setup_seed,setup_version)
+ var hero_result:Dictionary=candidate.act("hero_"+hero_setup_selection)
+ var legacy_result:Dictionary=candidate.act("legacy_"+legacy_selection) if hero_result.get("changed",false) else {}
+ if not legacy_result.get("changed",false):busy=false;modal_notice="开局配置无效，原旅程未替换。";queue_redraw();return
+ var result:Dictionary=await store.start_legacy(candidate.save_data(),revision)
+ busy=false
+ if not result.get("ok",false):modal_notice="新局未确认，原旅程保留："+str(result.get("status","unknown"));queue_redraw();return
+ ingest_profile(result);world=candidate;revision=int(result.revision);records=result.get("records",[]);modal="";build_tab="hero";talent_selection="";clear_target_feedback();center_camera();notice="英雄与传承已锁定，本局天赋候选由种子固定。";queue_redraw()
+func draw_legacy_setup():
+ panel(Rect2(0,0,1280,800),Color("0b1420"))
+ text(Vector2(130,92),"准备远征 · 传承一槽",29,GOLD)
+ draw_wrapped("当前可用%d轮回点 · 种子%d。默认不携带免费；点卡只选择，右侧解锁才永久付点。解锁后退出不退点，旧旅程直到最终开始才替换。" % [legacy_points,hero_setup_seed],Vector2(130,132),1020,17,INK,2)
+ var rows=legacy_rows()
+ for i in rows.size():
+  var row:Dictionary=rows[i];var y=185+i*98;var id=str(row.id)
+  panel(Rect2(130,y,760,88),Color("365347") if legacy_selection==id else Color("213443"))
+  ProgressArt.draw_icon(self,Vector2(170,y+43),id,56)
+  text(Vector2(210,y+27),str(row.get("title",row.get("name",id))),20,GOLD)
+  draw_wrapped(str(row.description),Vector2(210,y+52),660,15,INK,2)
+  panel(Rect2(910,y,240,88),Color("293e50"))
+  draw_wrapped("已解锁 · 点左卡选用" if owns_legacy(id) else "永久解锁：%d点\n点击即付点" % int(row.cost),Vector2(925,y+32),210,17,TEAL,2)
+ draw_wrapped(modal_notice,Vector2(130,600),1020,16,Color("efb18e"),2)
+ panel(Rect2(130,650,490,55),Color("384152"));text(Vector2(150,685),"返回英雄 · 种子不变",20)
+ panel(Rect2(660,650,490,55),Color("365347"));text(Vector2(680,685),"确认配置并开始 · Enter",20)
+func confirm_talent():
+ if busy or modal!="build" or build_tab!="talent" or not world.has_method("talent_view"):return
+ var found:Dictionary={}
+ for row in world.talent_view().offers:
+  if str(row.id)==talent_selection:found=row
+ if found.is_empty():modal_notice="先选一张卡，确认后本轮不可改选或重抽。";queue_redraw();return
+ if not found.get("allowed",world.talent_view().available):modal_notice=str(found.get("reason",world.talent_view().reason));queue_redraw();return
+ await transact("act",str(found.action))
+func draw_talents():
+ var view:Dictionary=world.talent_view()
+ panel(Rect2(0,0,1280,800),Color(0,0,0,0.8));panel(Rect2(95,85,1090,665),Color("152736"))
+ text(Vector2(125,132),"本局天赋 · 固定候选，确认后不可改选",25,GOLD);draw_build_tabs()
+ var y=265
+ for row in view.chosen:
+  ProgressArt.draw_icon(self,Vector2(158,y+20),str(row.id),48)
+  text(Vector2(200,y+15),str(row.title),20,GOLD)
+  draw_wrapped(str(row.description),Vector2(200,y+42),405,15,INK,3);y+=120
+ if view.chosen.is_empty():draw_wrapped("尚未选择天赋。达成击杀里程碑后可三选一，打开/关闭不会改变候选。",Vector2(125,280),485,18,INK,4)
+ draw_wrapped(str(view.reason)+("\n下一档：%d击杀" % int(view.next_kills) if int(view.next_kills)>0 else ""),Vector2(125,645),485,15,TEAL,3)
+ for i in choices.size():
+  var row:Dictionary=choices[i];var top=245+i*112
+  panel(Rect2(665,top,495,104),Color("365347") if str(row.id)==talent_selection else Color("293e50"))
+  ProgressArt.draw_icon(self,Vector2(699,top+35),str(row.id),46)
+  text(Vector2(733,top+25),"%d %s" % [i+1,str(row.title)],18,GOLD)
+  draw_wrapped(str(row.description),Vector2(733,top+48),410,14,INK,3)
+ if not choices.is_empty():
+  panel(Rect2(665,600,495,55),Color("365347") if view.available else Color("293e50"));text(Vector2(680,633),"确认选中天赋 · 本轮不可撤销" if view.available else "暂不可选 · 查看左侧条件",19)
+ draw_wrapped(modal_notice,Vector2(665,674),490,14,Color("efb18e"),1)
+ panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(930,717),"关闭 · Esc",18)
+
+func talent_ready()->bool:
+ if world==null or not world.has_method("talent_view") or world.ended:return false
+ var view:Dictionary=world.talent_view()
+ return int(view.next_kills)>0 and int(view.kills)>=int(view.next_kills)

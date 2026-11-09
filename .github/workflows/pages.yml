@@ -1,4 +1,4 @@
-name: Publish verified three-hero journey at original homepage
+name: Publish verified endless talents and reincarnation at original homepage
 on:
   push:
     branches: ['pages/playtest']
@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export three-hero journey release
+      - name: Verify and export talents and reincarnation release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower verified three-hero endless release\nGame source: dfa857a11c17479752ffa2c96db40ded0c036d46\nWeb deployment source: %s\nFinal world d84f1a594ff233baf2521c9185c08224258acc3b6eb995a5e078894d1c1d81be; combat 3c25e29c4b6b003829e127eb683f31f738a7cacc4dbedcbb75c8075fb38b677c. Atomic hero-selection start preserves old journey until confirmed. Warden blocks half of first two active attacks after fixed reductions, Ranger ignores8 defense, Scholar heals actual up to24 outside battle. Finite focus2/cap3, new maximum floors4/8/12 restore1 with overflow lost; revisits cannot recharge. Original flat distinct hero silhouettes.\nNative all three heroes played: Warden actual8 damage, Ranger actual10, Scholar24 and capped7 heal, full-health refusal, actual process restart and fatal confirmation/settlement verified. Final110 Godot suites plus Node/cart gate passed; independent59400 combat cases,764524 assertions,84 route fixtures and9 legal first-floor journeys; core12 and independent24 legal100-floor policies passed. Actual Chrome production storage699 checks passed, NOT Godot Web-engine gameplay.\nExplicit N new journey required for v20; old1-19 rules frozen. No endless talent drafts or reincarnation yet; planned separately. Hero balance and late-game economic surplus remain imperfect. Device-local rankings only, no global backend/account/fee/player uploads. Godot Web-engine gameplay remains unverified in cloud WebGL-blocklisted browser. Root homepage only.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower verified endless talents and reincarnation release\nGame source: da8be9694ede1067957ef64c795eef70fe61ed47\nWeb deployment source: %s\nFinal world 06a0d488c58b5fc15eda29b2c4f603292c8cb5576f47ecb55a29c4987e023bf8; combat 8dfa1e7280e6251459888811905f4a1c1b1800a5c8f4f40b62d253fb20063226. Nine seeded talent cards in three disjoint drafts at3/8/15 surviving kills; explicit irreversible selection, no paid draws. Atomic hero-plus-legacy start. First-time depth milestones3/8/15/30/50 grant5 device-local points total on death or retirement; Kit/Coin/Mind unlock costs1/2/2, one starting exchange slot, no unlimited permanent stat stacking. Atomic profile, finished run and receipt commit prevents repeat awards. Old rules1-20 frozen; explicit N required for new21.\nFull114 Godot suites plus Node and cart gate passed. Independent57384 combat cases/989323 assertions,24 legal sixteen-floor runs/7920 checks,12 legal hundred-floor policies. Native store1120/walk459/Node1550; independent323native+82JS. Actual Chrome production callback/Web Locks/localStorage/second-context794 checks passed, NOT Godot Web-engine gameplay.\nNative manual seed1186396894 reachedfloor3 and threekills, selected Alert, retired for1point, process restart still1; unlocked Kit and started Ranger seed374716464 withfocus1 and ward1/pierce1. No fake state injection for this playthrough. Old20 history awarded no points. Native visuals read; full Godot Web-engine gameplay remains unverified in cloud WebGL-blocklisted browser. Deep-floor economics and hero balance remain imperfect. Device-local ranking only, no global backend/account/fee/player uploads. Root homepage only.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output
