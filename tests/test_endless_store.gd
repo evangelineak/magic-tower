@@ -73,13 +73,13 @@ func run_tests():
  # Versioned replay must not reinterpret old runs or cross rules on one run.
  var legacy_record={"run_id":1,"seed":12,"max_floor":1,"kills":0,"gold":0,"reason":"retired"}
  check(a.valid_record(legacy_record),"unversioned old records remain readable as v1")
- for bad_version in [0,3,1.5,"1",true,null]:
+ for bad_version in [0,4,1.5,"1",true,null]:
   var bad_record=legacy_record.duplicate();bad_record.rule_version=bad_version
   check(not a.valid_record(bad_record),"record rejects invalid rule version")
  var version_path=path+".versions"
  var versions=Store.new(version_path)
- var old=World.new_run(12,1);var modern=World.new_run(12)
- check(old.save_data().version==1 and modern.save_data().version==2,"factory defaults v2 with explicit v1")
+ var old=World.new_run(12,1);var modern=World.new_run(12,2)
+ check(old.save_data().version==1 and modern.save_data().version==2,"explicit v1 and v2 factories")
  var vr=await versions.start(old.save_data(),0)
  check(vr.ok,"version one start")
  check((await versions.start(modern.save_data(),0)).status=="conflict","different-version start is not ack retry")
@@ -89,7 +89,7 @@ func run_tests():
  check((await versions.commit(old.save_data(),1)).ok,"old rules still replay and commit")
  vr=await versions.finish(old.save_data(),2)
  check(vr.ok and vr.records[0].rule_version==1,"old rules settle and label")
- modern=World.new_run(12)
+ modern=World.new_run(12,2)
  vr=await versions.start(modern.save_data(),3)
  check(vr.ok and vr.snapshot.version==2,"explicit new run changes version")
  check((await Store.new(version_path).read()).snapshot.version==2,"v2 disk roundtrip preserves version")
@@ -101,12 +101,36 @@ func run_tests():
  vr=await versions.finish(modern.save_data(),5)
  check(vr.ok and vr.records[1].rule_version==2,"v2 finish and label")
  check((await versions.finish(switched,5)).status=="conflict","finish retry checks version")
- for bad_version in [0,3,1.5,"1",true,null,{},[]]:
+ for bad_version in [0,4,1.5,"1",true,null,{},[]]:
   var bad=modern.save_data();bad.version=bad_version
   check(World.from_data(bad)==null,"facade rejects invalid version")
   check((await versions.start(bad,6)).status=="invalid","storage rejects invalid version")
  var roundtrip=JSON.parse_string(JSON.stringify(old.save_data()))
  check(World.from_data(roundtrip).save_data()==old.save_data(),"JSON number version accepted without migration")
+ check(World.new_run(12).save_data().version==3,"new factory defaults to v3")
+ # Every ordered pair rejects cross-rule commits, while explicit starts work.
+ for source in [1,2,3]:
+  vr=await versions.read()
+  var source_world=World.new_run(12,source)
+  vr=await versions.start(source_world.save_data(),vr.revision)
+  check(vr.ok and vr.snapshot.version==source,"explicit version start")
+  for target_version in [1,2,3]:
+   if target_version==source:continue
+   var target_world=World.new_run(12,target_version);target_world.act("retire")
+   var bytes=FileAccess.get_file_as_string(version_path)
+   check((await versions.commit(target_world.save_data(),vr.revision)).status=="invalid","cross-version commit rejected")
+   check(FileAccess.get_file_as_string(version_path)==bytes,"cross-version rejection preserves bytes")
+  source_world.act("retire")
+  vr=await versions.commit(source_world.save_data(),vr.revision)
+  check(vr.ok,"matching version retirement persisted")
+  vr=await versions.finish(source_world.save_data(),vr.revision)
+  check(vr.ok,"matching version finished")
+  var found=false
+  for item in vr.records:
+   if item.run_id==vr.run_id:found=item.rule_version==source
+  check(found,"rank labels exact rules")
+  var reopened=await Store.new(version_path).read()
+  check(reopened.ok and reopened.snapshot.version==source,"disk reload preserves every version")
  DirAccess.remove_absolute(version_path)
  var lock=path+".lock"
  DirAccess.make_dir_absolute(lock)

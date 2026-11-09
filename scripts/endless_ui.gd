@@ -70,7 +70,7 @@ func reload_run():
   notice="读取失败：%s。没有覆盖存档。按L重试。"%str(r.get("status","unknown"))
   if str(r.get("status","")) in ["empty","missing"]:modal="start";revision=int(r.get("revision",0))
  center_camera();queue_redraw()
-func start_run(seed_value:int,rule_version:int=2):
+func start_run(seed_value:int,rule_version:int=3):
  if busy:return
  busy=true;walk.clear()
  var candidate=WorldType.new_run(seed_value,rule_version)
@@ -97,6 +97,7 @@ func transact(kind:String,value,confirmed=false):
  world=candidate;revision=int(r.revision);records=r.get("records",records);modal="";modal_notice="";notice=str(result.get("message",""));center_camera()
  if result.get("battle") is Dictionary:
   battle=result.battle;battle_time=2.4;walk.clear()
+ if str(value).begins_with("case_") and kind=="act":open_case();modal_notice=notice
  if world.ended:
   await settle_run()
  queue_redraw()
@@ -143,6 +144,11 @@ func _unhandled_input(event):
   walk.clear()
   if busy:return
   var p=event.position
+  if modal=="case":
+   if Rect2(1035,710,150,42).has_point(p):modal="";return
+   for i in choices.size():
+    if Rect2(645,480+i*44,540,40).has_point(p):await transact("act",choices[i].id);return
+   return
   if modal!="":
    if Rect2(280,575,330,48).has_point(p):await confirm_modal();return
    if Rect2(650,575,330,48).has_point(p):
@@ -168,10 +174,11 @@ func _unhandled_input(event):
     if modal=="start":get_tree().change_scene_to_file("res://main.tscn")
     else:modal=""
    elif event.keycode==KEY_ENTER:await confirm_modal()
-   elif modal=="choices" and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():await transact("act",choices[event.keycode-KEY_1].id)
+   elif modal in ["choices","case"] and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():await transact("act",choices[event.keycode-KEY_1].id)
    return
   if event.keycode==KEY_SPACE:center_camera();return
   if event.keycode==KEY_N:modal="new";return
+  if event.keycode==KEY_Q:open_case();return
   if world==null or world.ended:return
   match event.keycode:
    KEY_W,KEY_UP:await transact("step",Vector2i.UP)
@@ -223,7 +230,7 @@ func draw_token(c:Vector2,t:String):
   panel(Rect2(c+Vector2(-7,-12),Vector2(14,12)),Color("172735"));draw_line(c+Vector2(-4,-7),c+Vector2(4,-7),TEAL,3)
   draw_line(c+Vector2(23,-15),c+Vector2(23,25),GOLD,3);draw_circle(c+Vector2(23,-21),6,TEAL)
   return
- if t=="g" and world!=null and world.rule_version()==2:
+ if t=="g" and world!=null and world.rule_version()>=2:
   draw_colored_polygon(PackedVector2Array([c+Vector2(-25,-16),c+Vector2(-9,-27),c+Vector2(9,-27),c+Vector2(25,-16),c+Vector2(19,26),c+Vector2(-19,26)]),Color("647b8c"))
   draw_line(c+Vector2(-9,-11),c+Vector2(9,-11),GOLD,3)
   draw_colored_polygon(PackedVector2Array([c+Vector2(-23,0),c+Vector2(8,0),c+Vector2(8,21),c+Vector2(-7,30),c+Vector2(-23,21)]),Color("496b7b"))
@@ -317,6 +324,8 @@ func _draw():
  var rects=[Rect2(768,610,476,42),Rect2(768,662,220,44),Rect2(1000,662,244,44),Rect2(768,714,220,44),Rect2(1000,714,244,44)]
  for i in rects.size():panel(rects[i],Color("293e50"));text(rects[i].position+Vector2(12,28),labels[i],16)
  text(Vector2(24,796),"视窗 (%d,%d) · 自动保存 · 经典存档独立保留"%[camera.x,camera.y],13,TEAL)
+ if world.has_method("case_view"):
+  text(Vector2(768,599),"Q · 信使历史路线图与回访线索",13,GOLD)
  if modal!="":draw_modal()
  elif hover.x>=0 and hover.y>=0 and not busy:
   var info:Dictionary=world.preview(hover)
@@ -341,11 +350,12 @@ func _draw():
   text(Vector2(180,450),"示意动画，结算仅一次 · 点击或按键跳过",14,TEAL)
  if busy:panel(Rect2(380,15,370,43),Color("293e50"));text(Vector2(397,43),"正在安全保存，请稍候……",18,GOLD)
 func draw_modal():
+ if modal=="case":draw_case();return
  panel(Rect2(0,0,1280,800),Color(0,0,0,0.70));panel(Rect2(245,145,790,505),Color("152736"))
  var title="确认"
  var body=notice
  match modal:
-  "start":title="踏入更深的塔";body="15×15地图，安全寻路与相邻点击。新局使用v2：先取训练，再比较重甲短路与轻敌长路的损伤。封存补给可立即使用，也可承担两层运输委托；中途允许拆封。强敌宝库可成长后回访。旧v1旅程按原规则继续。无尽模式独立保存，不替换经典旅程。首版数值安全界限100万层、10万动作，达到动作界限仍可结算。"
+  "start":title="踏入更深的塔";body="15×15地图，安全寻路与相邻点击。新局使用v3：先取训练，再比较重甲短路与轻敌长路的损伤。封存补给可立即使用，也可承担两层运输委托；中途允许拆封。强敌宝库可成长后回访。第四层商人处有可推理的信使奇遇，Q查看历史图。旧v1/v2旅程按原规则继续。无尽模式独立保存，不替换经典旅程。首版数值安全界限100万层、10万动作，达到动作界限仍可结算。"
   "new":title="重新开始无尽旅程？";body="会替换当前无尽旅程。经典魔塔存档与已结算的本设备历史榜保留。"
   "retire":title="结束并结算本局？";body="结算后不能继续这次无尽旅程，成绩只保存在本设备。不是公开全球排名。"
   "ranking":title="本设备历史榜";body="仅本设备可见，不上传服务器；v1与v2规则不同，标注版本，不代表同难度竞技。"
@@ -364,3 +374,58 @@ func draw_modal():
  if modal_notice!="" and modal in ["choices","new","start"]:draw_wrapped(modal_notice,Vector2(280,535),710,15,Color("efb18e"),2)
  panel(Rect2(280,575,330,48),Color("365347"));text(Vector2(300,606),"确认 / Enter" if modal not in ["ranking","choices"] else "关闭",18)
  panel(Rect2(650,575,330,48),Color("384152"));text(Vector2(670,606),"取消 / Esc",18)
+func open_case():
+ if world==null or not world.has_method("case_view"):
+  notice="这段旧规则旅程没有信使事件。新局使用新版规则。";return
+ walk.clear();choices.clear()
+ for d in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+  for option in world.options(world.pos+d):
+   if str(option.id).begins_with("case_") and not choices.any(func(x):return x.id==option.id):choices.append(option)
+ modal="case";modal_notice="";queue_redraw()
+func draw_case():
+ var data:Dictionary=world.case_view()
+ panel(Rect2(0,0,1280,800),Color(0,0,0,0.8));panel(Rect2(75,65,1130,700),Color("152736"))
+ text(Vector2(100,109),str(data.get("title","失踪信使 · 出发时路线图")),27,GOLD)
+ draw_wrapped("这是信使出发时的记录，不是玩家清理后的现场。",Vector2(100,145),1050,17,TEAL,2)
+ var cells:Array=data.get("grid",[])
+ for y in cells.size():
+  for x in cells[y].size():
+   var c=Vector2(125+x*60,205+y*60)
+   panel(Rect2(c-Vector2(28,28),Vector2(56,56)),Color("263c4b"))
+   draw_case_token(c,str(cells[y][x]))
+ var rule_text=""
+ for rule in data.get("rules",[]):rule_text+=str(rule).replace("从s出发","从旗帜营地出发").replace("钟楼T","钟楼").replace("D锁门和g守卫","锁门和守卫").replace("水井W","水井").replace("墙#","黑墙").replace("A/B/C是三个候选地点","仓库／庭院／驿站是三个候选地点")+"\n"
+ if rule_text=="":rule_text="前往第4层商人营地，阅读失踪信使的记录。"
+ draw_wrapped(rule_text,Vector2(645,203),530,18,INK,6)
+ draw_wrapped(str(data.get("status","调查时可以对照路线图，先排除不符合线索的地点。")),Vector2(645,359),530,17,TEAL,4)
+ for i in mini(5,choices.size()):
+  panel(Rect2(645,480+i*44,540,40),Color("2a4051"))
+  draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(655,505+i*44),515,15,INK,1)
+ if choices.is_empty():draw_wrapped("当前没有可执行的事件行动，请查看上方进度条件。" if data.get("available",false) else "这里只读查看。调查、选择或领奖请回第4层商人旁。",Vector2(645,500),530,17,GOLD,3)
+ text(Vector2(100,629),"旗帜=起点  钟楼=必经  水井=禁行",14,TEAL)
+ text(Vector2(100,652),"锁门/守卫不可过；仓/庭/驿是待调查地点。",14,TEAL)
+ draw_wrapped(modal_notice,Vector2(100,689),510,14,Color("efb18e"),3)
+ panel(Rect2(1035,710,150,42),Color("384152"));text(Vector2(1050,737),"关闭 · Esc",17)
+func draw_case_token(c:Vector2,t:String):
+ match t:
+  "#":panel(Rect2(c-Vector2(27,27),Vector2(54,54)),Color("0b1420"))
+  ".":draw_circle(c,3,TEAL)
+  "s":
+   draw_line(c+Vector2(-8,-23),c+Vector2(-8,24),INK,3)
+   draw_colored_polygon(PackedVector2Array([c+Vector2(-8,-23),c+Vector2(23,-16),c+Vector2(-8,-4)]),TEAL)
+  "T":
+   panel(Rect2(c+Vector2(-15,-21),Vector2(30,46)),Color("647b8c"))
+   draw_circle(c+Vector2(0,-9),11,GOLD);draw_line(c+Vector2(0,-9),c+Vector2(0,-17),Color("172735"),2);draw_line(c+Vector2(0,-9),c+Vector2(6,-5),Color("172735"),2)
+  "W":
+   draw_circle(c+Vector2(0,7),21,Color("647b8c"));draw_circle(c+Vector2(0,7),13,Color("194a66"))
+   draw_line(c+Vector2(-22,-19),c+Vector2(22,-19),GOLD,4);draw_line(c+Vector2(-18,-19),c+Vector2(-18,15),GOLD,3);draw_line(c+Vector2(18,-19),c+Vector2(18,15),GOLD,3)
+  "A":
+   panel(Rect2(c+Vector2(-20,-5),Vector2(40,27)),Color("94724e"))
+   draw_colored_polygon(PackedVector2Array([c+Vector2(-25,-6),c+Vector2(0,-24),c+Vector2(25,-6)]),GOLD)
+   text(c+Vector2(-16,16),"仓",16,INK)
+  "B":
+   draw_circle(c,22,Color("566e57"));draw_circle(c,13,TEAL,false,3);text(c+Vector2(-8,7),"庭",16,INK)
+  "C":
+   draw_colored_polygon(PackedVector2Array([c+Vector2(-25,23),c+Vector2(0,-24),c+Vector2(25,23)]),Color("8b718f"));text(c+Vector2(-8,15),"驿",16,INK)
+  _:
+   draw_token(c,t)

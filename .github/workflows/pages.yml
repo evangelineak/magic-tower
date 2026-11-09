@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export versioned endless routes and cargo release
+      - name: Verify and export messenger deduction encounter release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower latest verified versioned endless routes and cargo release\nGame source: 74ee42deb38be5c46cf8be8e8e3bea8db1be217d\nWeb deployment source: %s\nNative v1 restore, v2 two-route gameplay through floor three, cargo hand-in and nonrepeatable modification reward verified. Real-browser storage protocol and version isolation tested. Endless is a separate first-version mode with device-local rankings, not a global leaderboard. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves. Existing journeys retain their maps and receive no retroactive ferry rope or cargo. Start a new journey for the one-use floor-six rope. The V position inset works on existing Session journeys; original v0.17 saves remain untouched.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower latest verified messenger deduction encounter release\nGame source: 3d455d7cd5b3b8c1139fa03463c1ea6234212dd7\nWeb deployment source: %s\nNative v2 restore and v3 normal gameplay to floor five, historical-map deduction, wrong-choice explanation, return reward and reload verified. Real-browser production storage passed 44 checks including three-rule-version isolation. Endless is a separate first-version mode with device-local rankings, not a global leaderboard. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves. Existing journeys retain their maps and receive no retroactive ferry rope or cargo. Start a new journey for the one-use floor-six rope. The V position inset works on existing Session journeys; original v0.17 saves remain untouched.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output
