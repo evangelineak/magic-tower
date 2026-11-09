@@ -8,14 +8,15 @@ func check(ok:bool,label:String):
  if not ok:failures+=1;push_error(label)
 func _initialize():call_deferred("run")
 func run():
- for version in [10,11,12,13,14,15,16,17,18,19,20]:await run_version(version)
+ for version in [10,11,12,13,14,15,16,17,18,19,20,21]:await run_version(version)
  print("ENDLESS WALK STORE: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks])
  quit(0 if failures==0 else 1)
 func run_version(version:int):
  var path="/tmp/tower-walk-store-"+str(Time.get_ticks_usec())+".json"
  var store=Store.new(path);var w=World.new_run(0,version)
- if version==20:check(w.act("hero_warden").changed,"select v20 hero before persistence")
- var r=await store.start_hero(w.save_data(),0) if version==20 else await store.start(w.save_data(),0)
+ if version>=20:check(w.act("hero_warden").changed,"select v20 hero before persistence")
+ if version==21:check(w.act("legacy_none").changed,"select v21 legacy before persistence")
+ var r=await store.start_legacy(w.save_data(),0) if version==21 else (await store.start_hero(w.save_data(),0) if version==20 else await store.start(w.save_data(),0))
  for code in ["R","cargo_use","R","R","R"]:
   check(w.apply_code(code).changed,"legal setup "+code)
   r=await store.commit(w.save_data(),r.revision)
@@ -32,7 +33,7 @@ func run_version(version:int):
  check((await store.commit_walk(extra.save_data(),r.revision)).status=="invalid","camp return plus extra move rejected")
  var old=target.duplicate(true);old.version=9
  check((await store.commit_walk(old,r.revision)).status=="invalid","v9 cannot use batch API")
- for target_version in [10,11,12,13,14,15,16,17,18,19,20]:
+ for target_version in [10,11,12,13,14,15,16,17,18,19,20,21]:
   if target_version==version:continue
   var switched=target.duplicate(true);switched.version=target_version
   check((await store.commit_walk(switched,r.revision)).status=="invalid","walk cannot switch supported rules in same run")

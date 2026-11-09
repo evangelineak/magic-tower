@@ -1,6 +1,6 @@
 # Endless v20: three heroes and finite focus
 
-Source acceptance record: v20 implementation and the checks below are local; the last verified public-page version is v19 until a separate deployment is confirmed. Consult the live `BUILD.txt` for the deployed version. Native visual/play acceptance is recorded below; final aggregate acceptance remains pending and must be recorded separately when completed.
+Release acceptance: v20 was verified live at the original homepage. Source `dfa857a11c17479752ffa2c96db40ded0c036d46`, deployment `51dfa3fd49e0770d2ae73f87d594fa1b408cf26a`, Pages run `42631030767` succeeded; public BUILD matched both commits and homepage returned HTTP 200. Final 110 Godot suites plus Node and cart gate passed. Godot Web-engine gameplay remains unverified; native play and actual Chrome storage evidence are distinct.
 
 ## Scope
 

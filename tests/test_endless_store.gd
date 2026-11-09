@@ -73,7 +73,7 @@ func run_tests():
  # Versioned replay must not reinterpret old runs or cross rules on one run.
  var legacy_record={"run_id":1,"seed":12,"max_floor":1,"kills":0,"gold":0,"reason":"retired"}
  check(a.valid_record(legacy_record),"unversioned old records remain readable as v1")
- for bad_version in [0,21,1.5,"1",true,null]:
+ for bad_version in [0,22,1.5,"1",true,null]:
   var bad_record=legacy_record.duplicate();bad_record.rule_version=bad_version
   check(not a.valid_record(bad_record),"record rejects invalid rule version")
  var version_path=path+".versions"
@@ -101,26 +101,28 @@ func run_tests():
  vr=await versions.finish(modern.save_data(),5)
  check(vr.ok and vr.records[1].rule_version==2,"v2 finish and label")
  check((await versions.finish(switched,5)).status=="conflict","finish retry checks version")
- for bad_version in [0,21,1.5,"1",true,null,{},[]]:
+ for bad_version in [0,22,1.5,"1",true,null,{},[]]:
   var bad=modern.save_data();bad.version=bad_version
   check(World.from_data(bad)==null,"facade rejects invalid version")
   check((await versions.start(bad,6)).status=="invalid","storage rejects invalid version")
  var roundtrip=JSON.parse_string(JSON.stringify(old.save_data()))
  check(World.from_data(roundtrip).save_data()==old.save_data(),"JSON number version accepted without migration")
- check(World.new_run(12).save_data().version==20,"new factory defaults to v20")
+ check(World.new_run(12).save_data().version==21,"new factory defaults to v21")
  # Every ordered pair rejects cross-rule commits, while explicit starts work.
- for source in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]:
+ for source in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]:
   var matrix_path=version_path+"."+str(source)
   versions=Store.new(matrix_path)
   vr=await versions.read()
   var source_world=World.new_run(12,source)
-  if source==20:check(source_world.act("hero_warden").changed,"select v20 hero locally")
-  vr=await versions.start_hero(source_world.save_data(),vr.revision) if source==20 else await versions.start(source_world.save_data(),vr.revision)
+  if source>=20:check(source_world.act("hero_warden").changed,"select v20 hero locally")
+  if source==21:check(source_world.act("legacy_none").changed,"select v21 legacy locally")
+  vr=await versions.start_legacy(source_world.save_data(),vr.revision) if source==21 else (await versions.start_hero(source_world.save_data(),vr.revision) if source==20 else await versions.start(source_world.save_data(),vr.revision))
   check(vr.ok and vr.snapshot.version==source,"explicit version start")
-  for target_version in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]:
+  for target_version in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]:
    if target_version==source:continue
    var target_world=World.new_run(12,target_version)
-   if target_version==20:target_world.act("hero_warden")
+   if target_version>=20:target_world.act("hero_warden")
+   if target_version==21:target_world.act("legacy_none")
    target_world.act("retire")
    var bytes=FileAccess.get_file_as_string(matrix_path)
    check((await versions.commit(target_world.save_data(),vr.revision)).status=="invalid","cross-version commit rejected")
