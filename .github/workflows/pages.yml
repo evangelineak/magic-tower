@@ -1,4 +1,4 @@
-name: Stable game and opt-in single-use ferry rope preview on GitHub Pages
+name: Latest Magic Tower game on GitHub Pages
 on:
   push:
     branches: ['pages/playtest']
@@ -41,23 +41,11 @@ jobs:
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower opt-in single-use ferry rope preview\nGame source: b497f2d4eee6a5ed7ab32c6c717a0b89b530d6e5\nWeb deployment source: %s\nDesktop gameplay and production JS storage verified. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves. Existing journeys retain their maps and receive no retroactive ferry rope or cargo. Start a new journey for the one-use floor-six rope. The V position inset works on existing Session journeys; original v0.17 saves remain untouched.\n' "$GITHUB_SHA" > export/next/BUILD.txt
-      - name: Check out unchanged stable Web source
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: 4122fa416091eb3d89c7825b6d9eabd55d7c273e
-          path: stable-source
-          persist-credentials: false
-      - name: Rebuild stable root and assemble optional preview
+          printf 'Magic Tower latest verified single-use ferry rope release\nGame source: b497f2d4eee6a5ed7ab32c6c717a0b89b530d6e5\nWeb deployment source: %s\nDesktop gameplay and production JS storage verified. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves. Existing journeys retain their maps and receive no retroactive ferry rope or cargo. Start a new journey for the one-use floor-six rope. The V position inset works on existing Session journeys; original v0.17 saves remain untouched.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+      - name: Publish latest verified game at root and preserve preview path
         run: |
-          "$GODOT_BIN" --headless --path stable-source --editor --import --quit
-          "$GODOT_BIN" --headless --path stable-source --quit-after 30
-          mkdir -p stable-source/export/web site-output/preview
-          "$GODOT_BIN" --headless --path stable-source --export-release 'Web Single Thread' export/web/index.html
-          cp stable-source/assets/fonts/LICENSE-OFL.txt stable-source/export/web/FONT-LICENSE.txt
-          "$GODOT_BIN" --headless --path stable-source --script tools/export_license.gd -- export/web/GODOT-LICENSES.txt
-          printf 'Magic Tower v0.17 stable usability web preview\nGame source: 612199af7fda9d5600711ffc150f031c301c1f50\nStable Web source: 4122fa416091eb3d89c7825b6d9eabd55d7c273e\nSite deployment source: %s\nOptional strategy preview is separate at ./preview/; root game remains v0.17.\n' "$GITHUB_SHA" > stable-source/export/web/BUILD.txt
-          cp -a stable-source/export/web/. site-output/
+          mkdir -p site-output/preview
+          cp -a export/next/. site-output/
           cp -a export/next/. site-output/preview/
           touch site-output/.nojekyll
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
