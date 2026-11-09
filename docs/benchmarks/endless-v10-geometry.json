@@ -1,0 +1,22 @@
+{
+  "channel_maps": 74,
+  "checks": 6145,
+  "depths": [
+    1,
+    2,
+    3,
+    4,
+    17,
+    50,
+    100,
+    1000000
+  ],
+  "failures": [],
+  "maps": 384,
+  "method": "Independent BFS; no calls to core validate as oracle; wall masks canonicalized over all eight rotations/reflections",
+  "new_canonical_wall_shapes": 1,
+  "old_canonical_wall_shapes": 194,
+  "rules": 10,
+  "sampled_wall_shapes": 154,
+  "seeds": 48
+}

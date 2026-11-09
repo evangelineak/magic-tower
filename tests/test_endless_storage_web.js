@@ -51,26 +51,26 @@ check(S.execute(store,'finish',args({...v2done,version:1},3,{...r,run_id:2,rule_
 check(S.execute(store,'finish',args(v2done,3,{...r,run_id:2})).status==='invalid');
 check(S.execute(store,'finish',args(v2done,3,{...r,run_id:2,rule_version:2})).records[0].rule_version===2);
 check(S.execute(store,'finish',args({...v2done,version:1},3,{...r,run_id:2,rule_version:2})).status==='conflict');
-for(const version of [0,10,1.5,'1',true,null,{},[],NaN,Infinity]){
+for(const version of [0,11,1.5,'1',true,null,{},[],NaN,Infinity]){
  check(!S.snapshot({...snap,version}));
  check(S.execute(store,'start',args({...snap,version},4)).status==='invalid');
 }
-store.value=JSON.stringify({...S.fresh(),revision:1,run_id:1,active:{...snap,version:10}});
+store.value=JSON.stringify({...S.fresh(),revision:1,run_id:1,active:{...snap,version:11}});
 check(S.execute(store,'read',{}).status==='corrupt');
 const legacy={version:1,revision:3,run_id:1,active:done,finished:true,records:[r]};
 check(S.valid(legacy));
-for(const rule_version of [0,10,'2',null,1.5,true]){
+for(const rule_version of [0,11,'2',null,1.5,true]){
  check(!S.valid({...legacy,records:[{...r,rule_version}]}));
 }
 check(S.valid({...legacy,records:[{...r,rule_version:1}]}));
 check(!S.valid({...legacy,records:[{...r,rule_version:1,extra:true}]}));
 store.value=null;
-for(const version of [1,2,3,4,5,6,7,8,9]){
+for(const version of [1,2,3,4,5,6,7,8,9,10]){
  let current=S.execute(store,'read',{});
  const started={...snap,version};
  current=S.execute(store,'start',args(started,current.revision));
  check(current.ok&&current.snapshot.version===version);
- for(const targetVersion of [1,2,3,4,5,6,7,8,9]){
+ for(const targetVersion of [1,2,3,4,5,6,7,8,9,10]){
   if(targetVersion===version)continue;
   const original=store.value;
   check(S.execute(store,'commit',args({...started,version:targetVersion,actions:['retire']},current.revision)).status==='invalid');
@@ -82,4 +82,26 @@ for(const version of [1,2,3,4,5,6,7,8,9]){
  check(current.records.find(x=>x.run_id===current.run_id).rule_version===version);
  check(S.execute(store,'read',{}).snapshot.version===version);
 }
+// commit_walk is a dedicated v10 envelope operation, not a general batch commit.
+store.value=null;
+const walkBase={...snap,version:10};
+check(S.execute(store,'start',args(walkBase,0)).ok);
+const walkTarget={...walkBase,actions:['R','R']};
+check(S.execute(store,'commit',args(walkTarget,1)).status==='invalid');
+check(S.execute(store,'commit_walk',args(walkBase,1)).status==='invalid');
+for(const actions of [['R!'],['cargo_use'],Array(225).fill('R')]){
+ check(S.execute(store,'commit_walk',args({...walkBase,actions},1)).status==='invalid');
+}
+check(S.execute(store,'commit_walk',args({...walkTarget,version:9},1)).status==='invalid');
+check(S.execute(store,'commit_walk',args({...walkTarget,seed:9},1)).status==='invalid');
+const walkBytes=store.value;
+store.setItem=()=>{let e=new Error();e.name='QuotaExceededError';throw e;};
+check(S.execute(store,'commit_walk',args(walkTarget,1)).status==='quota');check(store.value===walkBytes);
+store.setItem=function(k,v){this.value=v;};
+check(S.execute(store,'commit_walk',args(walkTarget,1)).revision===2);
+check(S.execute(store,'commit_walk',args(walkTarget,1)).revision===2);
+check(S.execute(store,'commit_walk',args({...walkBase,actions:['L','L']},1)).status==='conflict');
+check(S.execute(store,'commit_walk',args({...walkBase,actions:['L','L','U']},2)).status==='invalid');
+check(S.execute(store,'commit_walk',args({...walkTarget,actions:['R','R','L']},2)).revision===3);
+check(S.execute(store,'read',{}).snapshot.actions.length===3);
 console.log(`ENDLESS WEB STORAGE: PASS (${count} checks; production envelope/CAS/quota/idempotence, not browser nor World replay)`);
