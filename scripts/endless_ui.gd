@@ -1,5 +1,6 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const CampFloor=preload("res://scripts/endless_camp_floor_art.gd")
 const RuneArt=preload("res://scripts/endless_rune_art.gd")
 const Enemies12=preload("res://scripts/endless_enemy_v12_art.gd")
 const Enemies7=preload("res://scripts/endless_enemy_v7_art.gd")
@@ -22,6 +23,8 @@ var notice="正在读取独立的无尽旅程……"
 var modal_notice=""
 var camera=Vector2i.ZERO
 var hover=Vector2i(-1,-1)
+var camp_floor_key=""
+var camp_floor_cache:Dictionary={}
 var rune_cache_key=""
 var rune_cache:Dictionary={}
 var target_feedback:Dictionary={}
@@ -335,14 +338,15 @@ func _draw():
  text(Vector2(768,34),"第 %d 层 · 已抵达 %d 层"%[world.floor_number,world.max_floor],21,GOLD)
  text(Vector2(768,59),"种子 %d · 规则 v%d · 持续生成"%[world.seed,int(world.rule_version())],14,TEAL)
  panel(Rect2(20,68,712,712),Color("182a39"))
+ var camp_region=camp_floor_cells()
  for y in VIEW:
   for x in VIEW:
    var p=Vector2i(x,y)+camera;var c=ORIGIN+Vector2(x,y)*CELL+Vector2(32,32)
-   panel(Rect2(c-Vector2(31,31),Vector2(62,62)),Color("152432") if (p.x+p.y)%2==0 else Color("192a38"))
+   draw_ground_tile(c,p,camp_region)
    draw_token(c,world.tile(p))
  for p in walk:
   var screen=Vector2(p-camera)
-  if screen.x>=0 and screen.y>=0 and screen.x<VIEW and screen.y<VIEW:draw_circle(ORIGIN+screen*CELL+Vector2(32,32),4,TEAL)
+  if screen.x>=0 and screen.y>=0 and screen.x<VIEW and screen.y<VIEW:draw_path_marker(ORIGIN+screen*CELL+Vector2(32,32))
  var hero=world.pos-camera
  if hero.x>=0 and hero.y>=0 and hero.x<VIEW and hero.y<VIEW:
   var c=ORIGIN+Vector2(hero)*CELL+Vector2(32,32)
@@ -815,3 +819,16 @@ func rune_data()->Dictionary:
 
 func target_tooltips_visible()->bool:
  return not (battle_time>0 and not battle.is_empty())
+
+func camp_floor_cells()->Dictionary:
+ if world==null:return {}
+ # Only rebuild after world state changes, never every animation frame.
+ var key="%s:%d:%d:%d" % [world.get_instance_id(),revision,world.floor_number,world.actions.size()]
+ if key!=camp_floor_key:
+  camp_floor_cache=CampFloor.cells(world);camp_floor_key=key
+ return camp_floor_cache
+func draw_ground_tile(center:Vector2,p:Vector2i,region:Dictionary):
+ panel(Rect2(center-Vector2(31,31),Vector2(62,62)),Color("152432") if (p.x+p.y)%2==0 else Color("192a38"))
+ CampFloor.draw_floor(self,center,p,region,64)
+
+func draw_path_marker(center:Vector2):draw_circle(center,4,TEAL)

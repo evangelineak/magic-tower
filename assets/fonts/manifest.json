@@ -49,6 +49,10 @@
       "sha256": "85460f24d9055cc738ab02b6f801e485a852a2b7bcbacadb5759a351d8545fda"
     },
     {
+      "path": "scripts/endless_camp_floor_art.gd",
+      "sha256": "755c0ae589f9b59634b6ae2b8b157f3997eb7a63edb35ae36143802e53b51d2f"
+    },
+    {
       "path": "scripts/endless_enemy_v12_art.gd",
       "sha256": "f1f6a7772cad04107ee1a6685ded8db076e24938b78b2291954cd0fc98e51f84"
     },
@@ -79,6 +83,10 @@
     {
       "path": "scripts/endless_generation_v13.gd",
       "sha256": "4a3b8f8a329eecdbbeea906599ce1d3713da51a58e7e0d80e05789434be7b17f"
+    },
+    {
+      "path": "scripts/endless_generation_v14.gd",
+      "sha256": "e8c3784a7b3823db32be33136eb7ad054d7846155abe2e23963880ff7b52bebc"
     },
     {
       "path": "scripts/endless_generation_v2.gd",
@@ -122,15 +130,15 @@
     },
     {
       "path": "scripts/endless_store.gd",
-      "sha256": "385aa419449b2f418a731fbd70e1210372db8f2303e66976a328c4f1579b466f"
+      "sha256": "83758122765f308fea35ca984323911e71a56589dc15bd05cb11ce1bcad356c1"
     },
     {
       "path": "scripts/endless_ui.gd",
-      "sha256": "3a9342465937e68d695e04cea42ac2581ff5751a2e886a9a25e2e3a27c597634"
+      "sha256": "1251788624499819a9d8e0085e1e02ef8bd12d57922a532dbb3fab8355b47b20"
     },
     {
       "path": "scripts/endless_world.gd",
-      "sha256": "68b97b973f0278ba60ecd32f6d6c5bbd10a513efb7b388c9ffd995d9abeccba1"
+      "sha256": "f1ca6c4be0c78e3ed4185269a49d07af8bc8389bd29e4d497496d3ca30c9167e"
     },
     {
       "path": "scripts/endless_world_v1.gd",
@@ -151,6 +159,10 @@
     {
       "path": "scripts/endless_world_v13.gd",
       "sha256": "decbf22c85ec245d3c4d8f6184563ab854235c5cea21b07e4d372505a5bee6cf"
+    },
+    {
+      "path": "scripts/endless_world_v14.gd",
+      "sha256": "5626429b02087d37d8f829985f19ae9bdaa741ef55b91375e824bb769466e948"
     },
     {
       "path": "scripts/endless_world_v2.gd",
