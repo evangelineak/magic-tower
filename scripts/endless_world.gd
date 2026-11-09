@@ -2,18 +2,24 @@ class_name TowerEndlessWorld
 extends RefCounted
 ## Rules router. Saved action logs always replay with their original rules.
 const MAX_ACTIONS:=100000
-static func new_run(run_seed:int,rule_version:int=3):
- if rule_version==1:return load("res://scripts/endless_world_v1.gd").new_run(run_seed)
- if rule_version==2:return load("res://scripts/endless_world_v2.gd").new_run(run_seed)
- if rule_version==3:return load("res://scripts/endless_world_v3.gd").new_run(run_seed)
- return null
+const CURRENT_VERSION:=4
+const SUPPORTED_VERSIONS=[1,2,3,4]
+const RULE_SCRIPTS={
+ 1:"res://scripts/endless_world_v1.gd",
+ 2:"res://scripts/endless_world_v2.gd",
+ 3:"res://scripts/endless_world_v3.gd",
+ 4:"res://scripts/endless_world_v4.gd",
+}
+static func supports_version(version)->bool:
+ # JSON numeric values are floats. Never coerce strings, booleans or fractions.
+ if not (version is int or version is float):return false
+ return is_finite(float(version)) and version==floor(float(version)) and int(version) in SUPPORTED_VERSIONS
+static func new_run(run_seed:int,rule_version:int=CURRENT_VERSION):
+ if not supports_version(rule_version):return null
+ return load(RULE_SCRIPTS[rule_version]).new_run(run_seed)
 static func new_v1_run(run_seed:int):
  return new_run(run_seed,1)
 static func from_data(data:Dictionary):
  var version=data.get("version")
- # JSON numeric values are floats. Reject booleans, strings and fractions.
- if not (version is int or version is float):return null
- if version==1:return load("res://scripts/endless_world_v1.gd").from_data(data)
- if version==2:return load("res://scripts/endless_world_v2.gd").from_data(data)
- if version==3:return load("res://scripts/endless_world_v3.gd").from_data(data)
- return null
+ if not supports_version(version):return null
+ return load(RULE_SCRIPTS[int(version)]).from_data(data)
