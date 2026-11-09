@@ -37,6 +37,27 @@ func route(w,target:Vector2i)->Array:
    if parents.has(next) or w.tile(next) in ["#","D","V","g","M","S","<",">"]:continue
    parents[next]=p;q.append(next)
  return []
+func go_new(w,target:Vector2i):
+ var q=[w.pos];var parents={w.pos:w.pos};var i=0
+ while i<q.size():
+  var p:Vector2i=q[i];i+=1
+  if p==target:break
+  for d in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+   var n=p+d;var t=w.tile(n)
+   if parents.has(n) or t in ["#","M","S","D","V","b"] or (t in ["<",">"] and n!=target):continue
+   parents[n]=p;q.append(n)
+ check(parents.has(target),"v3 UI fixture genuine route exists")
+ if not parents.has(target):return
+ var path=[];var p=target
+ while p!=w.pos:path.push_front(p);p=parents[p]
+ for n in path:
+  if w.tile(n)=="C":check(w.act("cargo_use").changed,"v3 fixture consumes supply normally")
+  check(w.step(n-w.pos).changed and not w.ended,"v3 fixture real surviving action")
+func reach_next(w):
+ var odd=w.floor_number%2==1
+ go_new(w,Vector2i(2 if odd else 12,1 if odd else 13))
+ go_new(w,Vector2i(3 if odd else 11,1 if odd else 13))
+ go_new(w,Vector2i(13,13) if odd else Vector2i(1,1))
 func run_tests():
  var ui=load("res://endless.tscn").instantiate();var memory=MemoryStore.new();ui.store=memory;root.add_child(ui)
  await process_frame
@@ -100,7 +121,7 @@ func run_tests():
  check(ui.camera==Vector2i(4,4),"camera follows into larger map edge")
  check(ui.screen_tile(ui.ORIGIN+Vector2(32,32))==Vector2i(4,4),"mouse maps viewport to world coordinate")
  # New UI defaults to v2; old v1 fixture above remains replay-compatible.
- await ui.start_run(1)
+ await ui.start_run(1,2)
  check(ui.world.rule_version()==2 and memory.snapshot.version==2,"new mode uses v2 explicitly")
  check(ui.world.summary().routes.size()==2,"two route budgets exposed")
  await ui.map_click(Vector2i(2,1))
@@ -118,6 +139,25 @@ func run_tests():
  var after_open=ui.world.save_data()
  await ui.transact("act","cargo_open")
  check(ui.world.save_data()==after_open,"duplicate opening cannot farm health")
+ ui.queue_redraw();await process_frame
+ var v3=World.new_run(42)
+ for floor_index in 3:reach_next(v3)
+ go_new(v3,Vector2i(1,12))
+ memory.snapshot=v3.save_data();memory.revision+=1;await ui.reload_run()
+ await ui.transact("act","case_read")
+ check(ui.modal=="case" and ui.world.case_view().visible,"reading opens historical inset")
+ check(ui.choices.size()==3,"history has three real candidate actions")
+ await ui.transact("act","case_b")
+ check(ui.modal=="case" and "没有扣除资源" in ui.modal_notice,"wrong deduction retains explanatory feedback over history map")
+ await ui.transact("act","case_a")
+ check(ui.world.messenger.state=="found" and ui.choices.size()==2,"correct deduction reveals mutually exclusive choices")
+ await ui.transact("act","case_help")
+ check(ui.world.messenger.state=="helped" and ui.choices.is_empty(),"delayed reward not available before advancing")
+ await ui.reload_run();ui.open_case()
+ check(ui.world.messenger.state=="helped" and ui.modal=="case","historical clue state survives reload")
+ var snapshot_before=ui.world.save_data()
+ await ui.transact("act","case_reward")
+ check(ui.world.save_data()==snapshot_before,"early UI reward attempt rejected")
  ui.queue_redraw();await process_frame
  ui.queue_free();await process_frame
  print("ENDLESS UI: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks]);quit(0 if failures==0 else 1)

@@ -27,7 +27,7 @@ func exact(value,keys:Array)->bool:
 func integer(value,low:int=0,high:int=MAX_COUNTER)->bool:
  return (value is int or value is float) and is_finite(float(value)) and value>=low and value<=high and floor(float(value))==value
 func snapshot_shape(s)->bool:
- if not exact(s,["version","mode","seed","actions"]) or not integer(s.version,1,2) or s.mode!="endless" or not integer(s.seed,0,2147483647) or not s.actions is Array or s.actions.size()>100000:return false
+ if not exact(s,["version","mode","seed","actions"]) or not integer(s.version,1,3) or s.mode!="endless" or not integer(s.seed,0,2147483647) or not s.actions is Array or s.actions.size()>100000:return false
  for a in s.actions:
   if not a is String or a.is_empty() or a.length()>40:return false
  return true
@@ -35,7 +35,7 @@ func canonical_snapshot(s:Dictionary)->Dictionary:
  return {"version":int(s.version),"mode":"endless","seed":int(s.seed),"actions":s.actions.duplicate()}
 func valid_record(r)->bool:
  if not exact(r,["run_id","seed","max_floor","kills","gold","reason"]) and not exact(r,["run_id","seed","max_floor","kills","gold","reason","rule_version"]):return false
- if not integer(r.get("rule_version",1),1,2):return false
+ if not integer(r.get("rule_version",1),1,3):return false
  return integer(r.run_id,1) and integer(r.seed,0,2147483647) and integer(r.max_floor,1,1000000000) and integer(r.kills,0,1000000000) and integer(r.gold,0,1000000000) and r.reason in ["death","retired","action_limit"]
 func fresh()->Dictionary:return {"version":1,"revision":0,"run_id":0,"active":null,"finished":false,"records":[]}
 func valid_envelope(e)->bool:
