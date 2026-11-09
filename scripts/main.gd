@@ -1,6 +1,7 @@
 extends Node2D
 
 const World = preload("res://scripts/world.gd")
+const MapSymbols = preload("res://scripts/map_symbols.gd")
 const Localization = preload("res://scripts/localization.gd")
 var language := "zh"
 const Attunement = preload("res://scripts/attunement.gd")
@@ -720,6 +721,7 @@ func draw_cargo_icon(center: Vector2, full: bool, size:=60.0):
 			draw_line(center-Vector2(size*0.2,0),center+Vector2(size*0.2,0),TEAL,4)
 			draw_line(center-Vector2(0,size*0.2),center+Vector2(0,size*0.2),TEAL,4)
 func draw_token(c: Vector2, t: String):
+	if MapSymbols.draw_icon(self,t,Rect2(c-Vector2(30,30),Vector2(60,60))): return
 	if t=="c":
 		draw_cargo_icon(c,world.cargo.state=="shipped")
 		return

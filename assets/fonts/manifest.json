@@ -98,7 +98,11 @@
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "1c68c980f74957697ed3a05af3dfcf9307bb45d95732b26a3e289076307021f4"
+      "sha256": "e4b1a8952fa18ce70d3860831a23b468c2aa11686937f62757a7103afa3947d1"
+    },
+    {
+      "path": "scripts/map_symbols.gd",
+      "sha256": "a10acce96b013e3d6a3cf53552557414144e642d9c24937e938a51a719adb791"
     },
     {
       "path": "scripts/navigation.gd",
