@@ -1,6 +1,6 @@
 extends SceneTree
 const Store=preload("res://scripts/endless_store.gd")
-const World=preload("res://scripts/endless_world_v10.gd")
+const World=preload("res://scripts/endless_world.gd")
 var checks:=0
 var failures:=0
 func check(ok:bool,label:String):
@@ -8,8 +8,12 @@ func check(ok:bool,label:String):
  if not ok:failures+=1;push_error(label)
 func _initialize():call_deferred("run")
 func run():
+ for version in [10,11]:await run_version(version)
+ print("ENDLESS WALK STORE: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks])
+ quit(0 if failures==0 else 1)
+func run_version(version:int):
  var path="/tmp/tower-walk-store-"+str(Time.get_ticks_usec())+".json"
- var store=Store.new(path);var w=World.new_run(0)
+ var store=Store.new(path);var w=World.new_run(0,version)
  var r=await store.start(w.save_data(),0)
  for code in ["R","cargo_use","R","R","R"]:
   check(w.apply_code(code).changed,"legal setup "+code)
@@ -27,6 +31,8 @@ func run():
  check((await store.commit_walk(extra.save_data(),r.revision)).status=="invalid","camp return plus extra move rejected")
  var old=target.duplicate(true);old.version=9
  check((await store.commit_walk(old,r.revision)).status=="invalid","v9 cannot use batch API")
+ var switched=target.duplicate(true);switched.version=11 if version==10 else 10
+ check((await store.commit_walk(switched,r.revision)).status=="invalid","walk cannot switch supported rules in same run")
  var malformed=original.duplicate(true);malformed.actions.append("cargo_use")
  check((await store.commit_walk(malformed,r.revision)).status=="invalid","non-direction suffix rejected")
  check(FileAccess.get_file_as_string(path)==original_bytes,"all rejected batches preserve bytes")
@@ -47,5 +53,3 @@ func run():
  check((await store.commit_walk(huge,r.revision)).status=="invalid","225-step suffix rejected")
  check((await store.commit_walk(target,r.revision)).status=="invalid","already-at-camp request is not a new write")
  DirAccess.remove_absolute(path)
- print("ENDLESS WALK STORE: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks])
- quit(0 if failures==0 else 1)
