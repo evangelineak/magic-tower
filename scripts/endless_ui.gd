@@ -151,6 +151,9 @@ func _unhandled_input(event):
   walk.clear()
   if busy:return
   var p=event.position
+  if modal=="growth":
+   if Rect2(910,687,250,45).has_point(p):modal=""
+   return
   if modal in ["encounter","items"]:
    if Rect2(910,687,250,45).has_point(p):modal="";return
    for i in choices.size():
@@ -178,6 +181,7 @@ func _unhandled_input(event):
    return
   if Rect2(950,396,138,32).has_point(p):open_supply_panel("encounter");return
   if Rect2(1096,396,138,32).has_point(p):open_supply_panel("items");return
+  if Rect2(950,354,284,32).has_point(p) and world!=null and world.has_method("growth_view"):open_growth();return
   if Rect2(768,562,476,24).has_point(p):open_build();return
   if Rect2(768,587,476,24).has_point(p):open_case();return
   if Rect2(768,662,220,44).has_point(p):center_camera();return
@@ -201,6 +205,7 @@ func _unhandled_input(event):
   if event.keycode==KEY_N:modal="new";return
   if event.keycode==KEY_Q:open_case();return
   if event.keycode==KEY_B:open_build();return
+  if event.keycode==KEY_G:open_growth();return
   if event.keycode==KEY_H:modal="help";return
   if event.keycode==KEY_R:open_supply_panel("encounter");return
   if event.keycode==KEY_I:open_supply_panel("items");return
@@ -312,6 +317,8 @@ func _draw():
  draw_rect(Rect2(Vector2(768,264)+Vector2(camera)*11,Vector2(121,121)),INK,false,1)
  draw_circle(Vector2(773,269)+Vector2(world.pos)*11,4,TEAL)
  draw_wrapped("WASD / 方向键移动\n点击邻格互动，远处安全寻路\n右拖地图，空格回到角色\nH查看玩法；金=宝物，青=楼梯",Vector2(950,280),282,16,INK,5)
+ if world.has_method("growth_view"):
+  panel(Rect2(950,354,284,32),Color("365347"));text(Vector2(958,376),"G 成长 / 全旅程预算",15,GOLD)
  if world.has_method("encounter_view"):
   panel(Rect2(950,396,138,32),Color("293e50"));text(Vector2(958,418),"R 营地遭遇",15,GOLD)
   panel(Rect2(1096,396,138,32),Color("293e50"));text(Vector2(1104,418),"I 战斗道具",15,GOLD)
@@ -372,6 +379,7 @@ func tooltip_layout(content:String,desired:Vector2)->Rect2:
 
 func draw_modal():
  if modal in ["encounter","items"]:draw_supply_panel();return
+ if modal=="growth":draw_growth();return
  if modal=="case":draw_case();return
  if modal=="build":draw_build();return
  panel(Rect2(0,0,1280,800),Color(0,0,0,0.70));panel(Rect2(245,145,790,505),Color("152736"))
@@ -387,6 +395,7 @@ func draw_modal():
   "ended":title="本次远征结束";body="成绩已保存到本设备历史榜。下一次仍有不同路线与成长选择。"
   "finish_retry":title="结算等待重试"
   "choices":title="选择行动";body=""
+ if modal=="help" and world!=null and world.has_method("growth_view"):body=growth_help_text()
  text(Vector2(280,190),title,26,GOLD)
  if modal=="choices":
   for i in mini(6,choices.size()):panel(Rect2(280,215+i*52,720,48),Color("2a4051"));draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(293,241+i*52),690,16,INK,2)
@@ -470,10 +479,10 @@ func draw_build():
  if info.get("effects") is Array:
   details+="\n"+"\n".join(info.effects)
  draw_wrapped(details,Vector2(125,339),485,16,INK,6)
- text(Vector2(125,492),"普通训练 %d / 3"%int(info.get("training_level",1)),20,GOLD)
+ text(Vector2(125,492),"战术训练 %d / 3"%int(info.get("training_level",1)),20,GOLD)
  text(Vector2(125,528),"遗物加成 +%d / 2"%int(info.get("relic_bonus",0)),20,TEAL)
- text(Vector2(125,564),"当前有效等级 %d / 5"%int(info.get("effective_level",1)),22,INK)
- draw_wrapped("普通成长有上限，宝库遗物可以突破。收割必须先活过战斗，战后回复不能救回致死伤害。",Vector2(125,617),485,16,TEAL,4)
+ text(Vector2(125,564),"战术有效等级 %d / 5"%int(info.get("effective_level",1)),22,INK)
+ draw_wrapped("战术训练有上限，宝库遗物可提高战术等级。收割必须先活过战斗，战后回复不能救回致死伤害。",Vector2(125,617),485,16,TEAL,4)
  text(Vector2(665,211),"商人营地可免费切换",21,GOLD)
  if choices.is_empty():
   draw_wrapped("现在只能查看。靠近商人后再按B切换；已结束旅程不可改动。",Vector2(665,290),485,18,INK,4)
@@ -508,3 +517,39 @@ func draw_supply_panel():
   draw_wrapped("%d  %s"%[i+1,str(choices[i].label)],Vector2(200,451+i*70),880,17,INK,2)
  if modal_notice!="":draw_wrapped(modal_notice,Vector2(160,665),720,15,Color("efb18e"),2)
  panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(928,715),"关闭 · Esc",18)
+
+func open_growth():
+ if world==null or not world.has_method("growth_view"):
+  notice="此旧规则旅程不采用新版成长预算；旧局保持原规则，新开局才使用新版。";return
+ walk.clear();modal="growth";choices.clear();queue_redraw()
+func growth_help_text()->String:
+ return "G：查看成长与全旅程预算。每层剑盾包领取一次，固定攻击+3、防御+2；回访不重复领，也不降低基础。\n所有额外永久攻防共用攻击+6、防御+4上限，不是每层重置。\n全旅程6课时：攻击、防御、急救共用；战术训练仍最高3，遗物最多额外2级。\n生命上限180。全旅程10份免费箱补给，每份最多8生命；用尽后4金币一份。满血不购买，也可免费放弃箱子开路。\nB战术；R营地遭遇；I道具；Q第四层信使线索。\n鼠标邻格互动，远处安全寻路；右拖地图，空格回角色。\nL读取；N明确重开。旧规则不自动升级；本设备榜不是全球榜。"
+func growth_lines(data:Dictionary)->Array[String]:
+ return ["已领取%d份基础包：攻击%d / 防御%d" % [int(data.training_packs),int(data.base_atk),int(data.base_def)],
+  "每层包仅领一次：攻击+3、防御+2；不是天赋等级。",
+  "本层基础包："+("仍可领取" if data.local_pack_available else "已领取"),
+  "额外永久攻击 +%d / %d；还可增加%d" % [int(data.bonus_atk),int(data.bonus_atk_cap),int(data.remaining_atk)],
+  "额外永久防御 +%d / %d；还可增加%d" % [int(data.bonus_def),int(data.bonus_def_cap),int(data.remaining_def)],
+  "技能、商店、宝库与任务奖励共用上限，不按层重置。",
+  "全旅程课时：已用%d / %d，剩%d" % [int(data.lessons_used),int(data.lesson_cap),int(data.lessons_remaining)],
+  "攻击、防御、急救共用；战术等级另有3+2上限。"]
+func draw_growth():
+ var data:Dictionary=world.growth_view()
+ panel(Rect2(0,0,1280,800),Color(0,0,0,0.8));panel(Rect2(95,85,1090,665),Color("152736"))
+ text(Vector2(125,132),"成长与预算 · 当前规则 v%d" % world.rule_version(),25,GOLD)
+ text(Vector2(125,176),"固定基础成长 ≠ 有限的额外成长",22,TEAL)
+ var lines=growth_lines(data)
+ for i in lines.size():
+  text(Vector2(125,222+i*38),lines[i],16,GOLD if i in [0,3,4,6] else INK)
+ text(Vector2(125,557),"生命 %d / %d；箱补给每份最多恢复%d" % [world.hp,int(data.hp_cap),int(data.supply_heal)],17,TEAL)
+ draw_wrapped("本层箱："+("尚可互动" if data.local_supply_available else "已处理")+"。补给额度与课时均跨层共享。",Vector2(125,594),500,16,INK,2)
+ text(Vector2(125,650),"全旅程免费补给：剩%d / %d；本次费用%d金" % [int(data.relief_remaining),int(data.relief_total),int(data.supply_price)],17,GOLD)
+ text(Vector2(665,176),"当前两条路线 · 只计剩余守卫",20,GOLD)
+ var y=220
+ for route in data.get("routes",[]):
+  var status="不能破防" if not route.get("valid",false) else ("当前会致死" if not route.get("survivable",false) else "可存活 · 净损%d生命" % int(route.get("net_damage",route.get("damage",0))))
+  draw_wrapped(str(route.get("label","路线"))+"："+status,Vector2(665,y),480,18,TEAL,2)
+  y+=70
+ draw_wrapped("只读预算，不会购买或战斗。预估按当前战术、已装备道具顺序结算，不含途中拾取、购物或新成长。不是自动通关承诺。",Vector2(665,383),480,17,INK,5)
+ draw_wrapped("旧旅程保持原规则；这份预算只适用于当前新版旅程。",Vector2(665,560),480,17,TEAL,3)
+ panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(930,717),"关闭 · Esc / Enter",17)

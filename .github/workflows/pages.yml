@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export distinct enemy mechanics release
+      - name: Verify and export bounded-growth budget release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower latest verified distinct enemy mechanics release\nGame source: f62f3dc066a99015c207c92f833f320176715ab0\nWeb deployment source: %s\nNative v6 restore and v7 normal gameplay through scout opening and charged retaliation to floor four and reload verified. Original six-enemy contact sheets visually checked. Real-browser production storage passed 97 checks including seven-rule-version isolation. Deep-run growth balance is still incomplete, as documented by the v6 100-floor audit. Endless is a separate first-version mode with device-local rankings, not a global leaderboard. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves. Existing journeys retain their maps and receive no retroactive ferry rope or cargo. Start a new journey for the one-use floor-six rope. The V position inset works on existing Session journeys; original v0.17 saves remain untouched.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower latest verified bounded-growth budget release\nGame source: c1c43c08c570eea95ba1ebe843b0a33f5915482a\nWeb deployment source: %s\nNative v7 restore and v8 new-run budget, lessons, relief, discard, battles, capped potion and reload verified. Real Chrome production storage passed 115 checks across eight rules versions. Independent 72-policy legal 100-floor audit: 44 completed, 28 died; all 36 medicine-shop policies completed. Eight legal double-relic return runs completed. Permanent zero-damage collapse improved in tested samples; gold economy remains generous, not universally balanced. Device-local rankings only, no global leaderboard. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nOlder journeys preserve their original rules. Explicit new journey required for v8. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output
