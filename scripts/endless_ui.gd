@@ -1,5 +1,7 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const VaultArt=preload("res://scripts/endless_vault_art.gd")
+const RevisitArt=preload("res://scripts/endless_revisit_art.gd")
 const BridgeArt=preload("res://scripts/endless_bridge_art.gd")
 const CampFloor=preload("res://scripts/endless_camp_floor_art.gd")
 const RuneArt=preload("res://scripts/endless_rune_art.gd")
@@ -361,7 +363,10 @@ func _draw():
   for x in VIEW:
    var p=Vector2i(x,y)+camera;var c=ORIGIN+Vector2(x,y)*CELL+Vector2(32,32)
    draw_ground_tile(c,p,camp_region)
-   if not draw_bridge_tile(c,p):draw_token(c,world.tile(p))
+   if world.tile(p)=="$" and world.has_method("vault_quote"):
+    VaultArt.draw_cache(self,c,str(world.vault_quote(p).kind))
+   elif not draw_bridge_tile(c,p):draw_token(c,world.tile(p))
+   if RevisitArt.status(world,p).get("blocked",false):RevisitArt.draw_seal(self,c)
  for p in walk:
   var screen=Vector2(p-camera)
   if screen.x>=0 and screen.y>=0 and screen.x<VIEW and screen.y<VIEW:draw_path_marker(ORIGIN+screen*CELL+Vector2(32,32))
@@ -397,9 +402,11 @@ func _draw():
   for x in 15:
    var t=world.tile(Vector2i(x,y));var color=Color("344655") if t=="#" else Color("14212d")
    if t in ["<",">"]:color=TEAL
-   elif t in ["D","$","T"]:color=GOLD
+   elif t in ["D","$","T","B"]:color=GOLD
    elif t not in ["#","."]:color=Color("ab7970")
-   panel(Rect2(768+x*11,264+y*11,10,10),color)
+   var mini_rect=Rect2(768+x*11,264+y*11,10,10)
+   panel(mini_rect,color)
+   if RevisitArt.status(world,Vector2i(x,y)).get("blocked",false):draw_rect(mini_rect.grow(-2),Color("14212d"),true)
  draw_rect(Rect2(Vector2(768,264)+Vector2(camera)*11,Vector2(121,121)),INK,false,1)
  draw_circle(Vector2(773,269)+Vector2(world.pos)*11,4,TEAL)
  draw_wrapped("WASD / 方向键移动\n点击邻格互动，远处安全寻路\n右拖地图，空格回到角色\nH查看玩法；金=宝物，青=楼梯",Vector2(950,280),282,16,INK,5)
@@ -446,6 +453,8 @@ func _draw():
   var info:Dictionary=world.preview(pointed)
   var content=target_status(pointed)
   if content!="":content+="\n"
+  var revisit=RevisitArt.status(world,pointed)
+  if revisit.get("blocked",false):content+="回访封签 · "+str(revisit.reason)+"\n"
   content+=str(info.get("title",""))
   for line in info.get("lines",[]):
    if str(line)!=str(info.get("title","")):content+="\n"+str(line)
