@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export flat map symbols release
+      - name: Verify and export 15x15 endless first playable release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower latest verified flat map symbols release\nGame source: c3e8f19c6d0dad2c20c9e2926cd8dc1fb35d97bd\nWeb deployment source: %s\nNative adjacent mouse interaction, flat-symbol rendering and production JS storage protocol tested. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves. Existing journeys retain their maps and receive no retroactive ferry rope or cargo. Start a new journey for the one-use floor-six rope. The V position inset works on existing Session journeys; original v0.17 saves remain untouched.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower latest verified 15x15 endless first playable release\nGame source: 153bebeb31273c87fdbe908e75c97d0bbc439cac\nWeb deployment source: %s\nNative endless gameplay, 15x15 viewport, adjacent interaction and real-browser storage conflicts tested. Endless is a separate first-version mode with device-local rankings, not a global leaderboard. Godot Web engine gameplay is NOT verified in the cloud WebGL2-blocklisted browser.\nNew Session storage does not import or delete legacy v0.17 saves. Existing journeys retain their maps and receive no retroactive ferry rope or cargo. Start a new journey for the one-use floor-six rope. The V position inset works on existing Session journeys; original v0.17 saves remain untouched.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish latest verified game at root and preserve preview path
         run: |
           mkdir -p site-output/preview

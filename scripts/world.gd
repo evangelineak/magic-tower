@@ -395,9 +395,24 @@ func _count_token(token: String) -> int:
 			for value in row:
 				if value==token: total+=1
 	return total
+# Geometry queries do not change schema-19's strict 11 x 11 load validation.
+# Invalid or ragged in-memory matrices have no usable bounds.
+func floor_size(floor: int = -1) -> Vector2i:
+	var index: int=floor_index if floor==-1 else floor
+	if index<0 or index>=floors.size() or not floors[index] is Array: return Vector2i.ZERO
+	var grid: Array=floors[index]
+	if grid.is_empty() or not grid[0] is Array or grid[0].is_empty(): return Vector2i.ZERO
+	var width: int=grid[0].size()
+	for row in grid:
+		if not row is Array or row.size()!=width: return Vector2i.ZERO
+	return Vector2i(width,grid.size())
+func in_bounds(point: Vector2i, floor: int = -1) -> bool:
+	var size: Vector2i=floor_size(floor)
+	return point.x>=0 and point.y>=0 and point.x<size.x and point.y<size.y
 func tile(p: Vector2i) -> String:
-	if p.x < 0 or p.y < 0 or p.x >= 11 or p.y >= 11: return "#"
-	return floors[floor_index][p.y][p.x]
+	if not in_bounds(p): return "#"
+	var value=floors[floor_index][p.y][p.x]
+	return value if value is String and value.length()==1 else "#"
 func safe_walk_path(target: Vector2i) -> Array[Vector2i]:
 	if strategy_pending() or ended_reason!="" or not generation_valid or won: return []
 	return Navigation.walk_path(floors[floor_index],pos,target)
