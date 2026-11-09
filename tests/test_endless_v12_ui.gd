@@ -72,5 +72,9 @@ func run():
  check("无法完成战斗" in invalid_route and not "+48" in invalid_route,"route stall not mislabeled armor or promised reward")
  var long_route=ui.route_hud_text({"label":"双关：回春祭司 / 棘甲守卫","valid":true,"survivable":true,"net_damage":999999,"gold":999999})
  check(ui.font.get_string_size(long_route,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x<=468,"long route numbers fit HUD without shrinking text")
+ ui.battle={"token":"t"};ui.battle_time=1.0;ui.hover=Vector2i(3,1)
+ check(not ui.target_tooltips_visible(),"battle overlay suppresses all target tooltips and status outlines")
+ ui.battle_time=0
+ check(ui.target_tooltips_visible(),"target tooltip returns after battle overlay closes")
  ui.queue_free();art.queue_free();await process_frame
  print("ENDLESS V12 UI: %s (%d checks)" % ["PASS" if failures==0 else "FAIL",checks]);quit(0 if failures==0 else 1)

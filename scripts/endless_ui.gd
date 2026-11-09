@@ -1,5 +1,6 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const RuneArt=preload("res://scripts/endless_rune_art.gd")
 const Enemies12=preload("res://scripts/endless_enemy_v12_art.gd")
 const Enemies7=preload("res://scripts/endless_enemy_v7_art.gd")
 const GearArt=preload("res://scripts/endless_gear_art.gd")
@@ -21,6 +22,10 @@ var notice="正在读取独立的无尽旅程……"
 var modal_notice=""
 var camera=Vector2i.ZERO
 var hover=Vector2i(-1,-1)
+var rune_cache_key=""
+var rune_cache:Dictionary={}
+var target_feedback:Dictionary={}
+var feedback_remaining=0.0
 var walk:Array=[]
 var walk_time=0.0
 var modal=""
@@ -61,7 +66,7 @@ func screen_tile(p:Vector2)->Vector2i:
  return q+camera if Rect2(ORIGIN,Vector2(704,704)).has_point(p) else Vector2i(-1,-1)
 func reload_run():
  if busy:return
- busy=true;walk.clear()
+ busy=true;walk.clear();clear_target_feedback()
  var r:Dictionary=await store.read()
  busy=false
  if r.get("ok",false):
@@ -78,7 +83,7 @@ func reload_run():
  center_camera();queue_redraw()
 func start_run(seed_value:int,rule_version:int=0):
  if busy:return
- busy=true;walk.clear()
+ busy=true;walk.clear();clear_target_feedback()
  var candidate=WorldType.new_run(seed_value,WorldType.CURRENT_VERSION if rule_version==0 else rule_version)
  var r:Dictionary=await store.start(candidate.save_data(),revision)
  busy=false
@@ -91,6 +96,8 @@ func transact(kind:String,value,confirmed=false):
  busy=true
  var candidate=world.clone()
  var result:Dictionary=candidate.step(value,confirmed) if kind=="step" else candidate.act(str(value))
+ if result.get("confirm",false) and kind=="act" and str(value)=="rune_on":
+  busy=false;open_rune();return
  if result.get("confirm",false) and kind=="act" and str(value)=="job_cancel":
   busy=false;walk.clear();pending_revision=revision;pending_origin=world.pos;pending_floor=world.floor_number;modal="confirm_job";notice=str(result.get("message","取消委托会损失12金币押金。"));queue_redraw();return
  if result.get("confirm",false):
@@ -102,6 +109,7 @@ func transact(kind:String,value,confirmed=false):
  busy=false
  if not r.get("ok",false):
   walk.clear();notice="保存未确认，画面未前进：%s。按L核对已存旅程。"%str(r.get("status","unknown"));queue_redraw();return
+ clear_target_feedback()
  world=candidate;revision=int(r.revision);records=r.get("records",records);modal="";modal_notice="";notice=str(result.get("message",""));center_camera()
  if result.get("battle") is Dictionary:
   battle=result.battle;battle_time=2.4;walk.clear()
@@ -126,14 +134,20 @@ func map_click(target:Vector2i):
  walk.clear()
  var delta:Vector2i=target-world.pos
  if absi(delta.x)+absi(delta.y)==1:
+  clear_target_feedback()
   choices=world.options(target)
   if not choices.is_empty():modal="choices";modal_notice="";return
   await transact("step",delta);return
  if world.tile(target)==".":
+  clear_target_feedback()
   walk=world.safe_path(target);walk_time=0.0
   if walk.is_empty():notice="没有完全安全的路线。不会自动跨过怪物、物品、门或楼梯。"
- else:notice="先靠近到正交相邻格，再点击互动。"
+ elif target.x>=0 and target.y>=0 and target.x<15 and target.y<15 and world.tile(target)!="#":
+  notice="先靠近到正交相邻格，再点击互动。";show_target_feedback(target,notice)
+ else:clear_target_feedback()
 func _process(delta):
+ feedback_remaining=maxf(0.0,feedback_remaining-delta)
+ validate_target_feedback()
  hover=screen_tile(get_global_mouse_position())
  battle_time=maxf(0.0,battle_time-delta)
  if not walk.is_empty() and not busy and modal=="" and world!=null:
@@ -152,11 +166,16 @@ func _unhandled_input(event):
   if drag:camera=drag_camera-Vector2i(((event.position-drag_origin)/CELL).round());camera.x=clampi(camera.x,0,4);camera.y=clampi(camera.y,0,4)
  if event is InputEventMouseButton:
   if event.button_index==MOUSE_BUTTON_RIGHT:
+   clear_target_feedback()
    drag=event.pressed;drag_origin=event.position;drag_camera=camera;walk.clear();return
   if event.button_index!=MOUSE_BUTTON_LEFT or not event.pressed:return
   walk.clear()
   if busy:return
   var p=event.position
+  if modal=="rune":
+   if Rect2(660,650,460,48).has_point(p):modal="";return
+   if Rect2(160,650,460,48).has_point(p):await confirm_modal();return
+   return
   if modal=="growth":
    if Rect2(910,687,250,45).has_point(p):modal=""
    return
@@ -191,6 +210,7 @@ func _unhandled_input(event):
     for i in choices.size():
      if Rect2(280,215+i*52,720,48).has_point(p):await transact("act",choices[i].id);return
    return
+  if rune_hit_rect().has_point(p):open_rune();return
   if Rect2(950,396,138,32).has_point(p):open_supply_panel("encounter");return
   if Rect2(1096,396,138,32).has_point(p):open_supply_panel("items");return
   if Rect2(950,354,284,32).has_point(p) and world!=null and world.has_method("growth_view"):open_growth();return
@@ -246,6 +266,13 @@ func _unhandled_input(event):
 func confirm_modal():
  match modal:
   "start","new","ended":await start_run(randi_range(0,2147483647))
+  "rune":
+   if world==null or not world.has_method("rune_view"):modal="";return
+   var info:Dictionary=rune_data()
+   if not info.get("available",false):modal_notice=str(info.get("reason","当前不能激活。"));return
+   if revision!=pending_revision or world.pos!=pending_origin or world.floor_number!=pending_floor:
+    modal_notice="位置或旅程已变化，请关闭后重新查看铭文。";return
+   await transact("act","rune_on!")
   "confirm_job":
    modal=""
    if world==null or revision!=pending_revision or world.pos!=pending_origin or world.floor_number!=pending_floor:
@@ -320,6 +347,11 @@ func _draw():
  if hero.x>=0 and hero.y>=0 and hero.x<VIEW and hero.y<VIEW:
   var c=ORIGIN+Vector2(hero)*CELL+Vector2(32,32)
   draw_hero(c);draw_rect(Rect2(c-Vector2(30,30),Vector2(60,60)),TEAL,false,2)
+ if world.has_method("rune_view"):
+  var rune_rect=rune_hit_rect()
+  if rune_rect.size.x>0:
+   var rune:Dictionary=rune_data()
+   panel(rune_rect,Color("07121c"));RuneArt.draw_rune(self,rune_rect.get_center(),str(rune.kind),bool(rune.active),28)
  panel(Rect2(752,72,504,704))
  var stats=[["生命",world.hp],["攻击",world.atk],["防御",world.defense],["金币",world.gold],["钥匙",world.keys],["击杀",world.kills]]
  if world.has_method("gear_view"):
@@ -375,21 +407,33 @@ func _draw():
   panel(Rect2(768,587,476,22),Color("293e50"))
   text(Vector2(776,604),"Q · 信使历史路线图与回访线索",13,GOLD)
  if modal!="":draw_modal()
- elif world.has_method("camp_return_view") and Rect2(768,662,220,44).has_point(get_global_mouse_position()):
+ elif target_tooltips_visible() and rune_hit_rect().has_point(get_global_mouse_position()) and not busy:
+  var rune:Dictionary=rune_data()
+  var content=rune_tooltip(rune)
+  var box=tooltip_layout(content,rune_hit_rect().position+Vector2(34,0))
+  panel(box,Color("07121c"));draw_rect(box,TEAL,false,1)
+  draw_wrapped(content,box.position+Vector2(12,23),box.size.x-24,15,INK,16)
+ elif target_tooltips_visible() and world.has_method("camp_return_view") and Rect2(768,662,220,44).has_point(get_global_mouse_position()):
   var camp_info:Dictionary=world.camp_return_view()
   var camp_text=camp_tooltip(camp_info)
   var camp_box=tooltip_layout(camp_text,Vector2(760,570))
   panel(camp_box,Color("07121c"));draw_rect(camp_box,TEAL,false,1)
   draw_wrapped(camp_text,camp_box.position+Vector2(12,23),camp_box.size.x-24,15,INK,14)
- elif hover.x>=0 and hover.y>=0 and not busy:
-  var info:Dictionary=world.preview(hover)
-  var content=str(info.get("title",""))
+ elif target_tooltips_visible() and tooltip_target().x>=0 and not busy:
+  var pointed=tooltip_target()
+  var info:Dictionary=world.preview(pointed)
+  var content=target_status(pointed)
+  if content!="":content+="\n"
+  content+=str(info.get("title",""))
   for line in info.get("lines",[]):
    if str(line)!=str(info.get("title","")):content+="\n"+str(line)
   if content!="":
-   var box=tooltip_layout(content,ORIGIN+Vector2(hover-camera)*CELL+Vector2(66,8))
+   if world.tile(pointed) not in ["#","."]:
+    var adjacent=absi(pointed.x-world.pos.x)+absi(pointed.y-world.pos.y)==1
+    draw_rect(Rect2(ORIGIN+Vector2(pointed-camera)*CELL+Vector2(2,2),Vector2(60,60)),TEAL if adjacent else GOLD,false,2)
+   var box=tooltip_layout(content,ORIGIN+Vector2(pointed-camera)*CELL+Vector2(66,8))
    panel(box,Color("07121c"));draw_rect(box,TEAL,false,1)
-   draw_wrapped(content,box.position+Vector2(12,23),box.size.x-24,15,INK,14)
+   draw_wrapped(content,box.position+Vector2(12,23),box.size.x-24,15,INK,16)
  if battle_time>0:
   panel(Rect2(150,220,560,330) if battle.has("reflection_damage") or battle.has("regen_total") else Rect2(150,220,560,300),Color("252432"));text(Vector2(180,258),"战斗结算",23,GOLD)
   draw_hero(Vector2(260,332));draw_token(Vector2(585,332),str(battle.get("token","g")))
@@ -413,10 +457,11 @@ func tooltip_layout(content:String,desired:Vector2)->Rect2:
   if font.get_string_size(partial+ch,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x>width-24:
    rows+=1;partial=""
   partial+=ch
- var height:=float(22+mini(rows,14)*21)
+ var height:=float(22+mini(rows,16)*21)
  return Rect2(Vector2(clampf(desired.x,20,1260-width),clampf(desired.y,70,780-height)),Vector2(width,height))
 
 func draw_modal():
+ if modal=="rune":draw_rune_panel();return
  if modal=="gear":draw_gear_panel();return
  if modal in ["encounter","contract","items"]:draw_supply_panel();return
  if modal=="growth":draw_growth();return
@@ -647,6 +692,7 @@ func start_camp_return():
  busy=false
  if not result.get("ok",false):
   notice="回营保存未确认，位置未前进：%s。按L核对已存旅程。" % str(result.get("status","unknown"));queue_redraw();return
+ clear_target_feedback()
  world=candidate;revision=int(result.revision);records=result.get("records",records);center_camera()
  notice="已沿%d格安全空路回到本层商人旁；每步均已记录。" % int(view.get("steps",0));queue_redraw()
 
@@ -695,3 +741,77 @@ func route_hud_text(route:Dictionary)->String:
  var reward=" · +%d金" % int(route.get("gold",0))
  if route.get("valid",false) and route.get("survivable",true) and font.get_string_size(result+reward,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x<=468:result+=reward
  return result
+
+func clear_target_feedback():
+ target_feedback.clear();feedback_remaining=0.0
+func show_target_feedback(target:Vector2i,message:String):
+ if world==null:return
+ target_feedback={"tile":target,"floor":world.floor_number,"token":world.tile(target),"message":message}
+ feedback_remaining=2.5;queue_redraw()
+func validate_target_feedback():
+ if target_feedback.is_empty():return
+ if feedback_remaining<=0 or world==null or int(target_feedback.floor)!=world.floor_number:
+  clear_target_feedback();return
+ var target:Vector2i=target_feedback.tile
+ var screen=target-camera
+ if world.tile(target)!=str(target_feedback.token) or screen.x<0 or screen.y<0 or screen.x>=VIEW or screen.y>=VIEW:clear_target_feedback()
+func tooltip_target()->Vector2i:
+ if world==null:return Vector2i(-1,-1)
+ validate_target_feedback()
+ # A different hovered interaction always keeps its complete battle/choice details.
+ if not target_feedback.is_empty() and (hover.x<0 or hover==target_feedback.tile or world.tile(hover) in [".","#"]):return target_feedback.tile
+ return hover
+func target_status(target:Vector2i)->String:
+ if world==null or target.x<0 or target.y<0 or world.tile(target) in [".","#"]:return ""
+ if not target_feedback.is_empty() and target==target_feedback.tile:return str(target_feedback.message)
+ var adjacent=absi(target.x-world.pos.x)+absi(target.y-world.pos.y)==1
+ return "相邻：点击查看或互动" if adjacent else "需先靠近：正交相邻后点击互动"
+
+func rune_hit_rect()->Rect2:
+ if world==null or not world.has_method("rune_view"):return Rect2()
+ var data:Dictionary=rune_data()
+ var screen:Vector2i=data.get("entry",Vector2i(-100,-100))-camera
+ if screen.x<0 or screen.y<0 or screen.x>=VIEW or screen.y>=VIEW:return Rect2()
+ return Rect2(ORIGIN+Vector2(screen)*CELL+Vector2(34,2),Vector2(28,28))
+func rune_tooltip(data:Dictionary)->String:
+ return str(data.get("title","入口铭文"))+"\n"+("已激活：本层永久生效，不能撤销。" if data.get("active",false) else "点击查看前后路线。激活一次%d金币，本层永久，不能撤销。" % int(data.get("price",0)))+"\n"+str(data.get("reason",""))+"\n"+str(data.get("body",""))
+func open_rune():
+ if world==null or not world.has_method("rune_view") or busy:return
+ walk.clear();clear_target_feedback();modal="rune";modal_notice=""
+ pending_revision=revision;pending_origin=world.pos;pending_floor=world.floor_number
+ queue_redraw()
+func rune_route_text(route:Dictionary)->String:
+ if not route.get("valid",false):return "无法完成战斗"
+ if not route.get("survivable",false):return "当前会致死"
+ return "可存活 · 净损%d生命" % int(route.get("net_damage",route.get("damage",0)))
+func draw_rune_panel():
+ var data:Dictionary=rune_data()
+ panel(Rect2(0,0,1280,800),Color(0,0,0,0.78));panel(Rect2(100,70,1080,680),Color("152736"))
+ RuneArt.draw_rune(self,Vector2(150,123),str(data.kind),bool(data.active),56)
+ text(Vector2(195,130),str(data.title)+(" · 已激活" if data.active else " · 尚未付费"),25,GOLD)
+ draw_wrapped(str(data.body),Vector2(145,180),980,18,INK,4)
+ draw_wrapped(str(data.reason),Vector2(145,286),980,17,TEAL,2)
+ text(Vector2(145,335),"不激活 / 原规则",21,GOLD);text(Vector2(665,335),"激活后 / 本层永久",21,GOLD)
+ for column in 2:
+  var rows:Array=data.get("before_routes" if column==0 else "after_routes",[])
+  for i in mini(2,rows.size()):
+   var x=145+column*520;var y=373+i*85;var route:Dictionary=rows[i]
+   draw_wrapped(str(route.get("label","路线")),Vector2(x,y),460,16,INK,2)
+   text(Vector2(x,y+45),rune_route_text(route),18,TEAL if route.get("valid",false) and route.get("survivable",false) else Color("efb18e"))
+ draw_wrapped("只计剩余守卫，按当前装备/战术/道具顺序预估；不含途中成长。查看或关闭不收费。",Vector2(145,565),980,16,TEAL,2)
+ if modal_notice!="":draw_wrapped(modal_notice,Vector2(145,610),980,16,Color("efb18e"),1)
+ panel(Rect2(160,650,460,48),Color("365347") if data.available else Color("293e50"))
+ text(Vector2(178,681),"确认支付%d金激活（不可撤销）" % int(data.price) if data.available else ("本层已生效" if data.active else "当前不可激活"),18,GOLD)
+ panel(Rect2(660,650,460,48),Color("384152"));text(Vector2(680,681),"关闭 · Esc",18)
+
+func rune_data()->Dictionary:
+ if world==null or not world.has_method("rune_view"):return {}
+ # rune_view simulates all remaining foes and two routes: don't repeat per frame.
+ # Successful transactions replace world; revision/location also invalidate cached views.
+ var key="%s:%d:%d:%s:%d:%d:%d:%d" % [world.get_instance_id(),revision,world.floor_number,str(world.pos),world.hp,world.gold,world.atk,world.defense]
+ if key!=rune_cache_key:
+  rune_cache=world.rune_view();rune_cache_key=key
+ return rune_cache
+
+func target_tooltips_visible()->bool:
+ return not (battle_time>0 and not battle.is_empty())
