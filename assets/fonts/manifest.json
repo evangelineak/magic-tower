@@ -89,6 +89,10 @@
       "sha256": "e8c3784a7b3823db32be33136eb7ad054d7846155abe2e23963880ff7b52bebc"
     },
     {
+      "path": "scripts/endless_generation_v15.gd",
+      "sha256": "324bb0cff892bd5fe46f33ee8a32b8c506044973a097bd330b5b6834b31e60ae"
+    },
+    {
       "path": "scripts/endless_generation_v2.gd",
       "sha256": "51deac4d30b1b33021b95d2dff2c551a82e4a5f2b190c3d03d9e8f6bb8136bae"
     },
@@ -130,7 +134,7 @@
     },
     {
       "path": "scripts/endless_store.gd",
-      "sha256": "83758122765f308fea35ca984323911e71a56589dc15bd05cb11ce1bcad356c1"
+      "sha256": "697e4db069ccb7edc355c5c303ad1c060eebd92c0dbccb32c11f0c4fabea438a"
     },
     {
       "path": "scripts/endless_ui.gd",
@@ -138,7 +142,7 @@
     },
     {
       "path": "scripts/endless_world.gd",
-      "sha256": "f1ca6c4be0c78e3ed4185269a49d07af8bc8389bd29e4d497496d3ca30c9167e"
+      "sha256": "a08055e3ca7144a68bb1ee8b95d1e0849a522ffb02df68b24547c21ddc3d6d1d"
     },
     {
       "path": "scripts/endless_world_v1.gd",
@@ -163,6 +167,10 @@
     {
       "path": "scripts/endless_world_v14.gd",
       "sha256": "5626429b02087d37d8f829985f19ae9bdaa741ef55b91375e824bb769466e948"
+    },
+    {
+      "path": "scripts/endless_world_v15.gd",
+      "sha256": "bad0ec98aa56ceb520867192f860b24c7c3beba52884417a3873476fed25cdf3"
     },
     {
       "path": "scripts/endless_world_v2.gd",
