@@ -174,6 +174,8 @@ func _draw():
 		label_at(Vector2(100,310),"L: Reload current journey / F5: Retry save",18,GOLD)
 		return
 	label_at(Vector2(310,42),world.floor_title(),22,GOLD)
+	panel(Rect2(510,12,214,44),Color("294738"))
+	label_at(Vector2(521,40),"无尽远征 · 15×15  F3",16,GOLD)
 	label_at(Vector2(752,30),"FLOOR %d / %d" % [world.floor_index+1,world.floor_count()],18,GOLD)
 	label_at(Vector2(930,30),"SEED %d" % world.seed_value,15,TEAL)
 	label_at(Vector2(752,54),"F2: 中文 / English",13,MUTED)
@@ -1476,6 +1478,9 @@ func _unhandled_input(event):
 		toggle_mute()
 		return
 	if session!=null and session.busy: return
+	if (event is InputEventKey and event.pressed and not event.echo and event.keycode==KEY_F3) or (event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT and Rect2(510,12,214,44).has_point(get_global_mouse_position())):
+		get_tree().change_scene_to_file("res://endless.tscn")
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode==KEY_F5: retry_save(); return
 		if event.keycode==KEY_L and (world==null or session.read_only or is_terminal() or strategy_pending() or not modal_open()): load_game(); return

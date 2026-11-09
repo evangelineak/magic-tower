@@ -17,12 +17,12 @@
     "13": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the SIL Open Font License for the specific language, permissions and limitations governing your use of this Font Software.",
     "14": "http://scripts.sil.org/OFL"
   },
-  "output_sha256": "f2989e332d2effc827b0433fead8b7daee9f3ddce683b2501018676c61f3d013",
-  "bytes": 429844,
+  "output_sha256": "9c85b22f9a28c622264189d34ed0e461c2419c56974f9232ba623a3242fc88aa",
+  "bytes": 438112,
   "coverage": {
-    "mapped_codepoints": 1096,
-    "glyphs": 2166,
-    "required_codepoints": 940,
+    "mapped_codepoints": 1114,
+    "glyphs": 2202,
+    "required_codepoints": 961,
     "missing": [],
     "family": "MagicTowerCJK",
     "postscript": "MagicTowerCJK-Regular"
@@ -47,6 +47,18 @@
     {
       "path": "scripts/endless_generation.gd",
       "sha256": "360c50169959c6eacf8f008b4b30eee445210d8e4eb76c5bd5e87454ca1ca0fc"
+    },
+    {
+      "path": "scripts/endless_store.gd",
+      "sha256": "0a05ddba5f467c1079d5b95f16128ee831aabae2f52fb15ac129768656200af9"
+    },
+    {
+      "path": "scripts/endless_ui.gd",
+      "sha256": "97cedc65cdaa1091705fd2b21962f4f00322bbb8391a6dcb5094b5f4dadfa1b9"
+    },
+    {
+      "path": "scripts/endless_world.gd",
+      "sha256": "f3dfeeb008576038c832a01f4f86da914236ffbb790385d9e32dbba17e8c6d2e"
     },
     {
       "path": "scripts/expedition.gd",
@@ -102,7 +114,7 @@
     },
     {
       "path": "scripts/main.gd",
-      "sha256": "e4b1a8952fa18ce70d3860831a23b468c2aa11686937f62757a7103afa3947d1"
+      "sha256": "b474fee45ed30e2454b1f6f9035da5ffa4324479d511b1c7db2bd3801cd2ffc3"
     },
     {
       "path": "scripts/map_symbols.gd",

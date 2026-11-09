@@ -1,0 +1,37 @@
+<!doctype html><meta charset="utf-8"><title>Endless storage browser test</title>
+<h1>无尽模式独立存储真实浏览器测试</h1><p>仅测试本机测试站点localStorage与Web Locks，不代表Godot Web引擎实玩。</p><button id="run">运行并恢复测试前数据</button><pre id="result">尚未运行</pre>
+<iframe id="worker" src="endless_storage_frame.html" hidden></iframe>
+<script src="../../scripts/endless_storage_web.js"></script>
+<script>
+let serial=0;const key='magic-tower.endless.v1';
+function call(api,operation,args={}){return new Promise(resolve=>api.request(JSON.stringify({request:++serial,operation,args}),raw=>resolve(JSON.parse(raw).result)));}
+const args=(snapshot,expected_revision,record={})=>({snapshot,expected_revision,record});
+document.getElementById('run').onclick=async()=>{
+const output=document.getElementById('result');let count=0,backup=localStorage.getItem(key);
+const check=(condition,label)=>{if(!condition)throw Error(label);count++;};
+try{
+check(!!navigator.locks,'Web Locks required');localStorage.removeItem(key);
+const api=MagicTowerEndless,other=document.getElementById('worker').contentWindow.MagicTowerEndless;
+check(!!other,'second browsing context ready');
+let r=await call(api,'read');check(r.ok&&r.status==='empty','empty read');
+const first={version:1,mode:'endless',seed:17,actions:[]};
+r=await call(api,'start',args(first,0));check(r.ok&&r.revision===1,'new run');
+const right={...first,actions:['R']},down={...first,actions:['D']};
+const pair=await Promise.all([call(api,'commit',args(right,1)),call(other,'commit',args(down,1))]);
+check(pair.filter(x=>x.ok).length===1,'only one concurrent commit');check(pair.filter(x=>x.status==='conflict').length===1,'other context receives conflict');
+r=await call(other,'read');check(r.ok&&r.revision===2,'shared persistent revision');
+const winner=r.snapshot;check(winner.actions.length===1,'exactly one action retained');
+r=await call(api,'commit',args(winner,1));check(r.ok&&r.revision===2,'lost acknowledgment retry idempotent');
+const ended={...winner,actions:[...winner.actions,'retire']};
+r=await call(api,'commit',args(ended,2));check(r.ok&&r.revision===3,'retirement saved');
+const record={run_id:1,seed:17,max_floor:1,kills:0,gold:0,reason:'retired'};
+r=await call(other,'finish',args(ended,3,record));check(r.ok&&r.records.length===1&&r.status==='finished','local rank atomic');
+r=await call(api,'finish',args(ended,3,record));check(r.ok&&r.records.length===1,'finish retry no duplicate');
+r=await call(other,'read');check(r.status==='finished'&&r.records.length===1,'other context sees finished rank');
+const old=localStorage.getItem(key);r=await call(api,'start',args({...first,seed:18},2));check(r.status==='conflict'&&localStorage.getItem(key)===old,'stale new-run request does not overwrite');
+localStorage.setItem(key,'{broken');r=await call(api,'read');check(!r.ok,'corrupt JSON rejected');check(localStorage.getItem(key)==='{broken','corruption not silently replaced');
+output.textContent=`PASS: ${count} checks. Actual production JS callback + Web Locks + localStorage + second browsing context. No Godot engine gameplay claim.`;
+}catch(e){output.textContent=`FAIL after ${count}: ${e.stack}`;}
+finally{if(backup===null)localStorage.removeItem(key);else localStorage.setItem(key,backup);}
+};
+</script>
