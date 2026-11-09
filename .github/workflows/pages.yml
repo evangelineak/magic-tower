@@ -1,4 +1,4 @@
-name: Publish verified spatial cart courtyards at original homepage
+name: Publish verified three-hero journey at original homepage
 on:
   push:
     branches: ['pages/playtest']
@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export spatial cart courtyard release
+      - name: Verify and export three-hero journey release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower verified spatial cart courtyard release\nGame source: 1326d14053678b1af3728861a6112fece30e30ad\nWeb deployment source: %s\nFinal core 283e2fc26462911404efdeecd1b2fdcbdb5891388a9b7eeb818a2b9b29260023. At most two early stone-cart courtyards: physical pushing, visible socket/gate wiring, free reset before shared exclusive reward claim, no respawn or duplicate bounty. Supply tools versus guarded capped relic, capacity and zero-gain preservation. Native seed1165695190 played normally from floor1 to5; exact129 damage, reset, re-selection, cancel/claim and actual process restart restored state. Independent122 maps,33 spatial states per variant,127 resource checks,4164 native store checks,12 legal100-floor policies,107 Godot suites plus Node and cart contract gate passed. Real Chrome storage595 checks passed, NOT Godot Web-engine gameplay.\nExplicit N new journey required for v19; old1-18 rules frozen. Event is finite early content, not a solution to deep repetition or economic inflation. Classic hero/reincarnation systems remain separate. Device-local rankings only; no global backend/account/fee/player uploads. Godot Web-engine gameplay remains unverified in cloud WebGL-blocklisted browser. Root homepage only.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower verified three-hero endless release\nGame source: dfa857a11c17479752ffa2c96db40ded0c036d46\nWeb deployment source: %s\nFinal world d84f1a594ff233baf2521c9185c08224258acc3b6eb995a5e078894d1c1d81be; combat 3c25e29c4b6b003829e127eb683f31f738a7cacc4dbedcbb75c8075fb38b677c. Atomic hero-selection start preserves old journey until confirmed. Warden blocks half of first two active attacks after fixed reductions, Ranger ignores8 defense, Scholar heals actual up to24 outside battle. Finite focus2/cap3, new maximum floors4/8/12 restore1 with overflow lost; revisits cannot recharge. Original flat distinct hero silhouettes.\nNative all three heroes played: Warden actual8 damage, Ranger actual10, Scholar24 and capped7 heal, full-health refusal, actual process restart and fatal confirmation/settlement verified. Final110 Godot suites plus Node/cart gate passed; independent59400 combat cases,764524 assertions,84 route fixtures and9 legal first-floor journeys; core12 and independent24 legal100-floor policies passed. Actual Chrome production storage699 checks passed, NOT Godot Web-engine gameplay.\nExplicit N new journey required for v20; old1-19 rules frozen. No endless talent drafts or reincarnation yet; planned separately. Hero balance and late-game economic surplus remain imperfect. Device-local rankings only, no global backend/account/fee/player uploads. Godot Web-engine gameplay remains unverified in cloud WebGL-blocklisted browser. Root homepage only.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output

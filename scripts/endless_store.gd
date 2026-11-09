@@ -31,6 +31,15 @@ func snapshot_shape(s)->bool:
  for a in s.actions:
   if not a is String or a.is_empty() or a.length()>40:return false
  return true
+func initial_start(s:Dictionary)->bool:return int(s.version)!=20 and s.actions.is_empty()
+func initial_hero(s:Dictionary)->bool:return int(s.version)==20 and s.actions.size()==1 and s.actions[0] in ["hero_warden","hero_ranger","hero_scholar"]
+func active_initialized(s:Dictionary)->bool:
+ if int(s.version)!=20:return true
+ if s.actions.is_empty() or s.actions[0] not in ["hero_warden","hero_ranger","hero_scholar"]:return false
+ for code in s.actions.slice(1):
+  if code.begins_with("hero_"):return false
+ return true
+func has_commit_event(s:Dictionary)->bool:return not s.actions.is_empty() and not initial_hero(s)
 func canonical_snapshot(s:Dictionary)->Dictionary:
  return {"version":int(s.version),"mode":"endless","seed":int(s.seed),"actions":s.actions.duplicate()}
 func valid_record(r)->bool:
@@ -40,7 +49,9 @@ func valid_record(r)->bool:
 func fresh()->Dictionary:return {"version":1,"revision":0,"run_id":0,"active":null,"finished":false,"records":[]}
 func valid_envelope(e)->bool:
  if not exact(e,["version","revision","run_id","active","finished","records"]) or e.version!=1 or not integer(e.revision) or not integer(e.run_id) or not e.finished is bool or not e.records is Array or e.records.size()>10:return false
- if e.active!=null and not snapshot_shape(e.active):return false
+ if e.active!=null:
+  if not snapshot_shape(e.active):return false
+  if not active_initialized(e.active):return false
  var seen:Dictionary={}
  for r in e.records:
   if not valid_record(r) or r.run_id>e.run_id or seen.has(r.run_id):return false
@@ -60,7 +71,7 @@ func validated(s:Dictionary):
  if w!=null:cache_world=w;cache_snapshot=s.duplicate(true)
  return w
 func validated_walk(base:Dictionary,s:Dictionary):
- if not snapshot_shape(base) or not snapshot_shape(s) or not int(base.version) in [10,11,12,13,14,15,16,17,18,19] or s.version!=base.version or base.seed!=s.seed:return null
+ if not snapshot_shape(base) or not snapshot_shape(s) or not int(base.version) in [10,11,12,13,14,15,16,17,18,19,20] or s.version!=base.version or base.seed!=s.seed:return null
  var count:int=s.actions.size()-base.actions.size()
  if count<1 or count>224 or s.actions.slice(0,base.actions.size())!=base.actions:return null
  for code in s.actions.slice(base.actions.size()):
@@ -116,18 +127,21 @@ func read()->Dictionary:
   if r.status=="finished" and not w.ended:return fail("corrupt")
  return r
 func start(snapshot:Dictionary,expected_revision:int)->Dictionary:return await write("start",snapshot,expected_revision)
+func start_hero(snapshot:Dictionary,expected_revision:int)->Dictionary:return await write("start_hero",snapshot,expected_revision)
 func commit(snapshot:Dictionary,expected_revision:int)->Dictionary:return await write("commit",snapshot,expected_revision)
 func commit_walk(snapshot:Dictionary,expected_revision:int)->Dictionary:return await write("commit_walk",snapshot,expected_revision)
 func finish(snapshot:Dictionary,expected_revision:int)->Dictionary:return await write("finish",snapshot,expected_revision)
 func write(operation:String,s:Dictionary,expected:int)->Dictionary:
  if not snapshot_shape(s) or JSON.stringify(s).length()>MAX_BYTES:return fail("invalid")
  s=canonical_snapshot(s)
+ if operation=="start" and not initial_start(s):return fail("invalid")
+ if operation=="start_hero" and not initial_hero(s):return fail("invalid")
  var current=await read()
  if not current.get("ok",false):return current
  # Validate before writes; clone/apply-one never trusts a new history prefix.
  var w=null
  if operation=="commit_walk":
-  if not int(s.version) in [10,11,12,13,14,15,16,17,18,19]:return fail("invalid")
+  if not int(s.version) in [10,11,12,13,14,15,16,17,18,19,20]:return fail("invalid")
   var acknowledged:bool=current.status=="active" and current.snapshot==s and expected==current.revision-1
   if acknowledged:w=validated(s)
   else:
@@ -189,12 +203,12 @@ func native_write_locked(operation:String,a:Dictionary)->Dictionary:
  if not loaded.ok:return loaded
  var e:Dictionary=loaded.envelope;var s:Dictionary=a.snapshot;var expected:int=a.expected_revision
  if operation=="finish" and e.finished and e.active==s and expected==int(e.revision)-1:return result(e)
- if not e.finished and e.active==s and expected==int(e.revision)-1 and ((operation=="start" and s.actions.is_empty()) or (operation=="commit" and not s.actions.is_empty()) or (operation=="commit_walk" and int(s.version) in [10,11,12,13,14,15,16,17,18,19] and not s.actions.is_empty())):return result(e)
+ if not e.finished and e.active==s and expected==int(e.revision)-1 and ((operation=="start" and initial_start(s)) or (operation=="start_hero" and initial_hero(s)) or (operation=="commit" and has_commit_event(s)) or (operation=="commit_walk" and int(s.version) in [10,11,12,13,14,15,16,17,18,19,20] and has_commit_event(s))):return result(e)
  if expected!=int(e.revision):return fail("conflict")
  if e.revision>=MAX_COUNTER:return fail("limit")
  var n=e.duplicate(true);n.revision=int(n.revision)+1
- if operation=="start":
-  if not s.actions.is_empty() or e.run_id>=MAX_COUNTER:return fail("invalid")
+ if operation in ["start","start_hero"]:
+  if (not initial_start(s) if operation=="start" else not initial_hero(s)) or e.run_id>=MAX_COUNTER:return fail("invalid")
   n.run_id=int(n.run_id)+1;n.active=s.duplicate(true);n.finished=false
  elif operation=="commit":
   if e.active==null or e.finished or s.version!=e.active.version or s.seed!=e.active.seed or s.actions.size()!=e.active.actions.size()+1 or s.actions.slice(0,-1)!=e.active.actions:return fail("invalid")
