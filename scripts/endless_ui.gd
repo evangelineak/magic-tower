@@ -1,5 +1,6 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const Heroes20=preload("res://scripts/endless_hero_v20_art.gd")
 const CartArt=preload("res://scripts/endless_cart_art.gd")
 const VaultArt=preload("res://scripts/endless_vault_art.gd")
 const RevisitArt=preload("res://scripts/endless_revisit_art.gd")
@@ -39,6 +40,9 @@ var target_feedback:Dictionary={}
 var feedback_remaining=0.0
 var walk:Array=[]
 var walk_time=0.0
+var hero_setup_seed=0
+var hero_setup_selection=""
+var build_tab="hero"
 var modal=""
 var pending=Vector2i.ZERO
 var pending_revision=-1
@@ -96,6 +100,8 @@ func reload_run():
  center_camera();queue_redraw()
 func start_run(seed_value:int,rule_version:int=0):
  if busy:return
+ if rule_version>=20 or (rule_version==0 and WorldType.CURRENT_VERSION>=20):
+  hero_setup_seed=seed_value;hero_setup_selection="";walk.clear();modal="hero_setup";modal_notice="";queue_redraw();return
  busy=true;walk.clear();clear_target_feedback()
  var candidate=WorldType.new_run(seed_value,WorldType.CURRENT_VERSION if rule_version==0 else rule_version)
  var r:Dictionary=await store.start(candidate.save_data(),revision)
@@ -133,6 +139,7 @@ func transact(kind:String,value,confirmed=false):
  if result.get("battle") is Dictionary:
   battle=result.battle;battle_time=2.4;walk.clear()
  if str(value).begins_with("case_") and kind=="act":open_case();modal_notice=notice
+ if str(value).begins_with("skill_") and kind=="act":open_build();modal_notice=notice
  if str(value).begins_with("tactic_") and kind=="act":open_build();modal_notice=notice
  if str(value).begins_with("enc_") and kind=="act":open_supply_panel("encounter");modal_notice=notice
  if str(value).begins_with("job_") and kind=="act":open_supply_panel("contract");modal_notice=notice
@@ -194,6 +201,12 @@ func _unhandled_input(event):
   walk.clear()
   if busy:return
   var p=event.position
+  if modal=="hero_setup":
+   for i in 3:
+    if Rect2(130+i*345,190,325,365).has_point(p):hero_setup_selection=["warden","ranger","scholar"][i];queue_redraw();return
+   if Rect2(660,645,490,55).has_point(p):await confirm_hero_setup();return
+   if Rect2(130,645,490,55).has_point(p):modal="" if world!=null else "start";return
+   return
   if modal=="bridge":
    if Rect2(880,686,250,44).has_point(p):modal="";return
    if Rect2(145,590,470,55).has_point(p):await confirm_bridge("short");return
@@ -218,6 +231,9 @@ func _unhandled_input(event):
     if Rect2(185,425+i*70,910,62).has_point(p):await transact("act",choices[i].id);return
    return
   if modal=="build":
+   if world.has_method("hero_view"):
+    if Rect2(125,180,240,40).has_point(p):build_tab="hero";open_build();return
+    if Rect2(375,180,240,40).has_point(p):build_tab="tactic";open_build();return
    if Rect2(910,687,250,45).has_point(p):modal="";return
    for i in choices.size():
     if Rect2(665,275+i*74,495,65).has_point(p):await transact("act",choices[i].id);return
@@ -257,6 +273,9 @@ func _unhandled_input(event):
   if busy:return
   if event.keycode==KEY_L:await reload_run();return
   if modal!="":
+   if modal=="hero_setup" and event.keycode in [KEY_1,KEY_2,KEY_3]:hero_setup_selection=["warden","ranger","scholar"][event.keycode-KEY_1];queue_redraw();return
+   if modal=="build" and event.keycode==KEY_TAB and world.has_method("hero_view"):build_tab="hero" if build_tab=="tactic" else "tactic";open_build();return
+   if modal=="hero_setup" and event.keycode==KEY_ESCAPE:modal="" if world!=null else "start";return
    if modal=="bridge" and event.keycode in [KEY_1,KEY_2]:
     await confirm_bridge("short" if event.keycode==KEY_1 else "loot");return
    if event.keycode==KEY_TAB and modal in ["encounter","contract"] and world!=null and world.has_method("contract_view"):
@@ -294,6 +313,7 @@ func _unhandled_input(event):
    KEY_N:modal="new"
 func confirm_modal():
  match modal:
+  "hero_setup":await confirm_hero_setup()
   "start","new","ended":await start_run(randi_range(0,2147483647))
   "bridge":modal_notice="请明确选择短桥或宝桥；Enter不会代替选择。"
   "rune":
@@ -317,6 +337,8 @@ func confirm_modal():
   "finish_retry":await settle_run()
   _:modal=""
 func draw_hero(c:Vector2):
+ if world!=null and world.has_method("hero_view"):
+  Heroes20.draw_hero(self,c,str(world.hero_view().id));return
  var stance="none"
  if world!=null and world.has_method("build_view"):stance=str(world.build_view().get("stance","none"))
  stance={"brace":"guard","reap":"harvest"}.get(stance,stance)
@@ -440,7 +462,7 @@ func _draw():
  text(Vector2(24,796),"视窗 (%d,%d) · 自动保存 · H玩法说明 · 经典存档独立保留"%[camera.x,camera.y],13,TEAL)
  if world.has_method("build_view"):
   panel(Rect2(768,562,476,22),Color("293e50"))
-  text(Vector2(776,579),"B · 英雄战术与遗物成长："+str(world.build_view().get("title","")),13,GOLD)
+  text(Vector2(776,579),("B · 英雄构筑："+str(world.hero_view().name)+" · 专注%d/%d" % [world.hero_view().focus,world.hero_view().focus_cap]) if world.has_method("hero_view") else "B · 英雄战术与遗物成长："+str(world.build_view().get("title","")),13,GOLD)
  if world.has_method("case_view"):
   panel(Rect2(768,587,476,22),Color("293e50"))
   text(Vector2(776,604),"Q · 信使历史路线图与回访线索",13,GOLD)
@@ -504,6 +526,7 @@ func tooltip_layout(content:String,desired:Vector2)->Rect2:
  return Rect2(Vector2(clampf(desired.x,20,1260-width),clampf(desired.y,70,780-height)),Vector2(width,height))
 
 func draw_modal():
+ if modal=="hero_setup":draw_hero_setup();return
  if modal=="bridge":draw_bridge_panel();return
  if modal=="rune":draw_rune_panel();return
  if modal=="gear":draw_gear_panel();return
@@ -526,6 +549,7 @@ func draw_modal():
   "finish_retry":title="结算等待重试"
   "choices":title="选择行动";body=""
  if modal=="help" and world!=null and world.has_method("growth_view"):body=growth_help_text()
+ if modal=="help" and world!=null and world.has_method("hero_view"):body=body.replace("B战术", "B英雄技能/战术（Tab切换）")
  if modal=="help" and world!=null and world.has_method("contract_view"):body=body.replace("R营地遭遇", "R遭遇/订单（Tab切换）")
  if modal=="help" and world!=null and world.has_method("gear_view"):body=body.replace("I道具", "I道具/装备（Tab切换）")
  if modal=="help" and world!=null and world.has_method("camp_return_view"):body=body.replace("右拖地图，空格回角色", "T安全回营（一次保存），空格回角色")
@@ -604,13 +628,15 @@ func draw_case_token(c:Vector2,t:String):
 func open_build():
  if world==null or not world.has_method("build_view"):
   notice="这段旧规则旅程没有战术槽，新局可体验新版构筑。";return
- walk.clear();var info:Dictionary=world.build_view();choices=info.get("options",[])
+ walk.clear();var info:Dictionary=world.hero_view() if world.has_method("hero_view") and build_tab=="hero" else world.build_view();choices=info.get("options",[])
  modal="build";modal_notice="";queue_redraw()
 func draw_build():
+ if world.has_method("hero_view") and build_tab=="hero":draw_hero_build();return
  var info:Dictionary=world.build_view()
  panel(Rect2(0,0,1280,800),Color(0,0,0,0.8));panel(Rect2(95,85,1090,665),Color("152736"))
  text(Vector2(125,132),"英雄战术 · 改变出手方式，而不只是加数值",25,GOLD)
  text(Vector2(125,172),"当前："+str(info.get("title","旅行者")),21,TEAL)
+ if world.has_method("hero_view"):draw_build_tabs()
  draw_hero(Vector2(245,282))
  var details=str(info.get("description",""))
  if info.get("effects") is Array:
@@ -1040,3 +1066,55 @@ func draw_cart_push_hint():
   draw_line(c-d*12,c+d*12,TEAL,3)
   draw_line(c+d*12,c+d*4+cross*7,TEAL,3)
   draw_line(c+d*12,c+d*4-cross*7,TEAL,3)
+
+func hero_catalog_rows()->Array:
+ var catalog=WorldType.new_run(hero_setup_seed,20).hero_catalog()
+ if catalog is Array:return catalog
+ var rows:Array=[]
+ for id in ["warden","ranger","scholar"]:
+  var row:Dictionary=catalog[id].duplicate();row.id=id;rows.append(row)
+ return rows
+func confirm_hero_setup():
+ if busy or modal!="hero_setup":return
+ if hero_setup_selection not in ["warden","ranger","scholar"]:modal_notice="请先选择一位英雄，查看技能后再开始。";queue_redraw();return
+ busy=true
+ var candidate=WorldType.new_run(hero_setup_seed,20)
+ var chosen:Dictionary=candidate.act("hero_"+hero_setup_selection)
+ if not chosen.get("changed",false):busy=false;modal_notice=str(chosen.get("message","无法选择英雄。"));return
+ var result:Dictionary=await store.start_hero(candidate.save_data(),revision)
+ busy=false
+ if not result.get("ok",false):modal_notice="新局保存未确认，旧旅程仍保留："+str(result.get("status","unknown"));queue_redraw();return
+ world=candidate;revision=int(result.revision);records=result.get("records",[]);modal="";build_tab="hero";clear_target_feedback();center_camera();notice="英雄已确定。B查看技能与战术，战斗预览包含英雄效果。";queue_redraw()
+func draw_hero_setup():
+ panel(Rect2(0,0,1280,800),Color("0b1420"))
+ text(Vector2(130,105),"准备远征 · 选择本局英雄",29,GOLD)
+ draw_wrapped("规则 v20 · 种子 %d。选卡只预览；按最终开始后才替换当前无尽旅程。此版没有轮回点或天赋抽选。" % hero_setup_seed,Vector2(130,145),1030,17,INK,2)
+ var rows=hero_catalog_rows()
+ for i in mini(3,rows.size()):
+  var row:Dictionary=rows[i];var x=130+i*345
+  panel(Rect2(x,190,325,365),Color("365347") if hero_setup_selection==str(row.id) else Color("213443"))
+  Heroes20.draw_hero(self,Vector2(x+160,275),str(row.id),96)
+  text(Vector2(x+22,360),"%d  %s" % [i+1,str(row.get("name",row.id))],23,GOLD)
+  draw_wrapped(str(row.get("skill_description",row.get("description",""))),Vector2(x+22,398),280,17,INK,6)
+ var recovery=str(rows[0].get("focus_recovery","")) if not rows.is_empty() else ""
+ draw_wrapped(recovery+"\n每次技能消耗1专注；护卫/游侠预备不扣点，实际开战才扣。",Vector2(130,571),1020,14,TEAL,3)
+ draw_wrapped(modal_notice,Vector2(130,627),1020,15,Color("efb18e"),1)
+ panel(Rect2(130,645,490,55),Color("384152"));text(Vector2(150,680),"取消 · 保留原旅程",20)
+ panel(Rect2(660,645,490,55),Color("365347"));text(Vector2(680,680),"以选中英雄开始 · Enter",20)
+func draw_build_tabs():
+ for i in 2:
+  panel(Rect2(125+i*250,180,240,40),Color("365347") if (build_tab=="hero")== (i==0) else Color("293e50"))
+  text(Vector2(137+i*250,207),["英雄技能","营地战术 · Tab"][i],17)
+func draw_hero_build():
+ var info:Dictionary=world.hero_view()
+ panel(Rect2(0,0,1280,800),Color(0,0,0,0.8));panel(Rect2(95,85,1090,665),Color("152736"))
+ text(Vector2(125,132),"英雄与构筑 · "+str(info.name),25,GOLD)
+ draw_build_tabs();Heroes20.draw_hero(self,Vector2(245,297),str(info.id),100)
+ text(Vector2(125,399),"专注 %d / %d · %s" % [info.focus,info.focus_cap,"技能已预备" if info.armed else "未预备"],22,TEAL)
+ draw_wrapped(str(info.skill_description),Vector2(125,440),485,18,INK,6)
+ if choices.is_empty():draw_wrapped("旅程已结束。" if world.ended else ("专注不足，等待抵达新的恢复层数。" if int(info.focus)<=0 else "生命已满，不消耗专注。"),Vector2(665,300),470,18,TEAL,3)
+ draw_wrapped(str(info.get("focus_recovery",""))+"\n英雄身份固定；战术与装备另行调整，先看战斗预览。",Vector2(125,550),485,15,TEAL,6)
+ for i in mini(5,choices.size()):
+  panel(Rect2(665,275+i*74,495,65),Color("2a4051"));draw_wrapped("%d  %s" % [i+1,str(choices[i].label)],Vector2(677,301+i*74),470,17,INK,2)
+ draw_wrapped(modal_notice,Vector2(665,656),485,14,Color("efb18e"),2)
+ panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(930,717),"关闭 · Esc",18)

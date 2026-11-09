@@ -45,40 +45,60 @@ r=await call(other,'read');check(r.ok&&r.snapshot.version===2&&r.records.some(x=
 r=await call(api,'start',args(first,7));check(r.ok&&r.snapshot.version===1,'explicit v1 new run still supported');
 const beforeDowngrade=localStorage.getItem(key);
 r=await call(other,'commit',args(modernEnd,8));check(r.status==='invalid'&&localStorage.getItem(key)===beforeDowngrade,'v2 action cannot enter v1 run');
-for(const version of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]){
+for(const version of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]){
  r=await call(api,'read');
- const snapshot={...first,version};
- r=await call(api,'start',args(snapshot,r.revision));check(r.ok&&r.snapshot.version===version,'explicit factory protocol version '+version);
- for(const targetVersion of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]){
+ const snapshot={...first,version,actions:version===20?['hero_warden']:[]};
+ r=await call(api,version===20?'start_hero':'start',args(snapshot,r.revision));check(r.ok&&r.snapshot.version===version,'explicit factory protocol version '+version);
+ for(const targetVersion of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]){
   if(targetVersion===version)continue;
   const retained=localStorage.getItem(key);
   const rejected=await call(other,'commit',args({...snapshot,version:targetVersion,actions:['retire']},r.revision));
   check(rejected.status==='invalid'&&localStorage.getItem(key)===retained,'cross-version '+version+' to '+targetVersion+' rejects without overwrite');
  }
- const ending={...snapshot,actions:['retire']};
+ const ending={...snapshot,actions:[...snapshot.actions,'retire']};
  r=await call(api,'commit',args(ending,r.revision));check(r.ok,'matching version retirement '+version);
  r=await call(other,'finish',args(ending,r.revision,{...record,run_id:r.run_id,rule_version:version,max_floor:version+1}));
  check(r.ok&&r.records.find(x=>x.run_id===r.run_id).rule_version===version,'rank retains rules '+version);
  r=await call(api,'read');check(r.ok&&r.snapshot.version===version,'read preserves rules '+version);
 }
 r=await call(api,'read');
-for(const walkVersion of [10,11,12,13,14,15,16,17,18,19]){
-const walkBase={...first,version:walkVersion};
-r=await call(api,'start',args(walkBase,r.revision));check(r.ok,'dedicated walk setup '+walkVersion);
-const walkRevision=r.revision, walkTarget={...walkBase,actions:['R','R']};
+for(const walkVersion of [10,11,12,13,14,15,16,17,18,19,20]){
+const walkBase={...first,version:walkVersion,actions:walkVersion===20?['hero_warden']:[]};
+r=await call(api,walkVersion===20?'start_hero':'start',args(walkBase,r.revision));check(r.ok,'dedicated walk setup '+walkVersion);
+const walkRevision=r.revision, walkTarget={...walkBase,actions:[...walkBase.actions,'R','R']};
 const plainBatch=await call(api,'commit',args(walkTarget,walkRevision));check(plainBatch.status==='invalid','ordinary commit still rejects multi-step');
-for(const targetVersion of [10,11,12,13,14,15,16,17,18,19]){if(targetVersion===walkVersion)continue;const switched=await call(api,'commit_walk',args({...walkTarget,version:targetVersion},walkRevision));check(switched.status==='invalid','walk cannot switch supported rules');}
-const walkPair=await Promise.all([call(api,'commit_walk',args(walkTarget,walkRevision)),call(other,'commit_walk',args({...walkBase,actions:['L','L']},walkRevision))]);
+for(const targetVersion of [10,11,12,13,14,15,16,17,18,19,20]){if(targetVersion===walkVersion)continue;const switched=await call(api,'commit_walk',args({...walkTarget,version:targetVersion},walkRevision));check(switched.status==='invalid','walk cannot switch supported rules');}
+const walkPair=await Promise.all([call(api,'commit_walk',args(walkTarget,walkRevision)),call(other,'commit_walk',args({...walkBase,actions:[...walkBase.actions,'L','L']},walkRevision))]);
 check(walkPair.filter(x=>x.ok).length===1&&walkPair.filter(x=>x.status==='conflict').length===1,'walk batch cross-context atomic CAS');
-r=await call(other,'read');check(r.ok&&r.revision===walkRevision+1&&r.snapshot.actions.length===2,'walk writes complete batch once');
+r=await call(other,'read');check(r.ok&&r.revision===walkRevision+1&&r.snapshot.actions.length===walkBase.actions.length+2,'walk writes complete batch once');
 const walkWinner=r.snapshot;
 r=await call(api,'commit_walk',args(walkWinner,walkRevision));check(r.ok&&r.revision===walkRevision+1,'walk lost acknowledgement retry');
 const unsafeShape=await call(api,'commit_walk',args({...walkWinner,actions:[...walkWinner.actions,'cargo_use']},r.revision));check(unsafeShape.status==='invalid','walk bridge rejects interaction code');
 }
+// Real two-context initial-hero CAS; no UI selection may overwrite the old run before this succeeds.
+for(const hero of ['hero_warden','hero_ranger','hero_scholar']){
+ r=await call(api,'read');const rev=r.revision,previousRun=r.run_id;
+ const selected={...first,version:20,actions:[hero]},before=localStorage.getItem(key);
+ for(const actions of [[],['hero_unknown'],[hero,'R'],[hero,hero]]){
+  const bad=await call(api,'start_hero',args({...selected,actions},rev));
+  check(bad.status==='invalid'&&localStorage.getItem(key)===before,'invalid hero initial history preserves existing run');
+ }
+ const legacy=await call(api,'start',args(selected,rev));check(legacy.status==='invalid','legacy start never accepts hero history');
+ const unselected=await call(api,'start',args({...selected,actions:[]},rev));check(unselected.status==='invalid','unselected v20 cannot start');
+ const otherHero={...selected,seed:18};
+ const contenders=await Promise.all([call(api,'start_hero',args(selected,rev)),call(other,'start_hero',args(otherHero,rev))]);
+ check(contenders.filter(x=>x.ok).length===1&&contenders.filter(x=>x.status==='conflict').length===1,'two hero selections compete by atomic CAS');
+ r=await call(other,'read');check(r.run_id===previousRun+1&&r.revision===rev+1,'hero start increments run/revision once');
+ const winner=r.snapshot;
+ const retry=await call(api,'start_hero',args(winner,rev));check(retry.ok&&retry.revision===rev+1,'hero lost-ack retry idempotent across context');
+ const falseCommit=await call(other,'commit',args(winner,rev));check(falseCommit.status==='conflict','different operation cannot impersonate hero start retry');
+ const swap=await call(api,'commit',args({...winner,actions:[...winner.actions,'hero_scholar']},r.revision));check(swap.status==='invalid','mid-run hero replacement rejected');
+ const moved={...winner,actions:[...winner.actions,'R']};r=await call(api,'commit',args(moved,r.revision));check(r.ok,'selected hero ordinary move persisted');
+}
 const beforeUnknownRules=localStorage.getItem(key);
 r=await call(api,'read');
-const unknown=await call(other,'start',args({...first,version:20},r.revision));
-check(unknown.status==='invalid'&&localStorage.getItem(key)===beforeUnknownRules,'unknown rules 20 rejected without changing save');
+const unknown=await call(other,'start',args({...first,version:21},r.revision));
+check(unknown.status==='invalid'&&localStorage.getItem(key)===beforeUnknownRules,'unknown rules 21 rejected without changing save');
 localStorage.setItem(key,'{broken');r=await call(api,'read');check(!r.ok,'corrupt JSON rejected');check(localStorage.getItem(key)==='{broken','corruption not silently replaced');
 output.textContent=`PASS: ${count} checks. Actual production JS callback + Web Locks + localStorage + second browsing context. No Godot engine gameplay claim.`;
 }catch(e){output.textContent=`FAIL after ${count}: ${e.stack}`;}

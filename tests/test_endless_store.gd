@@ -73,7 +73,7 @@ func run_tests():
  # Versioned replay must not reinterpret old runs or cross rules on one run.
  var legacy_record={"run_id":1,"seed":12,"max_floor":1,"kills":0,"gold":0,"reason":"retired"}
  check(a.valid_record(legacy_record),"unversioned old records remain readable as v1")
- for bad_version in [0,20,1.5,"1",true,null]:
+ for bad_version in [0,21,1.5,"1",true,null]:
   var bad_record=legacy_record.duplicate();bad_record.rule_version=bad_version
   check(not a.valid_record(bad_record),"record rejects invalid rule version")
  var version_path=path+".versions"
@@ -101,24 +101,27 @@ func run_tests():
  vr=await versions.finish(modern.save_data(),5)
  check(vr.ok and vr.records[1].rule_version==2,"v2 finish and label")
  check((await versions.finish(switched,5)).status=="conflict","finish retry checks version")
- for bad_version in [0,20,1.5,"1",true,null,{},[]]:
+ for bad_version in [0,21,1.5,"1",true,null,{},[]]:
   var bad=modern.save_data();bad.version=bad_version
   check(World.from_data(bad)==null,"facade rejects invalid version")
   check((await versions.start(bad,6)).status=="invalid","storage rejects invalid version")
  var roundtrip=JSON.parse_string(JSON.stringify(old.save_data()))
  check(World.from_data(roundtrip).save_data()==old.save_data(),"JSON number version accepted without migration")
- check(World.new_run(12).save_data().version==19,"new factory defaults to v19")
+ check(World.new_run(12).save_data().version==20,"new factory defaults to v20")
  # Every ordered pair rejects cross-rule commits, while explicit starts work.
- for source in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]:
+ for source in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]:
   var matrix_path=version_path+"."+str(source)
   versions=Store.new(matrix_path)
   vr=await versions.read()
   var source_world=World.new_run(12,source)
-  vr=await versions.start(source_world.save_data(),vr.revision)
+  if source==20:check(source_world.act("hero_warden").changed,"select v20 hero locally")
+  vr=await versions.start_hero(source_world.save_data(),vr.revision) if source==20 else await versions.start(source_world.save_data(),vr.revision)
   check(vr.ok and vr.snapshot.version==source,"explicit version start")
-  for target_version in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]:
+  for target_version in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]:
    if target_version==source:continue
-   var target_world=World.new_run(12,target_version);target_world.act("retire")
+   var target_world=World.new_run(12,target_version)
+   if target_version==20:target_world.act("hero_warden")
+   target_world.act("retire")
    var bytes=FileAccess.get_file_as_string(matrix_path)
    check((await versions.commit(target_world.save_data(),vr.revision)).status=="invalid","cross-version commit rejected")
    check(FileAccess.get_file_as_string(matrix_path)==bytes,"cross-version rejection preserves bytes")
@@ -146,5 +149,40 @@ func run_tests():
  check((await a.start(fresh,r.revision)).status=="corrupt","new run cannot silently overwrite corrupt save")
  check(FileAccess.get_file_as_string(path)=="not json","corruption retained for recovery")
  DirAccess.remove_absolute(path);DirAccess.remove_absolute(path.get_base_dir())
+ await test_hero_starts()
  print("ENDLESS NATIVE STORE: %s (%d checks)"%["PASS" if failures==0 else "FAIL",count])
  quit(0 if failures==0 else 1)
+
+func test_hero_starts():
+ for hero in ["hero_warden","hero_ranger","hero_scholar"]:
+  var path="/tmp/endless-hero-start-%d.json" % Time.get_ticks_usec()
+  var store=Store.new(path);var old=World.new_run(8,19)
+  check((await store.start(old.save_data(),0)).ok,"old run before hero selection")
+  var selected=World.new_run(8,20);check(selected.act(hero).get("changed",false),"hero preview selected in memory")
+  var snapshot=selected.save_data();var before=FileAccess.get_file_as_string(path)
+  for actions in [[],["hero_unknown"],[hero,"R"],[hero,hero]]:
+   var bad=snapshot.duplicate(true);bad.actions=actions
+   check((await store.start_hero(bad,1)).status=="invalid","dedicated hero start rejects malformed initial history")
+   check(FileAccess.get_file_as_string(path)==before,"bad selection leaves old run bytes")
+  var wrong=snapshot.duplicate(true);wrong.version=19
+  check((await store.start_hero(wrong,1)).status=="invalid","hero API cannot start old rules")
+  check((await store.start(snapshot,1)).status=="invalid","legacy start contract not widened")
+  check((await store.start(World.new_run(8,20).save_data(),1)).status=="invalid","unselected world never persisted")
+  store.test_fail_write=true
+  check((await store.start_hero(snapshot,1)).status=="io_error","hero save write failure surfaced")
+  check(FileAccess.get_file_as_string(path)==before,"failed start keeps old run")
+  store.test_fail_write=false
+  var r=await store.start_hero(snapshot,1)
+  check(r.ok and r.revision==2 and r.run_id==2,"create and hero selection atomically committed")
+  check((await Store.new(path).start_hero(snapshot,1)).revision==2,"lost hero start acknowledgement retry")
+  check((await store.commit(snapshot,1)).status=="conflict","commit cannot impersonate hero-start retry")
+  check((await store.commit_walk(snapshot,1)).status=="conflict","walk cannot impersonate hero-start retry")
+  var competing=World.new_run(9,20);competing.act(hero)
+  check((await Store.new(path).start_hero(competing.save_data(),1)).status=="conflict","second writer stale new hero rejected")
+  var malformed=snapshot.duplicate(true);malformed.actions.append("hero_scholar")
+  check((await store.commit(malformed,2)).status=="invalid","cannot append another hero mid-run")
+  check(selected.step(Vector2i.RIGHT).get("changed",false),"selected hero can move")
+  check((await store.commit(selected.save_data(),2)).ok,"normal single action after selection")
+  var loaded=await Store.new(path).read()
+  check(loaded.ok and loaded.snapshot.actions[0]==hero and World.from_data(loaded.snapshot).save_data()==selected.save_data(),"fresh read retains hero replay")
+  DirAccess.remove_absolute(path)
