@@ -2,8 +2,8 @@
 (function(root){
 'use strict';
 const KEY='magic-tower.endless.v1', LOCK='magic-tower.endless.v1.write', MAX=2*1024*1024;
-const SUPPORTED_VERSIONS=Object.freeze([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]);
-const WALK_VERSIONS=Object.freeze([10,11,12,13,14,15,16,17,18,19,20,21]);
+const SUPPORTED_VERSIONS=Object.freeze([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22]);
+const WALK_VERSIONS=Object.freeze([10,11,12,13,14,15,16,17,18,19,20,21,22]);
 const MILESTONES=Object.freeze([3,8,15,30,50]);
 const LEGACIES=Object.freeze(['kit','coin','mind']);
 const COSTS=Object.freeze({kit:1,coin:2,mind:2});
@@ -15,7 +15,7 @@ const rulesVersion=v=>integer(v)&&SUPPORTED_VERSIONS.includes(v);
 function snapshot(s){return exact(s,['version','mode','seed','actions'])&&rulesVersion(s.version)&&s.mode==='endless'&&integer(s.seed,0,2147483647)&&Array.isArray(s.actions)&&s.actions.length<=100000&&s.actions.every(a=>typeof a==='string'&&a.length>0&&a.length<=40);}
 const initialStart=s=>s.version<20&&s.actions.length===0;
 const initialHero=s=>s.version===20&&s.actions.length===1&&HERO_ACTIONS.includes(s.actions[0]);
-const initialLegacy=s=>s.version===21&&s.actions.length===2&&HERO_ACTIONS.includes(s.actions[0])&&['legacy_none',...LEGACIES.map(x=>'legacy_'+x)].includes(s.actions[1]);
+const initialLegacy=s=>[21,22].includes(s.version)&&s.actions.length===2&&HERO_ACTIONS.includes(s.actions[0])&&['legacy_none',...LEGACIES.map(x=>'legacy_'+x)].includes(s.actions[1]);
 const hasCommitEvent=s=>s.actions.length>0&&!initialHero(s)&&!initialLegacy(s);
 function activeInitialized(s){
  if(s.version<20)return true;
@@ -41,7 +41,7 @@ function validSettlement(e){
 function valid(e){
  if(!e||typeof e!=='object')return false;
  if(e.version===1)return exact(e,['version','revision','run_id','active','finished','records'])&&validBase(e)&&(e.active===null||e.active.version<21)&&e.records.every(r=>(r.rule_version||1)<21);
- return e.version===2&&exact(e,['version','revision','run_id','active','finished','records','profile','settlement'])&&validBase(e)&&validProfile(e.profile)&&validSettlement(e)&&(e.active===null||e.active.version!==21||e.active.actions[1]==='legacy_none'||e.profile.unlocks.includes(e.active.actions[1].slice(7)));
+ return e.version===2&&exact(e,['version','revision','run_id','active','finished','records','profile','settlement'])&&validBase(e)&&validProfile(e.profile)&&validSettlement(e)&&(e.active===null||![21,22].includes(e.active.version)||e.active.actions[1]==='legacy_none'||e.profile.unlocks.includes(e.active.actions[1].slice(7)));
 }
 const fresh=()=>({version:2,revision:0,run_id:0,active:null,finished:false,records:[],profile:freshProfile(),settlement:{}});
 const normalize=e=>e.version===1?{...copy(e),version:2,profile:freshProfile(),settlement:{}}:copy(e);
@@ -83,7 +83,7 @@ function transition(e,op,a){
   n.active=copy(s);
  }else if(op==='finish'){
   if(e.active===null||e.finished||!same(s,e.active)||!record(a.record)||a.record.run_id!==e.run_id||a.record.seed!==s.seed||(a.record.rule_version===undefined?1:a.record.rule_version)!==s.version)return error('invalid');
-  const awarded=s.version===21?MILESTONES.filter(m=>m<=a.record.max_floor&&!e.profile.milestones.includes(m)):[];
+  const awarded=[21,22].includes(s.version)?MILESTONES.filter(m=>m<=a.record.max_floor&&!e.profile.milestones.includes(m)):[];
   n.profile.milestones=[...e.profile.milestones,...awarded];n.finished=true;
   n.settlement={run_id:e.run_id,awarded,balance_after:points(n.profile)};
   n.records.push(copy(a.record));n.records.sort((a,b)=>b.max_floor-a.max_floor||b.kills-a.kills||b.gold-a.gold||a.run_id-b.run_id);n.records=n.records.slice(0,10);

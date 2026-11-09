@@ -36,13 +36,13 @@ func snapshot_shape(s)->bool:
  return true
 func initial_start(s:Dictionary)->bool:return int(s.version)<20 and s.actions.is_empty()
 func initial_hero(s:Dictionary)->bool:return int(s.version)==20 and s.actions.size()==1 and s.actions[0] in ["hero_warden","hero_ranger","hero_scholar"]
-func initial_legacy(s:Dictionary)->bool:return int(s.version)==21 and s.actions.size()==2 and s.actions[0] in ["hero_warden","hero_ranger","hero_scholar"] and s.actions[1] in ["legacy_none","legacy_kit","legacy_coin","legacy_mind"]
+func initial_legacy(s:Dictionary)->bool:return int(s.version) in [21,22] and s.actions.size()==2 and s.actions[0] in ["hero_warden","hero_ranger","hero_scholar"] and s.actions[1] in ["legacy_none","legacy_kit","legacy_coin","legacy_mind"]
 func active_initialized(s:Dictionary)->bool:
  if int(s.version)<20:return true
  if s.actions.is_empty() or s.actions[0] not in ["hero_warden","hero_ranger","hero_scholar"]:return false
  for code in s.actions.slice(1):
   if code.begins_with("hero_"):return false
- if int(s.version)==21:
+ if int(s.version) in [21,22]:
   if s.actions.size()<2 or s.actions[1] not in ["legacy_none","legacy_kit","legacy_coin","legacy_mind"]:return false
   for code in s.actions.slice(2):
    if code.begins_with("legacy_"):return false
@@ -98,7 +98,7 @@ func valid_envelope(e)->bool:
    if int(r.get("rule_version",1))>=21:return false
   return true
  if e.get("version")!=2 or not exact(e,["version","revision","run_id","active","finished","records","profile","settlement"]) or not valid_base(e) or not valid_profile(e.profile) or not valid_settlement(e):return false
- if e.active!=null and int(e.active.version)==21:
+ if e.active!=null and int(e.active.version) in [21,22]:
   var id:String=str(e.active.actions[1]).trim_prefix("legacy_")
   if id!="none" and id not in e.profile.unlocks:return false
  return true
@@ -123,7 +123,7 @@ func validated(s:Dictionary):
  if w!=null:cache_world=w;cache_snapshot=s.duplicate(true)
  return w
 func validated_walk(base:Dictionary,s:Dictionary):
- if not snapshot_shape(base) or not snapshot_shape(s) or not int(base.version) in [10,11,12,13,14,15,16,17,18,19,20,21] or s.version!=base.version or base.seed!=s.seed:return null
+ if not snapshot_shape(base) or not snapshot_shape(s) or not int(base.version) in [10,11,12,13,14,15,16,17,18,19,20,21,22] or s.version!=base.version or base.seed!=s.seed:return null
  var count:int=s.actions.size()-base.actions.size()
  if count<1 or count>224 or s.actions.slice(0,base.actions.size())!=base.actions:return null
  for code in s.actions.slice(base.actions.size()):
@@ -204,7 +204,7 @@ func write(operation:String,s:Dictionary,expected:int)->Dictionary:
  # Validate before writes; clone/apply-one never trusts a new history prefix.
  var w=null
  if operation=="commit_walk":
-  if not int(s.version) in [10,11,12,13,14,15,16,17,18,19,20,21]:return fail("invalid")
+  if not int(s.version) in [10,11,12,13,14,15,16,17,18,19,20,21,22]:return fail("invalid")
   var acknowledged:bool=current.status=="active" and current.snapshot==s and expected==current.revision-1
   if acknowledged:w=validated(s)
   else:
@@ -277,7 +277,7 @@ func native_write_locked(operation:String,a:Dictionary)->Dictionary:
   return save_native_envelope(unlocked)
  var s:Dictionary=a.snapshot
  if operation=="finish" and e.finished and e.active==s and expected<=int(e.revision):return result(e)
- if not e.finished and e.active==s and expected==int(e.revision)-1 and ((operation=="start" and initial_start(s)) or (operation=="start_hero" and initial_hero(s)) or (operation=="start_legacy" and initial_legacy(s)) or (operation=="commit" and has_commit_event(s)) or (operation=="commit_walk" and int(s.version) in [10,11,12,13,14,15,16,17,18,19,20,21] and has_commit_event(s))):return result(e)
+ if not e.finished and e.active==s and expected==int(e.revision)-1 and ((operation=="start" and initial_start(s)) or (operation=="start_hero" and initial_hero(s)) or (operation=="start_legacy" and initial_legacy(s)) or (operation=="commit" and has_commit_event(s)) or (operation=="commit_walk" and int(s.version) in [10,11,12,13,14,15,16,17,18,19,20,21,22] and has_commit_event(s))):return result(e)
  if expected!=int(e.revision):return fail("conflict")
  if e.revision>=MAX_COUNTER:return fail("limit")
  var n=e.duplicate(true);n.revision=int(n.revision)+1
@@ -303,7 +303,7 @@ func native_write_locked(operation:String,a:Dictionary)->Dictionary:
  elif operation=="finish":
   if e.active==null or e.finished or e.active!=s or not valid_record(a.record) or a.record.run_id!=e.run_id or a.record.get("rule_version",1)!=s.version:return fail("invalid")
   var awarded:Array=[]
-  if int(s.version)==21:
+  if int(s.version) in [21,22]:
    for milestone in MILESTONES:
     if milestone<=int(a.record.max_floor) and milestone not in e.profile.milestones:awarded.append(milestone)
   n.profile.milestones.append_array(awarded);n.finished=true
