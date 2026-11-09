@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export safe camp return and branched maps release
+      - name: Verify and export persistent equipment release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower verified safe camp return and branched maps release\nGame source: 809d2e48de277bda4a3e2ba64c511bff50569939\nWeb deployment source: %s\nNative v10 legal two-floor play, keyboard and mouse safe camp return, sealed door reward, paired stairs and reload verified. Real Chrome production storage passed 163 checks across ten rule versions. Independent 384-map topology audit and four legal 100-floor manual-versus-return replay pairs passed. Return reduces input, preserves all actual walking, never crosses interactions or stairs. Fifth genuine geometry family; economy remains generous. Device-local rankings only. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nOlder journeys preserve their original rules. Explicit new journey required for v10. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower verified persistent equipment release\nGame source: 6f17da13f659b4e94b718ecf847a8fab62a8223c\nWeb deployment source: %s\nNative v10 restore and v11 legal purchases, non-auto-equipping, both equipment combat results, HUD permanent versus combat stats, camp-only switching, original icons and reload verified. Real Chrome production storage passed 195 checks across eleven rule versions. Twelve legal 100-floor equipment trajectories and independent six 50-floor policies passed. Overpowered mantle candidate was rejected and rerun with defence penalty. Equipment has explicit trade-offs, not solved economic balance; gold remains generous. Device-local rankings only. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nOlder journeys preserve their original rules. Explicit new journey required for v11. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output

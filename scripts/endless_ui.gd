@@ -1,6 +1,7 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
 const Enemies7=preload("res://scripts/endless_enemy_v7_art.gd")
+const GearArt=preload("res://scripts/endless_gear_art.gd")
 const Props=preload("res://scripts/endless_interaction_art.gd")
 const Actors=preload("res://scripts/endless_actor_art.gd")
 const Symbols=preload("res://scripts/map_symbols.gd")
@@ -107,6 +108,7 @@ func transact(kind:String,value,confirmed=false):
  if str(value).begins_with("tactic_") and kind=="act":open_build();modal_notice=notice
  if str(value).begins_with("enc_") and kind=="act":open_supply_panel("encounter");modal_notice=notice
  if str(value).begins_with("job_") and kind=="act":open_supply_panel("contract");modal_notice=notice
+ if (str(value).begins_with("buy_") or str(value).begins_with("gear_")) and kind=="act":open_supply_panel("gear");modal_notice=notice
  if str(value).begins_with("arm_") and kind=="act":open_supply_panel("items");modal_notice=notice
  if world.ended:
   await settle_run()
@@ -160,7 +162,10 @@ func _unhandled_input(event):
   if modal in ["encounter","contract"] and world!=null and world.has_method("contract_view"):
    if Rect2(160,102,250,38).has_point(p):open_supply_panel("encounter");return
    if Rect2(430,102,250,38).has_point(p):open_supply_panel("contract");return
-  if modal in ["encounter","contract","items"]:
+  if modal in ["items","gear"] and world!=null and world.has_method("gear_view"):
+   if Rect2(160,102,250,38).has_point(p):open_supply_panel("items");return
+   if Rect2(430,102,250,38).has_point(p):open_supply_panel("gear");return
+  if modal in ["encounter","contract","items","gear"]:
    if Rect2(910,687,250,45).has_point(p):modal="";return
    for i in choices.size():
     if Rect2(185,425+i*70,910,62).has_point(p):await transact("act",choices[i].id);return
@@ -206,11 +211,13 @@ func _unhandled_input(event):
   if modal!="":
    if event.keycode==KEY_TAB and modal in ["encounter","contract"] and world!=null and world.has_method("contract_view"):
     open_supply_panel("contract" if modal=="encounter" else "encounter");return
+   if event.keycode==KEY_TAB and modal in ["items","gear"] and world!=null and world.has_method("gear_view"):
+    open_supply_panel("gear" if modal=="items" else "items");return
    if event.keycode==KEY_ESCAPE:
     if modal=="start":get_tree().change_scene_to_file("res://main.tscn")
     else:modal=""
    elif event.keycode==KEY_ENTER:await confirm_modal()
-   elif modal in ["choices","case","build","encounter","contract","items"] and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():await transact("act",choices[event.keycode-KEY_1].id)
+   elif modal in ["choices","case","build","encounter","contract","items","gear"] and event.keycode>=KEY_1 and event.keycode<KEY_1+choices.size():await transact("act",choices[event.keycode-KEY_1].id)
    return
   if event.keycode==KEY_T:await start_camp_return();return
   if event.keycode==KEY_SPACE:center_camera();return
@@ -313,9 +320,15 @@ func _draw():
   draw_hero(c);draw_rect(Rect2(c-Vector2(30,30),Vector2(60,60)),TEAL,false,2)
  panel(Rect2(752,72,504,704))
  var stats=[["生命",world.hp],["攻击",world.atk],["防御",world.defense],["金币",world.gold],["钥匙",world.keys],["击杀",world.kills]]
+ if world.has_method("gear_view"):
+  stats[1][0]="常驻攻击";stats[2][0]="常驻防御"
  for i in stats.size():
   var p=Vector2(768+(i%3)*160,96+(i/3)*72)
   text(p,str(stats[i][0]),15,TEAL);text(p+Vector2(0,29),str(stats[i][1]),25)
+ if world.has_method("gear_view"):
+  var combat:Dictionary=world.gear_view()
+  text(Vector2(928,147),"实战 %d" % int(combat.effective_atk),14,TEAL)
+  text(Vector2(1088,147),"实战 %d" % int(combat.effective_def),14,TEAL)
  var overview:Dictionary=world.summary() if world.has_method("summary") else {}
  if not overview.is_empty():
   text(Vector2(768,239),str(overview.get("layout","双路线远征")),17,GOLD)
@@ -338,7 +351,7 @@ func _draw():
   panel(Rect2(950,354,284,32),Color("365347"));text(Vector2(958,376),"G 成长 / 全旅程预算",15,GOLD)
  if world.has_method("encounter_view"):
   panel(Rect2(950,396,138,32),Color("293e50"));text(Vector2(958,418),"R 遭遇/订单" if world.has_method("contract_view") else "R 营地遭遇",15,GOLD)
-  panel(Rect2(1096,396,138,32),Color("293e50"));text(Vector2(1104,418),"I 战斗道具",15,GOLD)
+  panel(Rect2(1096,396,138,32),Color("293e50"));text(Vector2(1104,418),"I 道具/装备" if world.has_method("gear_view") else "I 战斗道具",15,GOLD)
  if not overview.is_empty():
   var line_y=456
   for route in overview.get("routes",[]):
@@ -402,6 +415,7 @@ func tooltip_layout(content:String,desired:Vector2)->Rect2:
  return Rect2(Vector2(clampf(desired.x,20,1260-width),clampf(desired.y,70,780-height)),Vector2(width,height))
 
 func draw_modal():
+ if modal=="gear":draw_gear_panel();return
  if modal in ["encounter","contract","items"]:draw_supply_panel();return
  if modal=="growth":draw_growth();return
  if modal=="case":draw_case();return
@@ -422,6 +436,7 @@ func draw_modal():
   "choices":title="选择行动";body=""
  if modal=="help" and world!=null and world.has_method("growth_view"):body=growth_help_text()
  if modal=="help" and world!=null and world.has_method("contract_view"):body=body.replace("R营地遭遇", "R遭遇/订单（Tab切换）")
+ if modal=="help" and world!=null and world.has_method("gear_view"):body=body.replace("I道具", "I道具/装备（Tab切换）")
  if modal=="help" and world!=null and world.has_method("camp_return_view"):body=body.replace("右拖地图，空格回角色", "T安全回营（一次保存），空格回角色")
  text(Vector2(280,190),title,26,GOLD)
  if modal=="choices":
@@ -523,20 +538,21 @@ func draw_build():
 
 func open_supply_panel(kind:String):
  if world==null:return
- var view_method={"encounter":"encounter_view","contract":"contract_view","items":"item_view"}.get(kind,"item_view")
- var option_method={"encounter":"encounter_options","contract":"contract_options","items":"item_options"}.get(kind,"item_options")
+ var view_method={"encounter":"encounter_view","contract":"contract_view","items":"item_view","gear":"gear_view"}.get(kind,"item_view")
+ var option_method={"encounter":"encounter_options","contract":"contract_options","items":"item_options","gear":"gear_options"}.get(kind,"item_options")
  if not world.has_method(view_method):notice="此旧规则旅程没有这项内容；可继续旧局或明确新开局。";return
  walk.clear();choices=world.call(option_method) if world.has_method(option_method) else world.call(view_method).get("options",[]);modal=kind;modal_notice="";queue_redraw()
 func draw_supply_panel():
  var data:Dictionary=world.call({"encounter":"encounter_view","contract":"contract_view","items":"item_view"}[modal])
  panel(Rect2(0,0,1280,800),Color(0,0,0,0.70));panel(Rect2(120,85,1040,665),Color("152736"))
- var tabbed:bool=modal in ["encounter","contract"] and world.has_method("contract_view")
+ var gear_tabs:bool=modal=="items" and world.has_method("gear_view")
+ var tabbed:bool=(modal in ["encounter","contract"] and world.has_method("contract_view")) or gear_tabs
  if tabbed:
   for i in 2:
-   var active:bool=(modal=="encounter" and i==0) or (modal=="contract" and i==1)
+   var active:bool=(modal in ["encounter","items"] and i==0) or (modal=="contract" and i==1)
    panel(Rect2(160+i*270,102,250,38),Color("365347") if active else Color("293e50"))
-   text(Vector2(174+i*270,128),["本层遭遇","路线委托"][i],19,GOLD if active else INK)
-  text(Vector2(725,128),"Tab 切换 · 不会自动接单",15,TEAL)
+   text(Vector2(174+i*270,128),(["消耗品","持久装备"] if gear_tabs else ["本层遭遇","路线委托"])[i],19,GOLD if active else INK)
+  text(Vector2(725,128),"Tab 切换 · 预览不会购买/装备" if gear_tabs else "Tab 切换 · 不会自动接单",15,TEAL)
  var heading=str(data.get("title","营地选择"))
  if modal=="contract":heading=contract_heading(data)
  text(Vector2(160,180 if tabbed else 140),heading,26,GOLD)
@@ -631,3 +647,33 @@ func start_camp_return():
   notice="回营保存未确认，位置未前进：%s。按L核对已存旅程。" % str(result.get("status","unknown"));queue_redraw();return
  world=candidate;revision=int(result.revision);records=result.get("records",records);center_camera()
  notice="已沿%d格安全空路回到本层商人旁；每步均已记录。" % int(view.get("steps",0));queue_redraw()
+
+func gear_entry_status(entry:Dictionary)->String:
+ if entry.get("equipped",false):return "已穿戴 · 重穿不收费"
+ if entry.get("owned",false):return "已拥有 · 营地免费切换"
+ return "一次购买 %d金币 · 不自动穿戴" % int(entry.get("price",40))
+func draw_gear_panel():
+ var data:Dictionary=world.gear_view()
+ panel(Rect2(0,0,1280,800),Color(0,0,0,0.70));panel(Rect2(120,85,1040,665),Color("152736"))
+ for i in 2:
+  panel(Rect2(160+i*270,102,250,38),Color("365347") if i==1 else Color("293e50"))
+  text(Vector2(174+i*270,128),["消耗品","持久装备"][i],19,GOLD if i==1 else INK)
+ text(Vector2(725,128),"Tab 切换 · 预览不会购买/装备",15,TEAL)
+ text(Vector2(160,180),"持久装备 · 可不装，仅一件生效",26,GOLD)
+ text(Vector2(160,212),"商人旁购买、免费切换或卸下。购买不自动穿；不会随战斗消耗。",17,INK)
+ var entries:Array=data.get("entries",[])
+ for i in mini(2,entries.size()):
+  var entry:Dictionary=entries[i];var x=160+i*490
+  panel(Rect2(x,230,470,164),Color("233c49"))
+  GearArt.draw_gear(self,Vector2(x+54,280),str(entry.id),64)
+  text(Vector2(x+100,260),str(entry.name),22,GOLD)
+  draw_wrapped(gear_entry_status(entry),Vector2(x+100,287),350,15,TEAL,2)
+  var effects=entry.get("effects",[])
+  var effect_text="\n".join(effects) if effects is Array else str(effects)
+  draw_wrapped(effect_text,Vector2(x+18,333),435,17,INK,3)
+ text(Vector2(160,414),"当前实战 攻击%d / 防御%d（常驻%d / %d）；%s" % [int(data.effective_atk),int(data.effective_def),int(data.base_atk),int(data.base_def),str(data.get("status",""))],15,TEAL)
+ for i in mini(3,choices.size()):
+  panel(Rect2(185,425+i*70,910,62),Color("2a4051"))
+  draw_wrapped("%d  %s" % [i+1,str(choices[i].label)],Vector2(200,451+i*70),880,17,INK,2)
+ if modal_notice!="":draw_wrapped(modal_notice,Vector2(160,665),720,15,Color("efb18e"),2)
+ panel(Rect2(910,687,250,45),Color("384152"));text(Vector2(928,715),"关闭 · Esc",18)
