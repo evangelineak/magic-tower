@@ -3,7 +3,7 @@
 'use strict';
 const KEY='magic-tower.endless.v1', LOCK='magic-tower.endless.v1.write', MAX=2*1024*1024;
 // Kept in parity with the explicit GDScript router by the protocol test.
-const SUPPORTED_VERSIONS=Object.freeze([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]);
+const SUPPORTED_VERSIONS=Object.freeze([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]);
 const rulesVersion=v=>Number.isSafeInteger(v)&&SUPPORTED_VERSIONS.includes(v);
 const integer=(v,a,b)=>Number.isSafeInteger(v)&&v>=a&&v<=b;
 const exact=(v,keys)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));
@@ -21,7 +21,7 @@ function transition(e,op,a){
  const s=a.snapshot;
  // A lost finish acknowledgement is idempotent, but only for the same current run.
  if(op==='finish'&&e.finished&&same(s,e.active)&&a.expected_revision===e.revision-1)return {ok:true,envelope:e,write:false};
- if(!e.finished&&same(s,e.active)&&a.expected_revision===e.revision-1&&((op==='start'&&s.actions.length===0)||(op==='commit'&&s.actions.length>0)||(op==='commit_walk'&&[10,11,12,13,14,15].includes(s.version)&&s.actions.length>0)))return {ok:true,envelope:e,write:false};
+ if(!e.finished&&same(s,e.active)&&a.expected_revision===e.revision-1&&((op==='start'&&s.actions.length===0)||(op==='commit'&&s.actions.length>0)||(op==='commit_walk'&&[10,11,12,13,14,15,16].includes(s.version)&&s.actions.length>0)))return {ok:true,envelope:e,write:false};
  if(a.expected_revision!==e.revision)return error('conflict');
  if(e.revision>=10000000)return error('limit');
  const n=JSON.parse(JSON.stringify(e));n.revision++;
@@ -33,7 +33,7 @@ function transition(e,op,a){
   n.active=s;
  }else if(op==='commit_walk'){
   // Shape/CAS only. Godot verifies the actual safe camp route before this bridge.
-  if(e.active===null||e.finished||![10,11,12,13,14,15].includes(s.version)||e.active.version!==s.version||s.seed!==e.active.seed||!e.active.actions.every((v,i)=>v===s.actions[i]))return error('invalid');
+  if(e.active===null||e.finished||![10,11,12,13,14,15,16].includes(s.version)||e.active.version!==s.version||s.seed!==e.active.seed||!e.active.actions.every((v,i)=>v===s.actions[i]))return error('invalid');
   const suffix=s.actions.slice(e.active.actions.length);
   if(suffix.length<1||suffix.length>224||!suffix.every(v=>['U','D','L','R'].includes(v)))return error('invalid');
   n.active=s;
