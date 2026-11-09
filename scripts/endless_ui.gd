@@ -1,5 +1,6 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const Props=preload("res://scripts/endless_interaction_art.gd")
 const Actors=preload("res://scripts/endless_actor_art.gd")
 const Symbols=preload("res://scripts/map_symbols.gd")
 const CELL=64.0
@@ -71,10 +72,10 @@ func reload_run():
   notice="读取失败：%s。没有覆盖存档。按L重试。"%str(r.get("status","unknown"))
   if str(r.get("status","")) in ["empty","missing"]:modal="start";revision=int(r.get("revision",0))
  center_camera();queue_redraw()
-func start_run(seed_value:int,rule_version:int=4):
+func start_run(seed_value:int,rule_version:int=0):
  if busy:return
  busy=true;walk.clear()
- var candidate=WorldType.new_run(seed_value,rule_version)
+ var candidate=WorldType.new_run(seed_value,WorldType.CURRENT_VERSION if rule_version==0 else rule_version)
  var r:Dictionary=await store.start(candidate.save_data(),revision)
  busy=false
  if r.get("ok",false):
@@ -222,29 +223,7 @@ func draw_hero(c:Vector2):
 func draw_token(c:Vector2,t:String):
  if t in ["g","b","w","V"]:
   Actors.draw_enemy(self,c,t,64);return
- if t=="C":
-  panel(Rect2(c+Vector2(-23,-17),Vector2(46,38)),Color("94724e"))
-  draw_rect(Rect2(c+Vector2(-23,-17),Vector2(46,38)),GOLD,false,3)
-  panel(Rect2(c+Vector2(-4,-19),Vector2(8,42)),Color("ded4af"))
-  draw_circle(c+Vector2(0,2),8,Color("bc6b68"));draw_line(c+Vector2(-4,2),c+Vector2(4,2),GOLD,2)
-  return
- if t=="b":
-  draw_colored_polygon(PackedVector2Array([c+Vector2(-27,-7),c+Vector2(-11,-22),c+Vector2(0,-12),c+Vector2(11,-22),c+Vector2(27,-7),c+Vector2(16,11),c+Vector2(0,20),c+Vector2(-16,11)]),Color("bb9771"))
-  draw_circle(c+Vector2(-8,-3),4,Color("172735"));draw_circle(c+Vector2(8,-3),4,Color("172735"))
-  draw_line(c+Vector2(-20,19),c+Vector2(20,19),Color("a9bec9"),4)
-  draw_colored_polygon(PackedVector2Array([c+Vector2(17,13),c+Vector2(29,19),c+Vector2(17,25)]),INK)
-  return
- if t=="w":
-  draw_colored_polygon(PackedVector2Array([c+Vector2(0,-29),c+Vector2(-16,-9),c+Vector2(-25,26),c+Vector2(0,18),c+Vector2(25,26),c+Vector2(16,-9)]),Color("8b718f"))
-  panel(Rect2(c+Vector2(-7,-12),Vector2(14,12)),Color("172735"));draw_line(c+Vector2(-4,-7),c+Vector2(4,-7),TEAL,3)
-  draw_line(c+Vector2(23,-15),c+Vector2(23,25),GOLD,3);draw_circle(c+Vector2(23,-21),6,TEAL)
-  return
- if t=="g" and world!=null and world.rule_version()>=2:
-  draw_colored_polygon(PackedVector2Array([c+Vector2(-25,-16),c+Vector2(-9,-27),c+Vector2(9,-27),c+Vector2(25,-16),c+Vector2(19,26),c+Vector2(-19,26)]),Color("647b8c"))
-  draw_line(c+Vector2(-9,-11),c+Vector2(9,-11),GOLD,3)
-  draw_colored_polygon(PackedVector2Array([c+Vector2(-23,0),c+Vector2(8,0),c+Vector2(8,21),c+Vector2(-7,30),c+Vector2(-23,21)]),Color("496b7b"))
-  draw_line(c+Vector2(-18,5),c+Vector2(3,23),GOLD,3);draw_line(c+Vector2(25,-23),c+Vector2(25,27),INK,4)
-  return
+ if Props.draw_token(self,c,t,64):return
  if Symbols.draw_icon(self,t,Rect2(c-Vector2(29,29),Vector2(58,58))):return
  match t:
   "#":panel(Rect2(c-Vector2(28,28),Vector2(56,56)),Color("293b4b"));draw_line(c+Vector2(-25,-19),c+Vector2(25,-19),Color("3c5160"),2)
@@ -344,14 +323,9 @@ func _draw():
   for line in info.get("lines",[]):
    if str(line)!=str(info.get("title","")):content+="\n"+str(line)
   if content!="":
-   var anchor=ORIGIN+Vector2(hover-camera)*CELL+Vector2(66,8)
-   anchor.x=clampf(anchor.x,30,935);anchor.y=clampf(anchor.y,80,560)
-   var rows=1;var partial=""
-   for ch in content:
-    if ch=="\n" or font.get_string_size(partial+ch,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x>290:rows+=1;partial=""
-    if ch!="\n":partial+=ch
-   var height=mini(205,22+rows*21)
-   panel(Rect2(anchor,Vector2(315,height)),Color("07121c"));draw_rect(Rect2(anchor,Vector2(315,height)),TEAL,false,1);draw_wrapped(content,anchor+Vector2(12,23),290,15,INK,8)
+   var box=tooltip_layout(content,ORIGIN+Vector2(hover-camera)*CELL+Vector2(66,8))
+   panel(box,Color("07121c"));draw_rect(box,TEAL,false,1)
+   draw_wrapped(content,box.position+Vector2(12,23),box.size.x-24,15,INK,14)
  if battle_time>0:
   panel(Rect2(150,220,560,250),Color("252432"));text(Vector2(180,258),"战斗结算",23,GOLD)
   draw_hero(Vector2(260,332));draw_token(Vector2(585,332),str(battle.get("token","g")))
@@ -362,6 +336,20 @@ func _draw():
    text(Vector2(180,435),"实际承伤%d · 胜后恢复%d · 净损耗%d"%[int(battle.damage),int(battle.heal_after),int(battle.get("net_damage",battle.damage))],14,TEAL)
   text(Vector2(180,457),"示意动画，结算仅一次 · 点击或按键跳过",13,TEAL)
  if busy:panel(Rect2(380,15,370,43),Color("293e50"));text(Vector2(397,43),"正在安全保存，请稍候……",18,GOLD)
+func tooltip_layout(content:String,desired:Vector2)->Rect2:
+ # Keep complete battle reasoning beside its tile, including narrow-view edges.
+ var width:=360.0
+ var rows:=1
+ var partial:=""
+ for ch in content:
+  if ch=="\n":
+   rows+=1;partial="";continue
+  if font.get_string_size(partial+ch,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x>width-24:
+   rows+=1;partial=""
+  partial+=ch
+ var height:=float(22+mini(rows,14)*21)
+ return Rect2(Vector2(clampf(desired.x,20,1260-width),clampf(desired.y,70,780-height)),Vector2(width,height))
+
 func draw_modal():
  if modal=="case":draw_case();return
  if modal=="build":draw_build();return
@@ -369,7 +357,7 @@ func draw_modal():
  var title="确认"
  var body=notice
  match modal:
-  "start":title="踏入更深的塔";body="15×15地图，安全寻路与相邻点击。新局使用v4：先取训练，再比较重甲短路与轻敌长路的损伤。封存补给可立即使用，也可承担两层运输委托；中途允许拆封。强敌宝库可成长后回访。第四层商人处有可推理的信使奇遇，Q查看历史图。B查看英雄战术，在商人旁切换；训练上限3级，遗物可额外提高2级。旧v1/v2/v3旅程按原规则继续。无尽模式独立保存，不替换经典旅程。首版数值安全界限100万层、10万动作，达到动作界限仍可结算。"
+  "start":title="踏入更深的塔";body="15×15地图，安全寻路与相邻点击。新局使用v5，四类布局：先取训练，再比较重甲短路与轻敌长路的损伤。封存补给可立即使用，也可承担两层运输委托；中途允许拆封。强敌宝库可成长后回访。第四层商人处有可推理的信使奇遇，Q查看历史图。B查看英雄战术，在商人旁切换；训练上限3级，遗物可额外提高2级。旧v1至v4旅程按原规则继续。无尽模式独立保存，不替换经典旅程。首版数值安全界限100万层、10万动作，达到动作界限仍可结算。"
   "new":title="重新开始无尽旅程？";body="会替换当前无尽旅程。经典魔塔存档与已结算的本设备历史榜保留。"
   "retire":title="结束并结算本局？";body="结算后不能继续这次无尽旅程，成绩只保存在本设备。不是公开全球排名。"
   "ranking":title="本设备历史榜";body="仅本设备可见，不上传服务器；v1与v2规则不同，标注版本，不代表同难度竞技。"

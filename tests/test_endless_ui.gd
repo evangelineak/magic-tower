@@ -61,6 +61,11 @@ func reach_next(w):
 func run_tests():
  var ui=load("res://endless.tscn").instantiate();var memory=MemoryStore.new();ui.store=memory;root.add_child(ui)
  await process_frame
+ var tooltip=ui.tooltip_layout("路线\n实际承伤6，恢复4，净损2\n必须先活过本次战斗。",Vector2(1250,790))
+ check(tooltip.end.x<=1260 and tooltip.end.y<=780,"tooltip clamps to visible right/bottom bounds")
+ check(tooltip.size.y>=85,"tooltip height includes all explanation rows")
+ var long_tooltip=ui.tooltip_layout("解释\n".repeat(11),Vector2(0,0))
+ check(long_tooltip.position.x>=20 and long_tooltip.position.y>=70 and long_tooltip.size.y>205,"long tactical tooltip no longer clipped at old eight-line limit")
  check(ui.modal=="start" and ui.world==null,"fresh mode offers new independent journey")
  await ui.start_run(1,1)
  check(ui.world!=null and memory.writes==1,"new journey saved before showing")
@@ -159,8 +164,8 @@ func run_tests():
  await ui.transact("act","case_reward")
  check(ui.world.save_data()==snapshot_before,"early UI reward attempt rejected")
  ui.queue_redraw();await process_frame
- await ui.start_run(8)
- check(ui.world.rule_version()==4,"new default uses v4 build rules")
+ await ui.start_run(8,4)
+ check(ui.world.rule_version()==4,"explicit v4 journey keeps build rules")
  ui.open_build()
  check(ui.modal=="build" and ui.choices.is_empty(),"remote build panel is read-only")
  ui.modal="";await ui.map_click(Vector2i(2,1));ui.open_build()
@@ -179,5 +184,17 @@ func run_tests():
  check(ui.world.training_level==2 and ui.world.effective_level()==2,"normal skill choice also trains capped tactic level")
  ui.open_build();check(ui.choices.is_empty(),"cannot switch stance from shrine rather than merchant")
  ui.queue_redraw();await process_frame
+ for seed_value in range(4):
+  await ui.start_run(seed_value)
+  check(ui.world.rule_version()==5,"new UI uses current v5 rules")
+  check(ui.world.summary().routes.size()==2,"each layout presents two actual routes")
+  ui.modal="";await ui.map_click(Vector2i(2,1))
+  check(ui.world.pos==Vector2i(2,1),"v5 adjacent training pickup")
+  ui.open_build();check(ui.choices.size()==3,"v5 camp can select stance")
+  await ui.transact("act","tactic_brace")
+  await ui.reload_run()
+  check(ui.world.rule_version()==5 and ui.world.tactic=="brace","v5 UI persisted stance replay")
+  ui.modal="";ui.hover=Vector2i(3,2)
+  ui.queue_redraw();await process_frame
  ui.queue_free();await process_frame
  print("ENDLESS UI: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks]);quit(0 if failures==0 else 1)
