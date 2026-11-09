@@ -8,7 +8,7 @@ func check(ok:bool,label:String):
  if not ok:failures+=1;push_error(label)
 func _initialize():call_deferred("run")
 func run():
- for version in [10,11]:await run_version(version)
+ for version in [10,11,12]:await run_version(version)
  print("ENDLESS WALK STORE: %s (%d checks)"%["PASS" if failures==0 else "FAIL",checks])
  quit(0 if failures==0 else 1)
 func run_version(version:int):
@@ -31,8 +31,10 @@ func run_version(version:int):
  check((await store.commit_walk(extra.save_data(),r.revision)).status=="invalid","camp return plus extra move rejected")
  var old=target.duplicate(true);old.version=9
  check((await store.commit_walk(old,r.revision)).status=="invalid","v9 cannot use batch API")
- var switched=target.duplicate(true);switched.version=11 if version==10 else 10
- check((await store.commit_walk(switched,r.revision)).status=="invalid","walk cannot switch supported rules in same run")
+ for target_version in [10,11,12]:
+  if target_version==version:continue
+  var switched=target.duplicate(true);switched.version=target_version
+  check((await store.commit_walk(switched,r.revision)).status=="invalid","walk cannot switch supported rules in same run")
  var malformed=original.duplicate(true);malformed.actions.append("cargo_use")
  check((await store.commit_walk(malformed,r.revision)).status=="invalid","non-direction suffix rejected")
  check(FileAccess.get_file_as_string(path)==original_bytes,"all rejected batches preserve bytes")

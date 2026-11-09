@@ -1,0 +1,1555 @@
+{
+  "cases": 8610,
+  "checks": 101640,
+  "controlled_fixture": true,
+  "failures": [],
+  "note": "Independent small-step reference, not legal player progression; production preview only used as actual value",
+  "samples": [
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 32,
+        "combat_def": 14,
+        "damage": 2,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 32
+        },
+        "enemy_base_def": 0,
+        "gear": "",
+        "gear_reduction": 0,
+        "heal_after": 0,
+        "healed_turns": 0,
+        "item": "",
+        "item_reduction": 0,
+        "lines": [
+          "命中反伤立即致死：没有后续反击、胜利奖励或收割回复。",
+          "玩家实战攻32/防14；敌生命32/攻20/防0（战术后0）",
+          "玩家出手1次；反伤2，祭司实际回复0（0次）",
+          "已发生原伤害2，首反击总减免0；实际承伤2",
+          "胜后回复0，净损耗2；只有存活才领取22金币。",
+          "不能存活；确认后本局结束，反伤和反击按发生顺序停止。"
+        ],
+        "mechanic_note": "命中反伤立即致死：没有后续反击、胜利奖励或收割回复。",
+        "net_damage": 2,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 2,
+        "raw_damage": 2,
+        "reduction": 0,
+        "reflection_damage": 2,
+        "regen_total": 0,
+        "rounds": 1,
+        "survivable": false,
+        "tactic": "reap",
+        "termination_reason": "reflection_death",
+        "title": "棘甲守卫",
+        "token": "t",
+        "valid": true
+      },
+      "counter": 6,
+      "expected": {
+        "damage": 2,
+        "events": [
+          [
+            "hit",
+            32,
+            0
+          ],
+          [
+            "thorns",
+            2,
+            0
+          ]
+        ],
+        "heal_after": 0,
+        "regen": 0,
+        "rounds": 1,
+        "survivable": false,
+        "thorns": 2,
+        "valid": true
+      },
+      "hit": 32,
+      "hp": 2,
+      "mode": "reap",
+      "token": "t"
+    },
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 32,
+        "combat_def": 14,
+        "damage": 2,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 32
+        },
+        "enemy_base_def": 0,
+        "gear": "cloak",
+        "gear_reduction": 0,
+        "heal_after": 0,
+        "healed_turns": 0,
+        "item": "ward",
+        "item_reduction": 0,
+        "lines": [
+          "命中反伤立即致死：没有后续反击、胜利奖励或收割回复。",
+          "玩家实战攻32/防14；敌生命32/攻20/防0（战术后0）",
+          "玩家出手1次；反伤2，祭司实际回复0（0次）",
+          "已发生原伤害2，首反击总减免0；实际承伤2",
+          "胜后回复0，净损耗2；只有存活才领取22金币。",
+          "不能存活；确认后本局结束，反伤和反击按发生顺序停止。",
+          "实际战斗才消耗已备道具；拒战或取消确认不消耗。"
+        ],
+        "mechanic_note": "命中反伤立即致死：没有后续反击、胜利奖励或收割回复。",
+        "net_damage": 2,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 0,
+        "raw_damage": 2,
+        "reduction": 0,
+        "reflection_damage": 2,
+        "regen_total": 0,
+        "rounds": 1,
+        "survivable": false,
+        "tactic": "brace",
+        "termination_reason": "reflection_death",
+        "title": "棘甲守卫",
+        "token": "t",
+        "valid": true
+      },
+      "counter": 6,
+      "expected": {
+        "damage": 2,
+        "events": [
+          [
+            "hit",
+            32,
+            0
+          ],
+          [
+            "thorns",
+            2,
+            0
+          ]
+        ],
+        "heal_after": 0,
+        "regen": 0,
+        "rounds": 1,
+        "survivable": false,
+        "thorns": 2,
+        "valid": true
+      },
+      "hit": 32,
+      "hp": 2,
+      "mode": "all",
+      "token": "t"
+    },
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 32,
+        "combat_def": 14,
+        "damage": 2,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 32
+        },
+        "enemy_base_def": 0,
+        "gear": "",
+        "gear_reduction": 0,
+        "heal_after": 2,
+        "healed_turns": 0,
+        "item": "",
+        "item_reduction": 0,
+        "lines": [
+          "每次命中反伤2，击杀一击也反伤；先死无胜利奖励。",
+          "玩家实战攻32/防14；敌生命32/攻20/防0（战术后0）",
+          "玩家出手1次；反伤2，祭司实际回复0（0次）",
+          "已发生原伤害2，首反击总减免0；实际承伤2",
+          "胜后回复2，净损耗0；只有存活才领取22金币。"
+        ],
+        "mechanic_note": "每次命中反伤2，击杀一击也反伤；先死无胜利奖励。",
+        "net_damage": 0,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 2,
+        "raw_damage": 2,
+        "reduction": 0,
+        "reflection_damage": 2,
+        "regen_total": 0,
+        "rounds": 1,
+        "survivable": true,
+        "tactic": "reap",
+        "termination_reason": "victory",
+        "title": "棘甲守卫",
+        "token": "t",
+        "valid": true
+      },
+      "counter": 6,
+      "expected": {
+        "damage": 2,
+        "events": [
+          [
+            "hit",
+            32,
+            0
+          ],
+          [
+            "thorns",
+            2,
+            1
+          ]
+        ],
+        "heal_after": 2,
+        "regen": 0,
+        "rounds": 1,
+        "survivable": true,
+        "thorns": 2,
+        "valid": true
+      },
+      "hit": 32,
+      "hp": 3,
+      "mode": "reap",
+      "token": "t"
+    },
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 32,
+        "combat_def": 14,
+        "damage": 2,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 32
+        },
+        "enemy_base_def": 0,
+        "gear": "cloak",
+        "gear_reduction": 0,
+        "heal_after": 0,
+        "healed_turns": 0,
+        "item": "ward",
+        "item_reduction": 0,
+        "lines": [
+          "每次命中反伤2，击杀一击也反伤；先死无胜利奖励。",
+          "玩家实战攻32/防14；敌生命32/攻20/防0（战术后0）",
+          "玩家出手1次；反伤2，祭司实际回复0（0次）",
+          "已发生原伤害2，首反击总减免0；实际承伤2",
+          "胜后回复0，净损耗2；只有存活才领取22金币。",
+          "实际战斗才消耗已备道具；拒战或取消确认不消耗。"
+        ],
+        "mechanic_note": "每次命中反伤2，击杀一击也反伤；先死无胜利奖励。",
+        "net_damage": 2,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 0,
+        "raw_damage": 2,
+        "reduction": 0,
+        "reflection_damage": 2,
+        "regen_total": 0,
+        "rounds": 1,
+        "survivable": true,
+        "tactic": "brace",
+        "termination_reason": "victory",
+        "title": "棘甲守卫",
+        "token": "t",
+        "valid": true
+      },
+      "counter": 6,
+      "expected": {
+        "damage": 2,
+        "events": [
+          [
+            "hit",
+            32,
+            0
+          ],
+          [
+            "thorns",
+            2,
+            1
+          ]
+        ],
+        "heal_after": 0,
+        "regen": 0,
+        "rounds": 1,
+        "survivable": true,
+        "thorns": 2,
+        "valid": true
+      },
+      "hit": 32,
+      "hp": 3,
+      "mode": "all",
+      "token": "t"
+    },
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 3,
+        "combat_def": 19,
+        "damage": 0,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 34
+        },
+        "enemy_base_def": 0,
+        "gear": "",
+        "gear_reduction": 0,
+        "heal_after": 0,
+        "healed_turns": 0,
+        "item": "",
+        "item_reduction": 0,
+        "lines": [
+          "每轮回复抵消伤害，战斗无法结束：拒战，不扣生命或道具。",
+          "玩家实战攻3/防19；敌生命34/攻20/防0（战术后0）",
+          "玩家出手0次；反伤0，祭司实际回复0（0次）",
+          "已发生原伤害0，首反击总减免0；实际承伤0",
+          "胜后回复0，净损耗0；只有存活才领取22金币。"
+        ],
+        "mechanic_note": "每轮回复抵消伤害，战斗无法结束：拒战，不扣生命或道具。",
+        "net_damage": 0,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 0,
+        "raw_damage": 0,
+        "reduction": 0,
+        "reflection_damage": 0,
+        "regen_total": 0,
+        "rounds": 0,
+        "survivable": false,
+        "tactic": "none",
+        "termination_reason": "regeneration_stall",
+        "title": "回春祭司",
+        "token": "p",
+        "valid": false
+      },
+      "counter": 1,
+      "expected": {
+        "damage": 0,
+        "events": [
+          "repeat_enemy_state"
+        ],
+        "heal_after": 0,
+        "regen": 0,
+        "rounds": 0,
+        "survivable": false,
+        "thorns": 0,
+        "valid": false
+      },
+      "hit": 3,
+      "hp": 180,
+      "mode": "none",
+      "token": "p"
+    },
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 3,
+        "combat_def": 19,
+        "damage": 0,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 34
+        },
+        "enemy_base_def": 0,
+        "gear": "",
+        "gear_reduction": 0,
+        "heal_after": 0,
+        "healed_turns": 0,
+        "item": "",
+        "item_reduction": 0,
+        "lines": [
+          "每轮回复抵消伤害，战斗无法结束：拒战，不扣生命或道具。",
+          "玩家实战攻3/防19；敌生命34/攻20/防0（战术后0）",
+          "玩家出手0次；反伤0，祭司实际回复0（0次）",
+          "已发生原伤害0，首反击总减免0；实际承伤0",
+          "胜后回复0，净损耗0；只有存活才领取22金币。"
+        ],
+        "mechanic_note": "每轮回复抵消伤害，战斗无法结束：拒战，不扣生命或道具。",
+        "net_damage": 0,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 0,
+        "raw_damage": 0,
+        "reduction": 0,
+        "reflection_damage": 0,
+        "regen_total": 0,
+        "rounds": 0,
+        "survivable": false,
+        "tactic": "brace",
+        "termination_reason": "regeneration_stall",
+        "title": "回春祭司",
+        "token": "p",
+        "valid": false
+      },
+      "counter": 1,
+      "expected": {
+        "damage": 0,
+        "events": [
+          "repeat_enemy_state"
+        ],
+        "heal_after": 0,
+        "regen": 0,
+        "rounds": 0,
+        "survivable": false,
+        "thorns": 0,
+        "valid": false
+      },
+      "hit": 3,
+      "hp": 180,
+      "mode": "brace",
+      "token": "p"
+    },
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 4,
+        "combat_def": 19,
+        "damage": 30,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 34
+        },
+        "enemy_base_def": 0,
+        "gear": "",
+        "gear_reduction": 0,
+        "heal_after": 0,
+        "healed_turns": 30,
+        "item": "",
+        "item_reduction": 0,
+        "lines": [
+          "实际反击伤害>0才回3；完全格挡不回血，死亡后不回。",
+          "玩家实战攻4/防19；敌生命34/攻20/防0（战术后0）",
+          "玩家出手31次；反伤0，祭司实际回复90（30次）",
+          "已发生原伤害30，首反击总减免0；实际承伤30",
+          "胜后回复0，净损耗30；只有存活才领取22金币。"
+        ],
+        "mechanic_note": "实际反击伤害>0才回3；完全格挡不回血，死亡后不回。",
+        "net_damage": 30,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 0,
+        "raw_damage": 30,
+        "reduction": 0,
+        "reflection_damage": 0,
+        "regen_total": 90,
+        "rounds": 31,
+        "survivable": true,
+        "tactic": "none",
+        "termination_reason": "victory",
+        "title": "回春祭司",
+        "token": "p",
+        "valid": true
+      },
+      "counter": 1,
+      "expected": {
+        "damage": 30,
+        "events": [
+          [
+            "hit",
+            4,
+            30
+          ],
+          [
+            "counter",
+            1,
+            179
+          ],
+          [
+            "regen",
+            3,
+            33
+          ],
+          [
+            "hit",
+            4,
+            29
+          ],
+          [
+            "counter",
+            1,
+            178
+          ],
+          [
+            "regen",
+            3,
+            32
+          ],
+          [
+            "hit",
+            4,
+            28
+          ],
+          [
+            "counter",
+            1,
+            177
+          ],
+          [
+            "regen",
+            3,
+            31
+          ],
+          [
+            "hit",
+            4,
+            27
+          ],
+          [
+            "counter",
+            1,
+            176
+          ],
+          [
+            "regen",
+            3,
+            30
+          ],
+          [
+            "hit",
+            4,
+            26
+          ],
+          [
+            "counter",
+            1,
+            175
+          ],
+          [
+            "regen",
+            3,
+            29
+          ],
+          [
+            "hit",
+            4,
+            25
+          ],
+          [
+            "counter",
+            1,
+            174
+          ],
+          [
+            "regen",
+            3,
+            28
+          ],
+          [
+            "hit",
+            4,
+            24
+          ],
+          [
+            "counter",
+            1,
+            173
+          ],
+          [
+            "regen",
+            3,
+            27
+          ],
+          [
+            "hit",
+            4,
+            23
+          ],
+          [
+            "counter",
+            1,
+            172
+          ],
+          [
+            "regen",
+            3,
+            26
+          ],
+          [
+            "hit",
+            4,
+            22
+          ],
+          [
+            "counter",
+            1,
+            171
+          ],
+          [
+            "regen",
+            3,
+            25
+          ],
+          [
+            "hit",
+            4,
+            21
+          ],
+          [
+            "counter",
+            1,
+            170
+          ],
+          [
+            "regen",
+            3,
+            24
+          ],
+          [
+            "hit",
+            4,
+            20
+          ],
+          [
+            "counter",
+            1,
+            169
+          ],
+          [
+            "regen",
+            3,
+            23
+          ],
+          [
+            "hit",
+            4,
+            19
+          ],
+          [
+            "counter",
+            1,
+            168
+          ],
+          [
+            "regen",
+            3,
+            22
+          ],
+          [
+            "hit",
+            4,
+            18
+          ],
+          [
+            "counter",
+            1,
+            167
+          ],
+          [
+            "regen",
+            3,
+            21
+          ],
+          [
+            "hit",
+            4,
+            17
+          ],
+          [
+            "counter",
+            1,
+            166
+          ],
+          [
+            "regen",
+            3,
+            20
+          ],
+          [
+            "hit",
+            4,
+            16
+          ],
+          [
+            "counter",
+            1,
+            165
+          ],
+          [
+            "regen",
+            3,
+            19
+          ],
+          [
+            "hit",
+            4,
+            15
+          ],
+          [
+            "counter",
+            1,
+            164
+          ],
+          [
+            "regen",
+            3,
+            18
+          ],
+          [
+            "hit",
+            4,
+            14
+          ],
+          [
+            "counter",
+            1,
+            163
+          ],
+          [
+            "regen",
+            3,
+            17
+          ],
+          [
+            "hit",
+            4,
+            13
+          ],
+          [
+            "counter",
+            1,
+            162
+          ],
+          [
+            "regen",
+            3,
+            16
+          ],
+          [
+            "hit",
+            4,
+            12
+          ],
+          [
+            "counter",
+            1,
+            161
+          ],
+          [
+            "regen",
+            3,
+            15
+          ],
+          [
+            "hit",
+            4,
+            11
+          ],
+          [
+            "counter",
+            1,
+            160
+          ],
+          [
+            "regen",
+            3,
+            14
+          ],
+          [
+            "hit",
+            4,
+            10
+          ],
+          [
+            "counter",
+            1,
+            159
+          ],
+          [
+            "regen",
+            3,
+            13
+          ],
+          [
+            "hit",
+            4,
+            9
+          ],
+          [
+            "counter",
+            1,
+            158
+          ],
+          [
+            "regen",
+            3,
+            12
+          ],
+          [
+            "hit",
+            4,
+            8
+          ],
+          [
+            "counter",
+            1,
+            157
+          ],
+          [
+            "regen",
+            3,
+            11
+          ],
+          [
+            "hit",
+            4,
+            7
+          ],
+          [
+            "counter",
+            1,
+            156
+          ],
+          [
+            "regen",
+            3,
+            10
+          ],
+          [
+            "hit",
+            4,
+            6
+          ],
+          [
+            "counter",
+            1,
+            155
+          ],
+          [
+            "regen",
+            3,
+            9
+          ],
+          [
+            "hit",
+            4,
+            5
+          ],
+          [
+            "counter",
+            1,
+            154
+          ],
+          [
+            "regen",
+            3,
+            8
+          ],
+          [
+            "hit",
+            4,
+            4
+          ],
+          [
+            "counter",
+            1,
+            153
+          ],
+          [
+            "regen",
+            3,
+            7
+          ],
+          [
+            "hit",
+            4,
+            3
+          ],
+          [
+            "counter",
+            1,
+            152
+          ],
+          [
+            "regen",
+            3,
+            6
+          ],
+          [
+            "hit",
+            4,
+            2
+          ],
+          [
+            "counter",
+            1,
+            151
+          ],
+          [
+            "regen",
+            3,
+            5
+          ],
+          [
+            "hit",
+            4,
+            1
+          ],
+          [
+            "counter",
+            1,
+            150
+          ],
+          [
+            "regen",
+            3,
+            4
+          ],
+          [
+            "hit",
+            4,
+            0
+          ]
+        ],
+        "heal_after": 0,
+        "regen": 90,
+        "rounds": 31,
+        "survivable": true,
+        "thorns": 0,
+        "valid": true
+      },
+      "hit": 4,
+      "hp": 180,
+      "mode": "none",
+      "token": "p"
+    },
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 4,
+        "combat_def": 19,
+        "damage": 26,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 34
+        },
+        "enemy_base_def": 0,
+        "gear": "",
+        "gear_reduction": 0,
+        "heal_after": 0,
+        "healed_turns": 26,
+        "item": "",
+        "item_reduction": 0,
+        "lines": [
+          "实际反击伤害>0才回3；完全格挡不回血，死亡后不回。",
+          "玩家实战攻4/防19；敌生命34/攻20/防0（战术后0）",
+          "玩家出手28次；反伤0，祭司实际回复78（26次）",
+          "已发生原伤害27，首反击总减免1；实际承伤26",
+          "胜后回复0，净损耗26；只有存活才领取22金币。"
+        ],
+        "mechanic_note": "实际反击伤害>0才回3；完全格挡不回血，死亡后不回。",
+        "net_damage": 26,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 0,
+        "raw_damage": 27,
+        "reduction": 1,
+        "reflection_damage": 0,
+        "regen_total": 78,
+        "rounds": 28,
+        "survivable": true,
+        "tactic": "brace",
+        "termination_reason": "victory",
+        "title": "回春祭司",
+        "token": "p",
+        "valid": true
+      },
+      "counter": 1,
+      "expected": {
+        "damage": 26,
+        "events": [
+          [
+            "hit",
+            4,
+            30
+          ],
+          [
+            "counter",
+            0,
+            180
+          ],
+          [
+            "hit",
+            4,
+            26
+          ],
+          [
+            "counter",
+            1,
+            179
+          ],
+          [
+            "regen",
+            3,
+            29
+          ],
+          [
+            "hit",
+            4,
+            25
+          ],
+          [
+            "counter",
+            1,
+            178
+          ],
+          [
+            "regen",
+            3,
+            28
+          ],
+          [
+            "hit",
+            4,
+            24
+          ],
+          [
+            "counter",
+            1,
+            177
+          ],
+          [
+            "regen",
+            3,
+            27
+          ],
+          [
+            "hit",
+            4,
+            23
+          ],
+          [
+            "counter",
+            1,
+            176
+          ],
+          [
+            "regen",
+            3,
+            26
+          ],
+          [
+            "hit",
+            4,
+            22
+          ],
+          [
+            "counter",
+            1,
+            175
+          ],
+          [
+            "regen",
+            3,
+            25
+          ],
+          [
+            "hit",
+            4,
+            21
+          ],
+          [
+            "counter",
+            1,
+            174
+          ],
+          [
+            "regen",
+            3,
+            24
+          ],
+          [
+            "hit",
+            4,
+            20
+          ],
+          [
+            "counter",
+            1,
+            173
+          ],
+          [
+            "regen",
+            3,
+            23
+          ],
+          [
+            "hit",
+            4,
+            19
+          ],
+          [
+            "counter",
+            1,
+            172
+          ],
+          [
+            "regen",
+            3,
+            22
+          ],
+          [
+            "hit",
+            4,
+            18
+          ],
+          [
+            "counter",
+            1,
+            171
+          ],
+          [
+            "regen",
+            3,
+            21
+          ],
+          [
+            "hit",
+            4,
+            17
+          ],
+          [
+            "counter",
+            1,
+            170
+          ],
+          [
+            "regen",
+            3,
+            20
+          ],
+          [
+            "hit",
+            4,
+            16
+          ],
+          [
+            "counter",
+            1,
+            169
+          ],
+          [
+            "regen",
+            3,
+            19
+          ],
+          [
+            "hit",
+            4,
+            15
+          ],
+          [
+            "counter",
+            1,
+            168
+          ],
+          [
+            "regen",
+            3,
+            18
+          ],
+          [
+            "hit",
+            4,
+            14
+          ],
+          [
+            "counter",
+            1,
+            167
+          ],
+          [
+            "regen",
+            3,
+            17
+          ],
+          [
+            "hit",
+            4,
+            13
+          ],
+          [
+            "counter",
+            1,
+            166
+          ],
+          [
+            "regen",
+            3,
+            16
+          ],
+          [
+            "hit",
+            4,
+            12
+          ],
+          [
+            "counter",
+            1,
+            165
+          ],
+          [
+            "regen",
+            3,
+            15
+          ],
+          [
+            "hit",
+            4,
+            11
+          ],
+          [
+            "counter",
+            1,
+            164
+          ],
+          [
+            "regen",
+            3,
+            14
+          ],
+          [
+            "hit",
+            4,
+            10
+          ],
+          [
+            "counter",
+            1,
+            163
+          ],
+          [
+            "regen",
+            3,
+            13
+          ],
+          [
+            "hit",
+            4,
+            9
+          ],
+          [
+            "counter",
+            1,
+            162
+          ],
+          [
+            "regen",
+            3,
+            12
+          ],
+          [
+            "hit",
+            4,
+            8
+          ],
+          [
+            "counter",
+            1,
+            161
+          ],
+          [
+            "regen",
+            3,
+            11
+          ],
+          [
+            "hit",
+            4,
+            7
+          ],
+          [
+            "counter",
+            1,
+            160
+          ],
+          [
+            "regen",
+            3,
+            10
+          ],
+          [
+            "hit",
+            4,
+            6
+          ],
+          [
+            "counter",
+            1,
+            159
+          ],
+          [
+            "regen",
+            3,
+            9
+          ],
+          [
+            "hit",
+            4,
+            5
+          ],
+          [
+            "counter",
+            1,
+            158
+          ],
+          [
+            "regen",
+            3,
+            8
+          ],
+          [
+            "hit",
+            4,
+            4
+          ],
+          [
+            "counter",
+            1,
+            157
+          ],
+          [
+            "regen",
+            3,
+            7
+          ],
+          [
+            "hit",
+            4,
+            3
+          ],
+          [
+            "counter",
+            1,
+            156
+          ],
+          [
+            "regen",
+            3,
+            6
+          ],
+          [
+            "hit",
+            4,
+            2
+          ],
+          [
+            "counter",
+            1,
+            155
+          ],
+          [
+            "regen",
+            3,
+            5
+          ],
+          [
+            "hit",
+            4,
+            1
+          ],
+          [
+            "counter",
+            1,
+            154
+          ],
+          [
+            "regen",
+            3,
+            4
+          ],
+          [
+            "hit",
+            4,
+            0
+          ]
+        ],
+        "heal_after": 0,
+        "regen": 78,
+        "rounds": 28,
+        "survivable": true,
+        "thorns": 0,
+        "valid": true
+      },
+      "hit": 4,
+      "hp": 180,
+      "mode": "brace",
+      "token": "p"
+    },
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 34,
+        "combat_def": 19,
+        "damage": 0,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 34
+        },
+        "enemy_base_def": 0,
+        "gear": "",
+        "gear_reduction": 0,
+        "heal_after": 0,
+        "healed_turns": 0,
+        "item": "",
+        "item_reduction": 0,
+        "lines": [
+          "实际反击伤害>0才回3；完全格挡不回血，死亡后不回。",
+          "玩家实战攻34/防19；敌生命34/攻20/防0（战术后0）",
+          "玩家出手1次；反伤0，祭司实际回复0（0次）",
+          "已发生原伤害0，首反击总减免0；实际承伤0",
+          "胜后回复0，净损耗0；只有存活才领取22金币。"
+        ],
+        "mechanic_note": "实际反击伤害>0才回3；完全格挡不回血，死亡后不回。",
+        "net_damage": 0,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 0,
+        "raw_damage": 0,
+        "reduction": 0,
+        "reflection_damage": 0,
+        "regen_total": 0,
+        "rounds": 1,
+        "survivable": true,
+        "tactic": "none",
+        "termination_reason": "victory",
+        "title": "回春祭司",
+        "token": "p",
+        "valid": true
+      },
+      "counter": 1,
+      "expected": {
+        "damage": 0,
+        "events": [
+          [
+            "hit",
+            34,
+            0
+          ]
+        ],
+        "heal_after": 0,
+        "regen": 0,
+        "rounds": 1,
+        "survivable": true,
+        "thorns": 0,
+        "valid": true
+      },
+      "hit": 34,
+      "hp": 180,
+      "mode": "none",
+      "token": "p"
+    },
+    {
+      "actual": {
+        "charge_extra": 0,
+        "charge_extra_damage": 0,
+        "combat_atk": 34,
+        "combat_def": 19,
+        "damage": 0,
+        "effective_level": 1,
+        "enemy": {
+          "atk": 20,
+          "def": 0,
+          "gold": 22,
+          "hp": 34
+        },
+        "enemy_base_def": 0,
+        "gear": "",
+        "gear_reduction": 0,
+        "heal_after": 0,
+        "healed_turns": 0,
+        "item": "",
+        "item_reduction": 0,
+        "lines": [
+          "实际反击伤害>0才回3；完全格挡不回血，死亡后不回。",
+          "玩家实战攻34/防19；敌生命34/攻20/防0（战术后0）",
+          "玩家出手1次；反伤0，祭司实际回复0（0次）",
+          "已发生原伤害0，首反击总减免0；实际承伤0",
+          "胜后回复0，净损耗0；只有存活才领取22金币。"
+        ],
+        "mechanic_note": "实际反击伤害>0才回3；完全格挡不回血，死亡后不回。",
+        "net_damage": 0,
+        "opening_damage": 0,
+        "opening_lethal": false,
+        "pierce": 0,
+        "potential_heal": 0,
+        "raw_damage": 0,
+        "reduction": 0,
+        "reflection_damage": 0,
+        "regen_total": 0,
+        "rounds": 1,
+        "survivable": true,
+        "tactic": "brace",
+        "termination_reason": "victory",
+        "title": "回春祭司",
+        "token": "p",
+        "valid": true
+      },
+      "counter": 1,
+      "expected": {
+        "damage": 0,
+        "events": [
+          [
+            "hit",
+            34,
+            0
+          ]
+        ],
+        "heal_after": 0,
+        "regen": 0,
+        "rounds": 1,
+        "survivable": true,
+        "thorns": 0,
+        "valid": true
+      },
+      "hit": 34,
+      "hp": 180,
+      "mode": "brace",
+      "token": "p"
+    }
+  ]
+}
