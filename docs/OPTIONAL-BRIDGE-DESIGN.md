@@ -1,6 +1,6 @@
 # Optional twin-arm bridge: design proposal only
 
-**Not implemented, not released.** This is not part of the v15 disconnected-floor/camp-access repair. Coordinates, resource budgets, rewards and generation probabilities remain undecided.
+**Historical design proposal, implemented with revisions in v16.** See [v16 implementation and acceptance](ENDLESS-V16.md). This document records the original design boundaries; its undecided language below is historical, not the current implementation contract. v15 itself did not include bridges.
 
 ## Player decision
 

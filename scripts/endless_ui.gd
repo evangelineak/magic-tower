@@ -1,5 +1,6 @@
 extends Node2D
 # A separate mode and storage namespace: the classic journey is untouched.
+const BridgeArt=preload("res://scripts/endless_bridge_art.gd")
 const CampFloor=preload("res://scripts/endless_camp_floor_art.gd")
 const RuneArt=preload("res://scripts/endless_rune_art.gd")
 const Enemies12=preload("res://scripts/endless_enemy_v12_art.gd")
@@ -23,6 +24,8 @@ var notice="正在读取独立的无尽旅程……"
 var modal_notice=""
 var camera=Vector2i.ZERO
 var hover=Vector2i(-1,-1)
+var bridge_cache_key=""
+var bridge_cache:Dictionary={}
 var camp_floor_key=""
 var camp_floor_cache:Dictionary={}
 var rune_cache_key=""
@@ -99,6 +102,12 @@ func transact(kind:String,value,confirmed=false):
  busy=true
  var candidate=world.clone()
  var result:Dictionary=candidate.step(value,confirmed) if kind=="step" else candidate.act(str(value))
+ if kind=="step" and not result.get("changed",false) and world.has_method("bridge_view") and world.tile(world.pos+value)=="N":
+  var mechanism=bridge_data()
+  if mechanism.get("present",false) and world.pos+value==mechanism.winch:
+   busy=false;open_bridge();return
+ if result.get("confirm",false) and kind=="act" and str(value) in ["bridge_short","bridge_loot"]:
+  busy=false;open_bridge();return
  if result.get("confirm",false) and kind=="act" and str(value)=="rune_on":
   busy=false;open_rune();return
  if result.get("confirm",false) and kind=="act" and str(value)=="job_cancel":
@@ -135,6 +144,7 @@ func settle_run():
 func map_click(target:Vector2i):
  if busy or world==null or world.ended or modal!="":return
  walk.clear()
+ if bridge_map_click(target):return
  var delta:Vector2i=target-world.pos
  if absi(delta.x)+absi(delta.y)==1:
   clear_target_feedback()
@@ -175,6 +185,11 @@ func _unhandled_input(event):
   walk.clear()
   if busy:return
   var p=event.position
+  if modal=="bridge":
+   if Rect2(880,686,250,44).has_point(p):modal="";return
+   if Rect2(145,590,470,55).has_point(p):await confirm_bridge("short");return
+   if Rect2(665,590,470,55).has_point(p):await confirm_bridge("loot");return
+   return
   if modal=="rune":
    if Rect2(660,650,460,48).has_point(p):modal="";return
    if Rect2(160,650,460,48).has_point(p):await confirm_modal();return
@@ -233,6 +248,8 @@ func _unhandled_input(event):
   if busy:return
   if event.keycode==KEY_L:await reload_run();return
   if modal!="":
+   if modal=="bridge" and event.keycode in [KEY_1,KEY_2]:
+    await confirm_bridge("short" if event.keycode==KEY_1 else "loot");return
    if event.keycode==KEY_TAB and modal in ["encounter","contract"] and world!=null and world.has_method("contract_view"):
     open_supply_panel("contract" if modal=="encounter" else "encounter");return
    if event.keycode==KEY_TAB and modal in ["items","gear"] and world!=null and world.has_method("gear_view"):
@@ -269,6 +286,7 @@ func _unhandled_input(event):
 func confirm_modal():
  match modal:
   "start","new","ended":await start_run(randi_range(0,2147483647))
+  "bridge":modal_notice="请明确选择短桥或宝桥；Enter不会代替选择。"
   "rune":
    if world==null or not world.has_method("rune_view"):modal="";return
    var info:Dictionary=rune_data()
@@ -343,7 +361,7 @@ func _draw():
   for x in VIEW:
    var p=Vector2i(x,y)+camera;var c=ORIGIN+Vector2(x,y)*CELL+Vector2(32,32)
    draw_ground_tile(c,p,camp_region)
-   draw_token(c,world.tile(p))
+   if not draw_bridge_tile(c,p):draw_token(c,world.tile(p))
  for p in walk:
   var screen=Vector2(p-camera)
   if screen.x>=0 and screen.y>=0 and screen.x<VIEW and screen.y<VIEW:draw_path_marker(ORIGIN+screen*CELL+Vector2(32,32))
@@ -465,6 +483,7 @@ func tooltip_layout(content:String,desired:Vector2)->Rect2:
  return Rect2(Vector2(clampf(desired.x,20,1260-width),clampf(desired.y,70,780-height)),Vector2(width,height))
 
 func draw_modal():
+ if modal=="bridge":draw_bridge_panel();return
  if modal=="rune":draw_rune_panel();return
  if modal=="gear":draw_gear_panel();return
  if modal in ["encounter","contract","items"]:draw_supply_panel();return
@@ -832,3 +851,84 @@ func draw_ground_tile(center:Vector2,p:Vector2i,region:Dictionary):
  CampFloor.draw_floor(self,center,p,region,64)
 
 func draw_path_marker(center:Vector2):draw_circle(center,4,TEAL)
+
+func bridge_data()->Dictionary:
+ if world==null or not world.has_method("bridge_view"):return {}
+ var key="%s:%d:%d:%s:%d:%d:%d:%d:%d" % [world.get_instance_id(),revision,world.floor_number,str(world.pos),world.hp,world.gold,world.keys,world.atk,world.defense]
+ if key!=bridge_cache_key:bridge_cache=world.bridge_view();bridge_cache_key=key
+ return bridge_cache
+func draw_bridge_tile(center:Vector2,p:Vector2i)->bool:
+ var data=bridge_data()
+ if not data.get("present",false):return false
+ if p==data.winch:
+  BridgeArt.draw_winch(self,center,str(data.get("choice",""))!="");return true
+ for arm in data.get("arms",[]):
+  if p in arm.get("cells",[]):return BridgeArt.draw_bridge(self,center,"open" if arm.state=="lowered" else str(arm.state),true)
+ if world.tile(p)=="B":BridgeArt.draw_tool_cache(self,center);return true
+ return false
+func bridge_map_click(target:Vector2i)->bool:
+ var data=bridge_data()
+ if not data.get("present",false):return false
+ var winch:Vector2i=data.winch
+ var is_arm=false
+ for arm in data.get("arms",[]):
+  if target in arm.get("cells",[]) and arm.state!="lowered":is_arm=true
+ if target!=winch and not is_arm:return false
+ var adjacent=absi(target.x-world.pos.x)+absi(target.y-world.pos.y)==1
+ if adjacent:
+  if target==winch:open_bridge()
+  else:show_target_feedback(target,"此桥由绞盘控制；前往绞盘（%d,%d）查看两臂取舍。" % [winch.x,winch.y])
+  return true
+ # Only this mechanism permits safe approach; never interact automatically on arrival.
+ var best:Array=[]
+ for d in [Vector2i.UP,Vector2i.DOWN,Vector2i.LEFT,Vector2i.RIGHT]:
+  var near=target+d
+  if world.tile(near)!=".":continue
+  var path:Array=world.safe_path(near)
+  if not path.is_empty() and (best.is_empty() or path.size()<best.size()):best=path
+ if best.is_empty():show_target_feedback(target,"没有完全安全的靠近路线；不会跨过门、怪物、资源或楼梯。")
+ else:
+  walk=best;walk_time=0.0
+  notice="仅沿安全空地靠近机关；到达后再次点击，不自动花钥匙。"
+ return true
+func open_bridge():
+ var data=bridge_data()
+ if busy or not data.get("present",false):return
+ walk.clear();clear_target_feedback();modal="bridge";modal_notice=""
+ pending_revision=revision;pending_origin=world.pos;pending_floor=world.floor_number;queue_redraw()
+func confirm_bridge(side:String):
+ if busy or modal!="bridge" or side not in ["short","loot"]:return
+ var data=bridge_data()
+ if not data.get("available",false):modal_notice=str(data.get("reason","当前不能选择桥臂。"));return
+ if revision!=pending_revision or world.pos!=pending_origin or world.floor_number!=pending_floor:
+  modal_notice="位置或旅程已变化，请关闭后重新查看机关。";return
+ await transact("act","bridge_"+side+"!")
+func bridge_enemy_text(info:Dictionary)->String:
+ if info.is_empty():return "无剩余守卫"
+ if not info.get("valid",false):return "当前无法完成战斗"
+ if not info.get("survivable",false):return "当前会致死"
+ return "已清除（不再节省战斗）" if info.get("cleared",false) else str(info.get("title","守卫")).get_slice("：",0)+" · 净损%d生命" % int(info.get("net_damage",info.get("damage",0)))
+func draw_bridge_panel():
+ var data=bridge_data()
+ panel(Rect2(0,0,1280,800),Color(0,0,0,0.78));panel(Rect2(100,70,1080,685),Color("152736"))
+ BridgeArt.draw_winch(self,Vector2(150,123),str(data.get("choice",""))!="",56)
+ text(Vector2(200,130),"双臂绞盘 · 一把钥匙，只能选一侧",25,GOLD)
+ draw_wrapped("确认后本层永久保留，另一臂锁死；不再重复收费。正常两条通关路线保留，原宝库门仍需钥匙。",Vector2(145,178),980,18,INK,3)
+ for i in mini(2,data.get("arms",[]).size()):
+  var arm:Dictionary=data.arms[i];var x=145+i*520
+  text(Vector2(x,265),str(arm.get("title","桥臂")),23,GOLD)
+  BridgeArt.draw_bridge(self,Vector2(x+415,270),"open" if arm.state=="lowered" else str(arm.state),true,52)
+  draw_wrapped(str(arm.get("body","")),Vector2(x,307),460,18,INK,4)
+  if str(arm.id)=="short":
+   draw_wrapped("绕过："+bridge_enemy_text(arm.get("bypassed",{}))+"\n暂不击杀则暂不获%d金币" % int(arm.get("bypassed",{}).get("gold",0))+"\n仍需面对："+bridge_enemy_text(arm.get("remaining",{})),Vector2(x,418),460,17,TEAL,4)
+  else:
+   draw_wrapped("额外守卫："+bridge_enemy_text(arm.get("guardian",{}))+"\n奖励："+bridge_reward_text(arm.get("reward",{})),Vector2(x,418),460,17,TEAL,4)
+  text(Vector2(x,550),{"raised":"尚未选择","lowered":"已放下，可通行，不再收费","locked":"已永久锁死"}.get(str(arm.state),str(arm.state)),17,GOLD)
+  panel(Rect2(x,590,470,55),Color("365347") if data.get("available",false) else Color("293e50"))
+  text(Vector2(x+12,624),"%d 确认花1钥匙：%s" % [i+1,"短桥" if str(arm.id)=="short" else "宝桥"] if data.get("available",false) else "不能激活：查看下方原因",18,INK)
+ draw_wrapped(modal_notice if modal_notice!="" else str(data.get("reason","")),Vector2(145,670),980,16,Color("efb18e"),1)
+ text(Vector2(145,717),"查看/关闭不收费；只预估当前状态，不代替自动战斗。",14,TEAL)
+ panel(Rect2(880,686,250,44),Color("384152"));text(Vector2(900,716),"关闭 · Esc",18)
+
+func bridge_reward_text(reward:Dictionary)->String:
+ return "护符%d件 + 凿甲钉%d件，%s" % [int(reward.get("ward",0)),int(reward.get("pierce",0)),"无金币" if int(reward.get("gold",0))==0 else "%d金币" % int(reward.gold)]

@@ -34,14 +34,14 @@ jobs:
           echo '3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8  /tmp/templates.tpz' | sha256sum --check
           mkdir -p "$HOME/.local/share/godot/export_templates/4.6.3.stable"
           unzip -p /tmp/templates.tpz templates/web_nothreads_release.zip > "$HOME/.local/share/godot/export_templates/4.6.3.stable/web_nothreads_release.zip"
-      - name: Verify and export connected floors and entrance camps release
+      - name: Verify and export keyed twin-arm bridge release
         run: |
           bash tools/test_all.sh
           mkdir -p export/next
           "$GODOT_BIN" --headless --path . --export-release 'Web Single Thread' export/next/index.html
           cp assets/fonts/LICENSE-OFL.txt export/next/FONT-LICENSE.txt
           "$GODOT_BIN" --headless --path . --script tools/export_license.gd -- export/next/GODOT-LICENSES.txt
-          printf 'Magic Tower verified connected floors and entrance camps release\nGame source: 866c9586bbed7bd42c211a9fe4bec1f913b0e8bc\nWeb deployment source: %s\nNative old-v14 restore and legal-v15 repaired causeway journey verified: formerly isolated floor13,5 reached, safe return, required priest battle, paired stairs, entrance-side bastions merchant purchase and reload. Independent 512-map audit preserves every original non-wall tile and reward while requiring zero isolated floors and safe station access across all six families; twelve legal 100-floor policies passed. Real Chrome production storage passed 363 checks across fifteen rule versions. Combat/prices unchanged and economy remains generous. Future bridge and global-ranking documents are proposals, not implemented features. Device-local rankings only; no backend/account/fee/player upload created. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nOlder journeys preserve their original rules. Explicit new journey required for v15 repairs. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
+          printf 'Magic Tower verified keyed twin-arm bridge release\nGame source: a87773523a3a7f86a00ddf2c5ed1f8ddc2acd873\nWeb deployment source: %s\nNative legal-v16 treasure and shortcut journeys verified: no-key refusal, safe distant click, cancellation, one-key payment, independent extra battle and two-tool cache, mandatory remaining guard, retained skipped enemy, paired stairs, reload and safe camp return. Original flat 40/64px raised/open/locked bridges inspected. Independent closed/short/loot geometry and native persistence passed; twelve legal 100-floor policies compare actual combat and economy costs. Real Chrome production storage passed 415 checks across sixteen rule versions. Old versions remain frozen. Device-local rankings only; no backend/account/fee/player upload created. Economy inflation is not solved. Godot Web engine gameplay is NOT verified in the cloud WebGL-blocklisted browser.\nExplicit new journey required for v16 bridges; only some odd floors contain them. Classic and Session saves remain separate.\n' "$GITHUB_SHA" > export/next/BUILD.txt
       - name: Publish verified game at original homepage only
         run: |
           mkdir -p site-output
